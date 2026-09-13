@@ -22,9 +22,15 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         $managedUser = $this->managedUser();
-        $roles = $this->user()?->hasRole(RoleName::Superadmin->value) === true
-            ? [RoleName::Owner->value, RoleName::BranchAdmin->value, RoleName::Customer->value]
-            : [RoleName::BranchAdmin->value, RoleName::Customer->value];
+        $roles = match (true) {
+            $managedUser?->organization_id === null => [RoleName::Customer->value],
+            $this->user()?->hasRole(RoleName::Superadmin->value) === true => [
+                RoleName::Owner->value,
+                RoleName::BranchAdmin->value,
+                RoleName::Customer->value,
+            ],
+            default => [RoleName::BranchAdmin->value, RoleName::Customer->value],
+        };
 
         return [
             'name' => ['required', 'string', 'max:120'],

@@ -196,6 +196,29 @@ it('updates user access while keeping branch assignments tenant scoped', functio
     ])->assertSessionHasErrors('branch_ids.0');
 });
 
+it('keeps users without an organization limited to the customer role', function (): void {
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->patch(route('cms.users.update', $customer), [
+        'name' => 'Pelanggan Umum',
+        'email' => 'pelanggan-umum@example.test',
+        'role' => RoleName::Owner->value,
+    ])->assertSessionHasErrors('role');
+
+    $this->actingAs($superadmin)->patch(route('cms.users.update', $customer), [
+        'name' => 'Pelanggan Umum',
+        'email' => 'pelanggan-umum@example.test',
+        'role' => RoleName::Customer->value,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($customer->refresh()->organization_id)->toBeNull()
+        ->and($customer->name)->toBe('Pelanggan Umum')
+        ->and($customer->hasRole(RoleName::Customer->value))->toBeTrue();
+});
+
 it('prevents owners from managing owner accounts and users from deleting themselves', function (): void {
     $organization = Organization::factory()->create();
     $owner = User::factory()->for($organization)->create();
