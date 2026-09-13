@@ -51,7 +51,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ## Core domain
 
 - Organization: tenant boundary and owner scope.
-- City: geographic grouping for branch discovery and reporting.
+- City: organization-owned geographic grouping for branch discovery and reporting. A city record is never shared across tenants.
 - Branch: operational unit with contact details, coordinates, free-delivery radius, and excess-distance tariff.
 - User: authenticated actor with global or organization/branch-scoped roles.
 - Service: laundry service category, for example wash-and-fold or dry cleaning.
@@ -129,8 +129,11 @@ Deliverables:
 - Order creation, deterministic total calculation, and status tracking.
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.
 - Owner/superadmin CMS for organizations, cities, branches, users, roles, and branch assignments.
-- Optimistic CMS creation states that reconcile from canonical Inertia responses and roll back on validation or network failure.
+- Modal create/edit workflows and typed-confirmation deletion for organizations, cities, branches, and managed users.
+- Optimistic CMS mutation states that reconcile from canonical Inertia responses and roll back on validation or network failure.
+- Accessible outlet coordinate selection with device geolocation, click-to-place, draggable markers, and keyboard-editable latitude/longitude fields.
 - Seeded demonstration data and documented API endpoints.
+- LaundryHub Demo seed data includes Jakarta Selatan and Bandung as selectable cities in the same organization.
 - Deterministic demo credentials and role shortcuts on the local login screen.
 - Responsive split authentication shell with product context on wide screens and a focused single-column form on compact screens.
 
@@ -141,7 +144,7 @@ Exit criteria:
 - A customer can see the order total and full status timeline.
 - A customer can see nearest eligible branches and a deterministic pickup/delivery quote.
 - Cross-organization access is denied by automated tests.
-- Tests, PHPStan, TypeScript checks, production build, API smoke checks, and browser QA pass.
+- Pest and Vitest tests, PHPStan, TypeScript checks, production build, API smoke checks, and manual UI review pass.
 
 ### Phase 2: Payments and receipts
 

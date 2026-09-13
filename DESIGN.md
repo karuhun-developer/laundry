@@ -49,6 +49,7 @@ All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds onl
 - Radius: 8 px controls, 12 px compact cards, 16 px content cards, 20 px feature/ticket surfaces, and full pills only for tags or segmented controls.
 - Shadow low: `0 8px 24px rgba(9, 67, 169, 0.08)`.
 - Shadow raised: `0 18px 48px rgba(9, 67, 169, 0.14)`.
+- Map marker shadow: `0 4px 14px rgba(15, 23, 42, 0.35)`, exposed as `--laundry-map-marker-shadow`.
 - Focus ring: 3 px translucent `brand-600` halo plus visible 1 px edge.
 
 ## 2. Layout and Responsive Behavior
@@ -104,6 +105,14 @@ Components respond to their container where possible; viewport breakpoints own o
 - Location denial and empty coverage states provide a clear manual path instead of blocking order creation.
 - Machine availability is not shown until capacity scheduling and slot-locking semantics are implemented.
 
+### Outlet location editor
+
+- Branch create and edit dialogs select coordinates on an OpenStreetMap surface, with labeled latitude and longitude inputs as the keyboard-accessible manual path.
+- The Lokasi saya action requests browser/device geolocation only after an explicit user action.
+- Clicking the map moves the outlet pin; the same pin is draggable for fine adjustment.
+- Selected coordinates remain visible, editable, synchronized with the marker, and submitted through the existing typed branch form.
+- Permission denial or unavailable geolocation keeps manual map placement usable and exposes a polite inline error.
+
 ### Service catalog and pricing
 
 - Catalog content is grouped by service, then by the selected branch's active price options.
@@ -122,10 +131,14 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Owner CMS management and optimistic reconciliation
 
-- Organization, city, branch, and user creation inserts a visibly pending record immediately while the request is active.
+- Organization, city, branch, and user creation and editing happen in focused dialogs instead of permanent sidebar forms.
+- Create and edit mutations insert or replace a visibly pending record immediately while the request is active.
 - Pending cities are informational only and cannot be selected by a branch form until the server confirms their canonical identifier.
+- City choices are scoped to the selected organization; superadmins see city ownership before opening a branch dialog.
 - Success replaces optimistic records through the canonical Inertia page response. Failure removes them and keeps entered form values available for correction.
 - Switching organization clears city and branch selections that no longer belong to the selected tenant. Switching away from branch-admin clears branch assignments.
+- Delete dialogs require the exact organization name, city name, branch code, or user email before enabling the destructive action.
+- Dependency conflicts and validation errors keep the delete dialog open so the actor can recover without losing context.
 - Empty tenant and location states explain the prerequisite action instead of presenting a disabled control without context.
 - Desktop comparison tables become record cards before they would require horizontal page scrolling. Long names, email addresses, slugs, and addresses truncate or wrap inside their own surface.
 
@@ -211,7 +224,7 @@ Every primitive must be demonstrated in a development showcase before product sc
 ### `Dialog` and `Drawer`
 
 - Focus is trapped and restored. Escape closes non-destructive dialogs.
-- Destructive confirmation names the affected record.
+- Destructive confirmation names the affected record and requires an exact typed value; native JavaScript confirmation dialogs are not used.
 
 ### Demo login selector
 
@@ -254,6 +267,7 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Product screens at the same widths with empty, error, loading, long-content, keyboard, and reduced-motion checks.
 - No raw color values or ad-hoc spacing inside product components; tokens are defined centrally.
 - Production build and browser console must be clean.
+- CMS interaction regression coverage uses Vitest and Vue Test Utils; Laravel behavior uses Pest. Playwright is not part of the Phase 1 test workflow.
 - Lighthouse is measured on production output; accessibility regressions block release.
 
 ### Handoff evidence

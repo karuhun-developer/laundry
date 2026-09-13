@@ -33,7 +33,8 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 
 - Unit tests lock pricing calculations and status transition rules.
 - Feature tests lock authorization and tenant isolation.
-- Browser tests cover the main owner, branch-admin, and customer journeys.
+- Vue component tests cover CMS modal interactions, destructive confirmation, form prefill, and geolocation updates.
+- Phase 1 does not use Playwright; interactive UI checks use Vitest/Vue Test Utils plus focused manual review.
 - Static analysis and strict TypeScript checks are release gates.
 
 ## Completion checklist

@@ -5,6 +5,7 @@ Phase: 1
 ## Scope
 
 Organizations are the tenant boundary. Cities, branches, owners, and branch admins belong to one organization. Customers remain organization-neutral so an account can receive orders from different laundry businesses.
+The same city name may exist once per organization; a branch can only select cities owned by its organization.
 
 ## Authorization
 
@@ -14,13 +15,14 @@ Organizations are the tenant boundary. Cities, branches, owners, and branch admi
 - `customer`: no CMS management permissions.
 
 Spatie Permission owns roles and permissions. Laravel policies enforce model-level tenant checks. Request validation also scopes foreign keys to the actor's organization to prevent cross-tenant assignment.
+The CMS mirrors that rule by filtering branch city choices after organization selection and showing city ownership to superadmins.
 
 ## Routes
 
-- `GET|POST /cms/organizations`
-- `GET|POST /cms/branches`
-- `POST /cms/cities`
-- `GET|POST /cms/users`
+- `GET|POST /cms/organizations` and `PATCH|DELETE /cms/organizations/{organization}`
+- `GET|POST /cms/branches` and `PATCH|DELETE /cms/branches/{branch}`
+- `POST /cms/cities` and `PATCH|DELETE /cms/cities/{city}`
+- `GET|POST /cms/users` and `PATCH|DELETE /cms/users/{user}`
 
 All routes require authenticated and verified web sessions.
 
@@ -30,4 +32,4 @@ Branches expose a single-file `logo` media collection through Spatie Media Libra
 
 ## Tests
 
-`tests/Feature/Cms/TenancyManagementTest.php` covers superadmin organization creation, normalized slug and branch-code conflicts, owner-scoped city and branch creation, scoped user and branch assignments, owner role limits, role-aware navigation, rejected cross-tenant assignment, and customer denial.
+`tests/Feature/Cms/TenancyManagementTest.php` and `tests/Feature/Cms/TenantCrudTest.php` cover scoped lists and creates, updates, protected deletion, exact confirmation, dependency conflicts, nullable-tenant customers, role boundaries, and cross-tenant denial.
