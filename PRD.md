@@ -95,6 +95,8 @@ The Phase 1 default workflow is:
 
 Cancelled is a terminal exception state. Every transition is authorized, recorded, and shown in the customer timeline.
 
+New orders start at `received`, receive a server-generated `LDR-YYYYMMDD-########` number, and append an initial status event in the same transaction as their item and delivery snapshots. Clients cannot submit authoritative totals, statuses, or snapshot values.
+
 ## Non-functional requirements
 
 - Strict TypeScript with no `any`, ignored errors, or unchecked boundary data.

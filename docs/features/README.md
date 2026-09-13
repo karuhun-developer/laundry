@@ -18,3 +18,4 @@ Every delivered feature receives a document in this directory. A feature documen
 | 1 | [Multi-branch tenancy and access](01-multi-branch-tenancy.md) | Delivered |
 | 1 | [Nearest-branch delivery routing](02-delivery-routing.md) | Delivered |
 | 1 | [Service catalog and weight pricing](03-service-catalog-pricing.md) | Delivered |
+| 1 | [Order creation and immutable pricing snapshots](04-order-creation.md) | Delivered |

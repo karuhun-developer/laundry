@@ -71,6 +71,12 @@ class Branch extends Model implements HasMedia
         return $this->hasMany(PriceOption::class);
     }
 
+    /** @return HasMany<Order, $this> */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('logo')->singleFile();

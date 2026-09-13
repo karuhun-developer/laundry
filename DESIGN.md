@@ -112,6 +112,14 @@ Components respond to their container where possible; viewport breakpoints own o
 - Quote interactions display requested weight, chargeable weight, base/excess breakdown, and total rupiah before order confirmation.
 - An overweight package without an excess tariff presents a blocking configuration message instead of an estimated total.
 
+### Order creation and optimistic reconciliation
+
+- Checkout shows the latest server quote, selected branch, delivery fee, and final estimate before confirmation.
+- After submission, the client may insert a pending order ticket immediately, but marks it as pending and never treats its local number, total, or status as authoritative.
+- A successful `201 Created` response replaces the pending ticket with the canonical order resource, including the server order number, immutable pricing snapshots, and initial timeline event.
+- A failed mutation rolls the pending ticket back, preserves the user's editable input, and exposes the field error plus a retry action.
+- Duplicate submission controls remain disabled while the same create request is pending.
+
 ### Branch admin mobile navigation
 
 - Queue

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -49,6 +50,18 @@ class User extends Authenticatable implements PasskeyUser
     public function branches(): BelongsToMany
     {
         return $this->belongsToMany(Branch::class)->withTimestamps();
+    }
+
+    /** @return HasMany<Order, $this> */
+    public function customerOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'customer_id');
+    }
+
+    /** @return HasMany<Order, $this> */
+    public function createdOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'created_by_id');
     }
 
     /**

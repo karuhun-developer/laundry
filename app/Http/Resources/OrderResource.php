@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Resources;
+
+use App\Models\Order;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/** @mixin Order */
+class OrderResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'order_number' => $this->order_number,
+            'status' => $this->status->value,
+            'organization_id' => $this->organization_id,
+            'branch' => [
+                'id' => $this->branch->id,
+                'name' => $this->branch->name,
+                'code' => $this->branch->code,
+            ],
+            'customer' => [
+                'id' => $this->customer_id,
+                'name' => $this->customer_name_snapshot,
+            ],
+            'items' => OrderItemResource::collection($this->whenLoaded('items')),
+            'pricing' => [
+                'items_subtotal_rupiah' => $this->items_subtotal_rupiah,
+                'delivery_fee_rupiah' => $this->delivery_fee_rupiah,
+                'total_rupiah' => $this->total_rupiah,
+            ],
+            'delivery' => $this->customer_latitude === null
+                ? null
+                : [
+                    'customer_latitude' => $this->customer_latitude,
+                    'customer_longitude' => $this->customer_longitude,
+                    'distance_meters' => $this->delivery_distance_meters,
+                    'free_radius_meters_snapshot' => $this->delivery_free_radius_meters_snapshot,
+                    'fee_per_km_rupiah_snapshot' => $this->delivery_fee_per_km_rupiah_snapshot,
+                    'fee_rupiah' => $this->delivery_fee_rupiah,
+                ],
+            'status_history' => OrderStatusEventResource::collection(
+                $this->whenLoaded('statusEvents'),
+            ),
+            'created_at' => $this->created_at->toISOString(),
+        ];
+    }
+}
