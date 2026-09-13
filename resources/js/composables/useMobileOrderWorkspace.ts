@@ -1,16 +1,20 @@
 import { usePage } from '@inertiajs/vue3';
 import type { ComputedRef, Ref } from 'vue';
 import { useMobileOrderApi } from '@/composables/useMobileOrderApi';
+import { useMobilePaymentApi } from '@/composables/useMobilePaymentApi';
 import { useOptimisticOrders } from '@/composables/useOptimisticOrders';
 import { buildDraftOrder, findCatalogOption } from '@/lib/mobileOrders';
 import type {
     CreateOrderPayload,
+    CreatePaymentPayload,
     MobileBranch,
     MobileContext,
     MobileCustomer,
+    MobileOrderReceipt,
     MobilePriceQuote,
     MobileService,
     NearestMobileBranch,
+    TransitionPaymentStatusPayload,
 } from '@/types/mobile';
 
 type MobileOrderWorkspaceState = {
@@ -25,6 +29,7 @@ type MobileOrderWorkspaceState = {
 export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     const page = usePage();
     const api = useMobileOrderApi();
+    const paymentApi = useMobilePaymentApi();
     const optimistic = useOptimisticOrders({
         createOrder: async (payload) => {
             const context = state.context.value;
@@ -53,6 +58,29 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
             }
 
             return api.transitionOrder(context.organization.slug, order, payload);
+        },
+        createPayment: async (order, payload) => {
+            const context = state.context.value;
+
+            if (!context) {
+                throw new Error('Konteks organisasi tidak tersedia.');
+            }
+
+            return paymentApi.createPayment(context.organization.slug, order, payload);
+        },
+        transitionPaymentStatus: async (order, payment, payload) => {
+            const context = state.context.value;
+
+            if (!context) {
+                throw new Error('Konteks organisasi tidak tersedia.');
+            }
+
+            return paymentApi.transitionPaymentStatus(
+                context.organization.slug,
+                order,
+                payment,
+                payload,
+            );
         },
     });
 
@@ -100,14 +128,38 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         return optimistic.createOrder(draft, payload);
     };
 
+    const createPayment = (orderId: number, payload: CreatePaymentPayload): Promise<boolean> =>
+        optimistic.createPayment(orderId, payload);
+
+    const transitionPaymentStatus = (
+        orderId: number,
+        paymentId: number,
+        payload: TransitionPaymentStatusPayload,
+    ): Promise<boolean> => optimistic.transitionPaymentStatus(orderId, paymentId, payload);
+
+    const loadReceipt = async (orderId: number): Promise<MobileOrderReceipt> => {
+        const context = state.context.value;
+        const order = optimistic.orders.value.find((entry) => entry.id === orderId);
+
+        if (!context || !order) {
+            throw new Error('Pesanan tidak lagi tersedia. Muat ulang daftar pesanan.');
+        }
+
+        return paymentApi.loadReceipt(context.organization.slug, order);
+    };
+
     return {
         createOrder,
+        createPayment,
         createProcessing: api.createProcessing,
+        loadReceipt,
         loadOrders: api.loadOrders,
         orders: optimistic.orders,
         rollbackMessage: optimistic.rollbackMessage,
         setOrders: optimistic.setOrders,
         transitionOrder: optimistic.transitionOrder,
         transitionProcessing: api.transitionProcessing,
+        transitionPaymentStatus,
+        paymentProcessing: paymentApi.processing,
     };
 };

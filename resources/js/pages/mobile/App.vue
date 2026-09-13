@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, ChevronDown, RefreshCw, Shirt, Store } from '@lucide/vue';
+import { AlertTriangle, RefreshCw, Shirt } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
+import MobileWorkspaceSwitcher from '@/components/mobile/molecules/MobileWorkspaceSwitcher.vue';
 import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
@@ -46,18 +47,6 @@ const changeOrganization = async (organizationSlug: string): Promise<void> => {
         ))
     ) {
         deliveryCoordinates.value = previousCoordinates;
-    }
-};
-
-const onOrganizationChange = (event: Event): void => {
-    if (event.target instanceof HTMLSelectElement) {
-        void changeOrganization(event.target.value);
-    }
-};
-
-const onBranchChange = (event: Event): void => {
-    if (event.target instanceof HTMLSelectElement) {
-        void workspace.selectBranch(Number(event.target.value));
     }
 };
 
@@ -139,48 +128,12 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
             </div>
 
             <template v-else>
-                <div class="mb-5 grid gap-3 sm:grid-cols-2">
-                    <label
-                        v-if="workspace.context.value.role === 'customer' && workspace.context.value.organizations.length > 1"
-                        class="relative block"
-                    >
-                        <span class="sr-only">Pilih organisasi laundry</span>
-                        <select
-                            :value="workspace.context.value.organization.slug"
-                            class="min-h-11 w-full appearance-none rounded-xl border border-line bg-surface py-2 pr-10 pl-3 text-sm font-semibold text-ink-950 shadow-low outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-                            @change="onOrganizationChange"
-                        >
-                            <option
-                                v-for="organization in workspace.context.value.organizations"
-                                :key="organization.id"
-                                :value="organization.slug"
-                            >
-                                {{ organization.name }}
-                            </option>
-                        </select>
-                        <ChevronDown class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
-                    </label>
-
-                    <label class="relative block" :class="{ 'sm:col-start-2': workspace.context.value.role === 'customer' }">
-                        <span class="sr-only">Pilih cabang</span>
-                        <Store class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-brand-700" aria-hidden="true" />
-                        <select
-                            :value="workspace.selectedBranchId.value ?? ''"
-                            class="min-h-11 w-full appearance-none rounded-xl border border-line bg-surface py-2 pr-10 pl-10 text-sm font-semibold text-ink-950 shadow-low outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-                            @change="onBranchChange"
-                        >
-                            <option v-if="workspace.context.value.branches.length === 0" value="">Belum ada cabang</option>
-                            <option
-                                v-for="branch in workspace.context.value.branches"
-                                :key="branch.id"
-                                :value="branch.id"
-                            >
-                                {{ branch.name }} · {{ branch.city.name }}
-                            </option>
-                        </select>
-                        <ChevronDown class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
-                    </label>
-                </div>
+                <MobileWorkspaceSwitcher
+                    :context="workspace.context.value"
+                    :selected-branch-id="workspace.selectedBranchId.value"
+                    @organization-change="changeOrganization"
+                    @branch-change="workspace.selectBranch"
+                />
 
                 <p
                     v-if="workspace.rollbackMessage.value || workspace.requestError.value"
@@ -210,6 +163,9 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                             role="customer"
                             title="Pesanan terbaru"
                             description="Pantau dua pesanan terakhir tanpa meninggalkan beranda."
+                            :payment-actions="workspace.paymentActions"
+                            :payment-processing="workspace.paymentProcessing.value"
+                            :printer-configured="workspace.printer.profile.value !== null"
                         />
                     </div>
 
@@ -217,6 +173,9 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                         v-else-if="activeTab === 'orders'"
                         :orders="workspace.orders.value"
                         role="customer"
+                        :payment-actions="workspace.paymentActions"
+                        :payment-processing="workspace.paymentProcessing.value"
+                        :printer-configured="workspace.printer.profile.value !== null"
                     />
 
                     <BranchExplorer
@@ -234,6 +193,13 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                         :email="page.props.auth.user.email"
                         role="customer"
                         :organization="workspace.context.value.organization"
+                        :printer-available="workspace.printer.available"
+                        :printer-profile="workspace.printer.profile.value"
+                        :printer-devices="workspace.printer.devices.value"
+                        :printer-discovering="workspace.printer.discovering.value"
+                        :printer-printing="workspace.printer.printing.value"
+                        :printer-message="workspace.printer.message.value"
+                        :printer-error="workspace.printer.error.value"
                     />
                 </template>
 
@@ -245,6 +211,9 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                         :processing="workspace.transitionProcessing.value"
                         title="Antrean cabang"
                         description="Lanjutkan status satu tahap atau batalkan pesanan yang masih aktif."
+                        :payment-actions="workspace.paymentActions"
+                        :payment-processing="workspace.paymentProcessing.value"
+                        :printer-configured="workspace.printer.profile.value !== null"
                         @transition="onTransition"
                     />
 
@@ -272,6 +241,17 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                         :email="page.props.auth.user.email"
                         role="branch_admin"
                         :organization="workspace.context.value.organization"
+                        :printer-available="workspace.printer.available"
+                        :printer-profile="workspace.printer.profile.value"
+                        :printer-devices="workspace.printer.devices.value"
+                        :printer-discovering="workspace.printer.discovering.value"
+                        :printer-printing="workspace.printer.printing.value"
+                        :printer-message="workspace.printer.message.value"
+                        :printer-error="workspace.printer.error.value"
+                        @discover-printer="workspace.printer.discover"
+                        @save-printer="workspace.printer.saveProfile"
+                        @clear-printer="workspace.printer.clearProfile"
+                        @test-printer="workspace.printer.testPrint"
                     />
                 </template>
             </template>

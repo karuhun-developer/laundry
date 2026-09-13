@@ -21,6 +21,7 @@ const branch: MobileBranch = {
     city: { name: 'Jakarta Selatan', province: 'DKI Jakarta' },
     coordinates: { latitude: -6.2607, longitude: 106.8136 },
     delivery: { free_radius_meters: 10000, fee_per_km_rupiah: 3000 },
+    payments: { qris_enabled: true },
 };
 
 const packagePriceOption: MobilePriceOption = {
@@ -59,7 +60,7 @@ const makeOrder = (): MobileOrder => ({
     order_number: 'LDR-20260913-00000021',
     status: 'washing',
     organization_id: 1,
-    branch: { id: 7, name: 'Cabang Kemang', code: 'KMG01' },
+    branch: { id: 7, name: 'Cabang Kemang', code: 'KMG01', qris_enabled: true },
     customer: { id: 9, name: 'Customer Demo' },
     items: [
         {
@@ -108,6 +109,8 @@ const makeOrder = (): MobileOrder => ({
             occurred_at: '2026-09-13T08:30:00.000Z',
         },
     ],
+    payments: [],
+    payment_summary: { paid_rupiah: 0, outstanding_rupiah: 30000, is_paid: false },
     created_at: '2026-09-13T08:00:00.000Z',
 });
 

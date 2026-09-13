@@ -1,3 +1,18 @@
+import type {
+    MobilePayment,
+    MobilePaymentMethod,
+    MobilePaymentStatus,
+    MobilePaymentSummary,
+} from '@/types/mobilePayments';
+
+export type {
+    MobilePayment,
+    MobilePaymentMethod,
+    MobilePaymentStatus,
+    MobilePaymentStatusEvent,
+    MobilePaymentSummary,
+} from '@/types/mobilePayments';
+
 export type MobileRole = 'customer' | 'branch_admin';
 
 export type MobileTab =
@@ -43,6 +58,9 @@ export type MobileBranch = {
     delivery: {
         free_radius_meters: number;
         fee_per_km_rupiah: number;
+    };
+    payments: {
+        qris_enabled: boolean;
     };
 };
 
@@ -148,7 +166,7 @@ export type MobileOrder = {
     order_number: string;
     status: MobileOrderStatus;
     organization_id: number;
-    branch: Pick<MobileBranch, 'id' | 'name' | 'code'>;
+    branch: Pick<MobileBranch, 'id' | 'name' | 'code'> & { qris_enabled: boolean };
     customer: Pick<MobileCustomer, 'id' | 'name'>;
     items: readonly MobileOrderItem[];
     pricing: {
@@ -165,6 +183,8 @@ export type MobileOrder = {
         fee_rupiah: number;
     };
     status_history: readonly MobileOrderStatusEvent[];
+    payments: readonly MobilePayment[];
+    payment_summary: MobilePaymentSummary;
     created_at: string;
     pending?: boolean;
 };
@@ -184,6 +204,52 @@ export type CreateOrderPayload = {
 export type TransitionOrderPayload = {
     status: MobileOrderStatus;
     note?: string;
+};
+
+export type CreatePaymentPayload = {
+    method: MobilePaymentMethod;
+    amount_rupiah: number;
+    note?: string;
+};
+
+export type TransitionPaymentStatusPayload = {
+    status: MobilePaymentStatus;
+    note?: string;
+};
+
+export type MobileOrderReceipt = {
+    receipt_number: string;
+    order_id: number;
+    order_status: MobileOrderStatus;
+    branch: {
+        id: number;
+        name: string;
+        code: string;
+        phone: string | null;
+        address: string;
+        city: {
+            name: string;
+            province: string;
+        };
+    };
+    customer: Pick<MobileCustomer, 'id' | 'name'>;
+    items: readonly MobileOrderItem[];
+    pricing: MobileOrder['pricing'] &
+        Pick<MobilePaymentSummary, 'paid_rupiah' | 'outstanding_rupiah'>;
+    payments: readonly MobilePayment[];
+    issued_at: string;
+    ordered_at: string;
+};
+
+export type MobilePaymentActions = {
+    createPayment: (orderId: number, payload: CreatePaymentPayload) => Promise<boolean>;
+    transitionPaymentStatus: (
+        orderId: number,
+        paymentId: number,
+        payload: TransitionPaymentStatusPayload,
+    ) => Promise<boolean>;
+    loadReceipt: (orderId: number) => Promise<MobileOrderReceipt>;
+    printReceipt: (orderId: number) => Promise<boolean>;
 };
 
 export type ApiEnvelope<T> = {

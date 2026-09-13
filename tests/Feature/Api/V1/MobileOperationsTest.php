@@ -15,7 +15,10 @@ beforeEach(function (): void {
 
 it('returns customer context with active organizations and branches', function (): void {
     $organization = Organization::factory()->create(['slug' => 'jakarta-laundry']);
-    $branch = Branch::factory()->for($organization)->create(['name' => 'Kemang']);
+    $branch = Branch::factory()->for($organization)->create([
+        'name' => 'Kemang',
+        'qris_enabled' => true,
+    ]);
     $otherOrganization = Organization::factory()->create(['slug' => 'bandung-laundry']);
     Branch::factory()->for($otherOrganization)->create(['name' => 'Dago']);
     $customer = User::factory()->create(['organization_id' => null]);
@@ -27,6 +30,7 @@ it('returns customer context with active organizations and branches', function (
         ->assertJsonPath('data.role', RoleName::Customer->value)
         ->assertJsonPath('data.organization.slug', $organization->slug)
         ->assertJsonPath('data.branches.0.id', $branch->id)
+        ->assertJsonPath('data.branches.0.payments.qris_enabled', true)
         ->assertJsonCount(2, 'data.organizations');
 });
 

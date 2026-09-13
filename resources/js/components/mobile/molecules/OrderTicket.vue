@@ -2,6 +2,7 @@
 import { ChevronRight, Clock3, MapPin, X } from '@lucide/vue';
 import { computed } from 'vue';
 import MobileStatusBadge from '@/components/mobile/atoms/MobileStatusBadge.vue';
+import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
 import {
     buildOrderTimeline,
     formatOrderDate,
@@ -10,16 +11,27 @@ import {
     nextOrderStatus,
     orderStatusLabels,
 } from '@/lib/mobileOrders';
-import type { MobileOrder, MobileOrderStatus, MobileRole } from '@/types/mobile';
+import type {
+    MobileOrder,
+    MobileOrderStatus,
+    MobilePaymentActions,
+    MobileRole,
+} from '@/types/mobile';
 
 type Props = {
     order: MobileOrder;
     role: MobileRole;
     processing?: boolean;
+    paymentProcessing?: boolean;
+    paymentActions?: MobilePaymentActions;
+    printerConfigured?: boolean;
 };
 
 const props = withDefaults(defineProps<Props>(), {
     processing: false,
+    paymentProcessing: false,
+    paymentActions: undefined,
+    printerConfigured: false,
 });
 
 const emit = defineEmits<{
@@ -65,6 +77,16 @@ const isTerminal = computed(
                         {{ formatRupiah(order.pricing.total_rupiah) }}
                     </p>
                 </div>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-canvas px-3 py-2 text-sm">
+                <span class="text-ink-500">Pembayaran</span>
+                <span
+                    class="font-semibold"
+                    :class="order.payment_summary.is_paid ? 'text-mint-500' : 'text-amber-700'"
+                >
+                    {{ order.payment_summary.is_paid ? 'Lunas' : `Sisa ${formatRupiah(order.payment_summary.outstanding_rupiah)}` }}
+                </span>
             </div>
 
             <div class="mt-4 border-t border-dashed border-line pt-4">
@@ -167,6 +189,15 @@ const isTerminal = computed(
                 <X class="size-4" aria-hidden="true" />
                 Batalkan
             </button>
+        </div>
+
+        <div v-if="role === 'branch_admin' && paymentActions" class="border-t border-line bg-surface px-4 py-3">
+            <PaymentDialog
+                :order="order"
+                :actions="paymentActions"
+                :processing="paymentProcessing"
+                :printer-configured="printerConfigured"
+            />
         </div>
 
         <div v-if="order.delivery" class="flex items-center gap-2 bg-surface-blue px-5 py-3 text-xs text-brand-700">

@@ -139,6 +139,7 @@ export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
             id: input.branch.id,
             name: input.branch.name,
             code: input.branch.code,
+            qris_enabled: input.branch.payments.qris_enabled,
         },
         customer: input.customer,
         items: [
@@ -189,6 +190,12 @@ export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
                 pending: true,
             },
         ],
+        payments: [],
+        payment_summary: {
+            paid_rupiah: 0,
+            outstanding_rupiah: subtotal + input.deliveryFeeRupiah,
+            is_paid: false,
+        },
         created_at: timestamp,
         pending: true,
     };

@@ -1,37 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { makeApi, makeOrder, payload } from '@/composables/mobileOrderTestFixtures';
 import { useOptimisticOrders } from '@/composables/useOptimisticOrders';
-import type { CreateOrderPayload, MobileOrder } from '@/types/mobile';
-
-const payload: CreateOrderPayload = {
-    items: [{ price_option_id: 5, weight_grams: 2500 }],
-};
-
-const makeOrder = (id: number, status: MobileOrder['status'] = 'received'): MobileOrder => ({
-    id,
-    order_number: id < 0 ? 'Menunggu nomor' : `LDR-20260913-${String(id).padStart(8, '0')}`,
-    status,
-    organization_id: 1,
-    branch: { id: 7, name: 'Cabang Kemang', code: 'KMG01' },
-    customer: { id: 9, name: 'Customer Demo' },
-    items: [],
-    pricing: {
-        items_subtotal_rupiah: 30000,
-        delivery_fee_rupiah: 0,
-        total_rupiah: 30000,
-    },
-    delivery: null,
-    status_history: [
-        {
-            id,
-            status,
-            actor: { id: 3, name: 'Admin Kemang' },
-            note: null,
-            occurred_at: '2026-09-13T08:00:00.000Z',
-        },
-    ],
-    created_at: '2026-09-13T08:00:00.000Z',
-    pending: id < 0,
-});
+import type { MobileOrder } from '@/types/mobile';
 
 describe('useOptimisticOrders', () => {
     it('inserts a draft immediately and replaces it after create succeeds', async () => {
@@ -40,11 +10,11 @@ describe('useOptimisticOrders', () => {
         const createPromise = new Promise<MobileOrder>((resolve) => {
             resolveCreate = resolve;
         });
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(() => createPromise),
-            fetchOrder: vi.fn(),
-            transitionOrder: vi.fn(),
-        });
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                createOrder: vi.fn(() => createPromise),
+            }),
+        );
 
         const request = optimistic.createOrder(makeOrder(-1), payload);
         expect(optimistic.orders.value[0]?.pending).toBe(true);
@@ -55,13 +25,13 @@ describe('useOptimisticOrders', () => {
     });
 
     it('rolls a draft back after create fails', async () => {
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(async () => {
-                throw new Error('Server tidak tersedia');
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                createOrder: vi.fn(async () => {
+                    throw new Error('Server tidak tersedia');
+                }),
             }),
-            fetchOrder: vi.fn(),
-            transitionOrder: vi.fn(),
-        });
+        );
 
         await expect(optimistic.createOrder(makeOrder(-2), payload)).resolves.toBe(false);
         expect(optimistic.orders.value).toHaveLength(0);
@@ -73,11 +43,11 @@ describe('useOptimisticOrders', () => {
         const createPromise = new Promise<MobileOrder>((_resolve, reject) => {
             rejectCreate = reject;
         });
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(() => createPromise),
-            fetchOrder: vi.fn(),
-            transitionOrder: vi.fn(),
-        });
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                createOrder: vi.fn(() => createPromise),
+            }),
+        );
         const request = optimistic.createOrder(makeOrder(-3), payload);
         const otherTenantOrder = makeOrder(84);
 
@@ -96,11 +66,11 @@ describe('useOptimisticOrders', () => {
         const transitionPromise = new Promise<MobileOrder>((resolve) => {
             resolveTransition = resolve;
         });
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(),
-            fetchOrder: vi.fn(),
-            transitionOrder: vi.fn(() => transitionPromise),
-        });
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                transitionOrder: vi.fn(() => transitionPromise),
+            }),
+        );
         optimistic.setOrders([initial]);
 
         const request = optimistic.transitionOrder(42, { status: 'weighed' });
@@ -114,13 +84,13 @@ describe('useOptimisticOrders', () => {
 
     it('restores the complete order after a status transition fails', async () => {
         const initial = makeOrder(42, 'received');
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(),
-            fetchOrder: vi.fn(),
-            transitionOrder: vi.fn(async () => {
-                throw new Error('Status bentrok');
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                transitionOrder: vi.fn(async () => {
+                    throw new Error('Status bentrok');
+                }),
             }),
-        });
+        );
         optimistic.setOrders([initial]);
 
         await expect(optimistic.transitionOrder(42, { status: 'weighed' })).resolves.toBe(false);
@@ -137,13 +107,14 @@ describe('useOptimisticOrders', () => {
         });
         const fetchOrder = vi.fn(() => refreshPromise);
         const conflict = Object.assign(new Error('Status pesanan sudah berubah.'), { status: 409 });
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(),
-            fetchOrder,
-            transitionOrder: vi.fn(async () => {
-                throw conflict;
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                fetchOrder,
+                transitionOrder: vi.fn(async () => {
+                    throw conflict;
+                }),
             }),
-        });
+        );
         optimistic.setOrders([initial]);
 
         const request = optimistic.transitionOrder(42, { status: 'weighed' });
@@ -156,6 +127,26 @@ describe('useOptimisticOrders', () => {
         expect(optimistic.rollbackMessage.value).toContain('data terbaru');
     });
 
+    it('reports the refresh failure after a conflicting status transition', async () => {
+        const initial = makeOrder(42, 'received');
+        const conflict = Object.assign(new Error('Status pesanan sudah berubah.'), { status: 409 });
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                fetchOrder: vi.fn(async () => {
+                    throw new Error('Koneksi pemuatan ulang terputus.');
+                }),
+                transitionOrder: vi.fn(async () => {
+                    throw conflict;
+                }),
+            }),
+        );
+        optimistic.setOrders([initial]);
+
+        await expect(optimistic.transitionOrder(42, { status: 'weighed' })).resolves.toBe(false);
+        expect(optimistic.orders.value).toEqual([initial]);
+        expect(optimistic.rollbackMessage.value).toContain('Koneksi pemuatan ulang terputus.');
+    });
+
     it('ignores a stale conflict refresh after the tenant order collection changes', async () => {
         const initial = makeOrder(42, 'received');
         const refreshedOldTenantOrder = makeOrder(42, 'washing');
@@ -166,13 +157,14 @@ describe('useOptimisticOrders', () => {
         });
         const fetchOrder = vi.fn(() => refreshPromise);
         const conflict = Object.assign(new Error('Status pesanan sudah berubah.'), { status: 409 });
-        const optimistic = useOptimisticOrders({
-            createOrder: vi.fn(),
-            fetchOrder,
-            transitionOrder: vi.fn(async () => {
-                throw conflict;
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                fetchOrder,
+                transitionOrder: vi.fn(async () => {
+                    throw conflict;
+                }),
             }),
-        });
+        );
         optimistic.setOrders([initial]);
 
         const request = optimistic.transitionOrder(42, { status: 'weighed' });

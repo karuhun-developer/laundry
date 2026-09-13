@@ -15,7 +15,7 @@ beforeEach(function (): void {
 
 it('returns a customer own canonical order with its ordered timeline', function (): void {
     $organization = Organization::factory()->create();
-    $branch = Branch::factory()->for($organization)->create();
+    $branch = Branch::factory()->for($organization)->create(['qris_enabled' => true]);
     $customer = User::factory()->create(['name' => 'Budi']);
     $customer->assignRole(RoleName::Customer->value);
     $order = Order::factory()->for($organization)->for($branch)->create([
@@ -51,6 +51,7 @@ it('returns a customer own canonical order with its ordered timeline', function 
     ]))->assertOk()
         ->assertJsonPath('data.order_number', $order->order_number)
         ->assertJsonPath('data.status', OrderStatus::Washing->value)
+        ->assertJsonPath('data.branch.qris_enabled', true)
         ->assertJsonPath('data.customer.id', $customer->id)
         ->assertJsonPath('data.status_history.0.status', OrderStatus::Received->value)
         ->assertJsonPath('data.status_history.1.status', OrderStatus::Weighed->value)

@@ -1,10 +1,13 @@
 import { computed, onMounted, readonly, ref } from 'vue';
 import { useMobileCatalogApi } from '@/composables/useMobileCatalogApi';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
+import { useMobilePrinter } from '@/composables/useMobilePrinter';
+import { toLaundryReceiptData } from '@/lib/mobilePayments';
 import type {
     MobileBranch,
     MobileContext,
     MobileCustomer,
+    MobilePaymentActions,
     MobilePriceQuote,
     MobileService,
     NearestMobileBranch,
@@ -22,6 +25,7 @@ export const useMobileWorkspace = () => {
     const loading = ref(true);
     const requestError = ref<string | null>(null);
     const catalogApi = useMobileCatalogApi();
+    const printer = useMobilePrinter();
     let loadGeneration = 0;
     let catalogGeneration = 0;
     let nearestGeneration = 0;
@@ -202,6 +206,24 @@ export const useMobileWorkspace = () => {
         );
     };
 
+    const paymentActions: MobilePaymentActions = {
+        createPayment: orderWorkspace.createPayment,
+        transitionPaymentStatus: orderWorkspace.transitionPaymentStatus,
+        loadReceipt: orderWorkspace.loadReceipt,
+        printReceipt: async (orderId) => {
+            requestError.value = null;
+
+            try {
+                const receipt = await orderWorkspace.loadReceipt(orderId);
+
+                return printer.printReceipt(toLaundryReceiptData(receipt));
+            } catch (error: unknown) {
+                requestError.value = errorMessage(error, 'Struk tidak dapat dicetak.');
+                return false;
+            }
+        },
+    };
+
     onMounted(() => void load());
 
     return {
@@ -218,6 +240,9 @@ export const useMobileWorkspace = () => {
         rollbackMessage: orderWorkspace.rollbackMessage,
         createProcessing: orderWorkspace.createProcessing,
         transitionProcessing: orderWorkspace.transitionProcessing,
+        paymentProcessing: orderWorkspace.paymentProcessing,
+        paymentActions,
+        printer,
         findNearestBranches,
         quoteOrder,
         createOrder: orderWorkspace.createOrder,

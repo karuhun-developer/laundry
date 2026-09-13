@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { Inbox } from '@lucide/vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
-import type { MobileOrder, MobileOrderStatus, MobileRole } from '@/types/mobile';
+import type {
+    MobileOrder,
+    MobileOrderStatus,
+    MobilePaymentActions,
+    MobileRole,
+} from '@/types/mobile';
 
 type Props = {
     orders: readonly MobileOrder[];
@@ -9,12 +14,18 @@ type Props = {
     processing?: boolean;
     title?: string;
     description?: string;
+    paymentActions?: MobilePaymentActions;
+    paymentProcessing?: boolean;
+    printerConfigured?: boolean;
 };
 
 withDefaults(defineProps<Props>(), {
     processing: false,
     title: 'Pesanan laundry',
     description: 'Status terbaru dan riwayat proses ada di satu tempat.',
+    paymentActions: undefined,
+    paymentProcessing: false,
+    printerConfigured: false,
 });
 
 const emit = defineEmits<{
@@ -45,6 +56,9 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                 :order="order"
                 :role="role"
                 :processing="processing"
+                :payment-actions="paymentActions"
+                :payment-processing="paymentProcessing"
+                :printer-configured="printerConfigured"
                 @transition="onTransition"
             />
         </div>

@@ -1,14 +1,41 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Building2, LogOut, Mail, ShieldCheck, UserRound } from '@lucide/vue';
+import MobilePrinterSettings from '@/components/mobile/organisms/MobilePrinterSettings.vue';
+import type { PrinterConnection, PrinterDevice, PrinterProfile } from '@/lib/printer/types';
 import { logout } from '@/routes';
 import type { MobileOrganization, MobileRole } from '@/types/mobile';
 
-defineProps<{
-    name: string;
-    email: string;
-    role: MobileRole;
-    organization: MobileOrganization;
+withDefaults(
+    defineProps<{
+        name: string;
+        email: string;
+        role: MobileRole;
+        organization: MobileOrganization;
+        printerAvailable?: boolean;
+        printerProfile?: PrinterProfile | null;
+        printerDevices?: readonly PrinterDevice[];
+        printerDiscovering?: boolean;
+        printerPrinting?: boolean;
+        printerMessage?: string | null;
+        printerError?: string | null;
+    }>(),
+    {
+        printerAvailable: false,
+        printerProfile: null,
+        printerDevices: () => [],
+        printerDiscovering: false,
+        printerPrinting: false,
+        printerMessage: null,
+        printerError: null,
+    },
+);
+
+defineEmits<{
+    discoverPrinter: [connection: PrinterConnection];
+    savePrinter: [profile: PrinterProfile];
+    clearPrinter: [];
+    testPrinter: [];
 }>();
 </script>
 
@@ -45,6 +72,21 @@ defineProps<{
                 </div>
             </div>
         </dl>
+
+        <MobilePrinterSettings
+            v-if="role === 'branch_admin'"
+            :available="printerAvailable"
+            :profile="printerProfile"
+            :devices="printerDevices"
+            :discovering="printerDiscovering"
+            :printing="printerPrinting"
+            :message="printerMessage"
+            :error="printerError"
+            @discover="$emit('discoverPrinter', $event)"
+            @save="$emit('savePrinter', $event)"
+            @clear="$emit('clearPrinter')"
+            @test-print="$emit('testPrinter')"
+        />
 
         <Link
             :href="logout()"

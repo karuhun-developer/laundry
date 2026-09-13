@@ -33,6 +33,7 @@ class OrderResource extends JsonResource
                 'id' => $this->branch->id,
                 'name' => $this->branch->name,
                 'code' => $this->branch->code,
+                'qris_enabled' => $this->branch->qris_enabled,
             ],
             'customer' => [
                 'id' => $this->customer_id,

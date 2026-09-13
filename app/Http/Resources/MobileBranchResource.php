@@ -34,6 +34,9 @@ class MobileBranchResource extends JsonResource
                 'free_radius_meters' => $this->free_delivery_radius_meters,
                 'fee_per_km_rupiah' => $this->delivery_fee_per_km_rupiah,
             ],
+            'payments' => [
+                'qris_enabled' => $this->qris_enabled,
+            ],
         ];
     }
 }
