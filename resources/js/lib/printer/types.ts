@@ -1,4 +1,22 @@
 export type PaperWidth = '58mm' | '80mm';
+export type PrinterConnection = 'bluetooth' | 'usb';
+
+export type PrinterDevice = {
+    readonly id: string;
+    readonly name: string;
+    readonly connection: PrinterConnection;
+};
+
+export type PrinterProfile = PrinterDevice & {
+    readonly paperWidth: PaperWidth;
+};
+
+export interface PrinterTransport {
+    readonly available: boolean;
+    readonly connections: readonly PrinterConnection[];
+    list(connection: PrinterConnection): Promise<readonly PrinterDevice[]>;
+    print(target: PrinterDevice, bytes: Uint8Array): Promise<void>;
+}
 
 export type ReceiptLine = {
     readonly text: string;
