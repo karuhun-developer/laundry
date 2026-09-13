@@ -5,10 +5,11 @@ import BranchFormDialog from '@/components/cms/BranchFormDialog.vue';
 import CityFormDialog from '@/components/cms/CityFormDialog.vue';
 import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import LocationPicker from '@/components/cms/LocationPicker.vue';
+import MessageTemplateFormDialog from '@/components/cms/MessageTemplateFormDialog.vue';
 import OrganizationFormDialog from '@/components/cms/OrganizationFormDialog.vue';
 import UserFormDialog from '@/components/cms/UserFormDialog.vue';
 import InputError from '@/components/InputError.vue';
-import type { OrganizationSummary, UserSummary } from '@/types';
+import type { MessageTemplateSummary, OrganizationSummary, UserSummary } from '@/types';
 
 type SubmitOptions = {
     onSuccess?: () => void;
@@ -218,6 +219,7 @@ describe('CMS dialogs', () => {
             organization_id: 1,
             name: 'Admin Kemang',
             email: 'admin.kemang@example.test',
+            whatsapp_phone: '6281234567890',
             roles: [{ id: 2, name: 'branch_admin' }],
             branches: [{ id: 7, name: 'Kemang' }],
             organization: { id: 1, name: 'Kirei Wash Jakarta' },
@@ -235,8 +237,72 @@ describe('CMS dialogs', () => {
 
         expect(wrapper.get<HTMLInputElement>('#user-name').element.value).toBe(user.name);
         expect(wrapper.get<HTMLInputElement>('#user-email').element.value).toBe(user.email);
+        expect(wrapper.get<HTMLInputElement>('#user-whatsapp-phone').element.value).toBe(
+            user.whatsapp_phone,
+        );
         expect(wrapper.get('#user-password').attributes('required')).toBeUndefined();
         expect(wrapper.text()).toContain('Password baru (opsional)');
+    });
+
+    it('prefills a message template and renders its variable preview', () => {
+        const messageTemplate: MessageTemplateSummary = {
+            id: 20,
+            organization_id: 1,
+            branch_id: 7,
+            scope_key: 'branch:7',
+            order_status: 'ready_for_pickup',
+            body: 'Halo {customer_name}, pesanan {order_number} sudah {status}.',
+            is_active: true,
+            organization: { id: 1, name: 'Kirei Wash Jakarta' },
+            branch: { id: 7, name: 'Kemang' },
+        };
+        const wrapper = mount(MessageTemplateFormDialog, {
+            props: {
+                messageTemplate,
+                branches: [{ id: 7, organization_id: 1, name: 'Kemang' }],
+                organizations: [{ id: 1, name: 'Kirei Wash Jakarta' }],
+                orderStatuses: [{ value: 'ready_for_pickup', label: 'Siap diambil' }],
+                supportedVariables: ['{customer_name}', '{order_number}', '{status}'],
+                currentOrganizationId: 1,
+                isSuperadmin: false,
+            },
+            global: { stubs: dialogStubs },
+        });
+
+        expect(wrapper.get<HTMLSelectElement>('#message-template-branch').element.value).toBe('7');
+        expect(wrapper.get<HTMLSelectElement>('#message-template-status').element.value).toBe(
+            messageTemplate.order_status,
+        );
+        expect(wrapper.get<HTMLTextAreaElement>('#message-template-body').element.value).toBe(
+            messageTemplate.body,
+        );
+        expect(wrapper.text()).toContain(
+            'Halo Budi Santoso, pesanan LDR-20260913-00000001 sudah Siap diambil.',
+        );
+    });
+
+    it('inserts a supported variable at the current message cursor', async () => {
+        const wrapper = mount(MessageTemplateFormDialog, {
+            attachTo: document.body,
+            props: {
+                branches: [],
+                organizations: [{ id: 1, name: 'Kirei Wash Jakarta' }],
+                orderStatuses: [{ value: 'received', label: 'Diterima' }],
+                supportedVariables: ['{customer_name}'],
+                currentOrganizationId: 1,
+                isSuperadmin: false,
+            },
+            global: { stubs: dialogStubs },
+        });
+        const body = wrapper.get<HTMLTextAreaElement>('#message-template-body');
+
+        await body.setValue('Halo !');
+        body.element.setSelectionRange(5, 5);
+        await wrapper.get('button[type="button"][class*="font-mono"]').trigger('click');
+
+        expect(body.element.value).toBe('Halo {customer_name}!');
+        expect(document.activeElement).toBe(body.element);
+        expect(body.element.selectionStart).toBe(20);
     });
 
     it('announces validation errors as a polite live region', () => {

@@ -4,9 +4,9 @@ import { Pencil, Plus, UserRoundPlus } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CmsFormDialog from '@/components/cms/CmsFormDialog.vue';
 import UserAccessFields from '@/components/cms/UserAccessFields.vue';
+import UserIdentityFields from '@/components/cms/UserIdentityFields.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { store, update } from '@/routes/cms/users';
 import type {
@@ -49,6 +49,7 @@ const form = useForm({
     organization_id: defaultOrganizationId(),
     name: props.user?.name ?? '',
     email: props.user?.email ?? '',
+    whatsapp_phone: props.user?.whatsapp_phone ?? '',
     password: '',
     password_confirmation: '',
     role: defaultRole(),
@@ -92,6 +93,7 @@ const restoreValues = (): void => {
     form.organization_id = defaultOrganizationId();
     form.name = props.user?.name ?? '';
     form.email = props.user?.email ?? '';
+    form.whatsapp_phone = props.user?.whatsapp_phone ?? '';
     form.password = '';
     form.password_confirmation = '';
     form.role = defaultRole();
@@ -141,6 +143,7 @@ const submit = (): void => {
         organization_id: organizationId,
         name: form.name,
         email: form.email,
+        whatsapp_phone: form.whatsapp_phone === '' ? null : form.whatsapp_phone,
         roles: [{ id: props.user?.roles[0]?.id ?? -1, name: form.role }],
         branches: availableBranches.value.filter((branch) => form.branch_ids.includes(branch.id)),
         organization,
@@ -229,18 +232,14 @@ const submit = (): void => {
                     <InputError id="user-organization-error" :message="form.errors.organization_id" />
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="space-y-2">
-                        <Label for="user-name">Nama lengkap</Label>
-                        <Input id="user-name" v-model="form.name" autocomplete="name" placeholder="Nama pengguna" required :aria-invalid="Boolean(form.errors.name)" aria-describedby="user-name-error" />
-                        <InputError id="user-name-error" :message="form.errors.name" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="user-email">Email</Label>
-                        <Input id="user-email" v-model="form.email" type="email" autocomplete="email" placeholder="nama@example.com" required :aria-invalid="Boolean(form.errors.email)" aria-describedby="user-email-error" />
-                        <InputError id="user-email-error" :message="form.errors.email" />
-                    </div>
-                </div>
+                <UserIdentityFields
+                    v-model:name="form.name"
+                    v-model:email="form.email"
+                    v-model:whatsapp-phone="form.whatsapp_phone"
+                    :name-error="form.errors.name"
+                    :email-error="form.errors.email"
+                    :whatsapp-phone-error="form.errors.whatsapp_phone"
+                />
 
                 <UserAccessFields
                     v-model:role="form.role"

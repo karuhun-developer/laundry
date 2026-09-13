@@ -97,6 +97,9 @@ const canManageUser = (user: UserSummary): boolean =>
                                 <td class="px-5 py-4">
                                     <p class="text-ink-950 font-medium">{{ user.name }}</p>
                                     <p class="text-ink-500 mt-0.5 text-xs">{{ user.email }}</p>
+                                    <p v-if="user.whatsapp_phone" class="text-ink-500 mt-0.5 text-xs">
+                                        WhatsApp {{ user.whatsapp_phone }}
+                                    </p>
                                 </td>
                                 <td class="px-5 py-4">{{ organizationName(user) }}</td>
                                 <td class="px-5 py-4">
@@ -146,6 +149,9 @@ const canManageUser = (user: UserSummary): boolean =>
                             <div class="min-w-0">
                                 <h3 class="text-ink-950 truncate font-semibold">{{ user.name }}</h3>
                                 <p class="text-ink-500 truncate text-xs">{{ user.email }}</p>
+                                <p v-if="user.whatsapp_phone" class="text-ink-500 truncate text-xs">
+                                    WhatsApp {{ user.whatsapp_phone }}
+                                </p>
                             </div>
                             <Badge variant="secondary">
                                 {{ user.pending ? 'Menyimpan' : roleLabel(user.roles[0]?.name ?? 'customer') }}

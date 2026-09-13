@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutGrid, MapPinned, UsersRound } from '@lucide/vue';
+import { Building2, LayoutGrid, MapPinned, MessageSquareText, UsersRound } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as branchesIndex } from '@/routes/cms/branches';
+import { index as messageTemplatesIndex } from '@/routes/cms/message-templates';
 import { index as organizationsIndex } from '@/routes/cms/organizations';
 import { index as usersIndex } from '@/routes/cms/users';
 import type { NavItem } from '@/types';
@@ -54,6 +55,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Pengguna & akses',
                 href: usersIndex(),
                 icon: UsersRound,
+            },
+            {
+                title: 'Template WhatsApp',
+                href: messageTemplatesIndex(),
+                icon: MessageSquareText,
             },
         );
     }

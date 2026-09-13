@@ -48,6 +48,7 @@ export type UserSummary = {
     organization_id: number | null;
     name: string;
     email: string;
+    whatsapp_phone: string | null;
     roles: RoleSummary[];
     branches: Pick<BranchSummary, 'id' | 'name'>[];
     organization?: OrganizationOption;
@@ -68,4 +69,30 @@ export type UsersPageProps = {
     users: UserSummary[];
     branches: Pick<BranchSummary, 'id' | 'organization_id' | 'name'>[];
     organizations: OrganizationOption[];
+};
+
+export type OrderStatusOption = {
+    value: string;
+    label: string;
+};
+
+export type MessageTemplateSummary = {
+    id: number;
+    organization_id: number;
+    branch_id: number | null;
+    scope_key: string;
+    order_status: string;
+    body: string;
+    is_active: boolean;
+    organization: OrganizationOption;
+    branch: Pick<BranchSummary, 'id' | 'name'> | null;
+    pending?: boolean;
+};
+
+export type MessageTemplatesPageProps = {
+    messageTemplates: MessageTemplateSummary[];
+    branches: Pick<BranchSummary, 'id' | 'organization_id' | 'name'>[];
+    organizations: OrganizationOption[];
+    orderStatuses: OrderStatusOption[];
+    supportedVariables: string[];
 };
