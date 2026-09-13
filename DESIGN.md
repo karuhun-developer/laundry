@@ -204,6 +204,12 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Focus is trapped and restored. Escape closes non-destructive dialogs.
 - Destructive confirmation names the affected record.
 
+### Demo login selector
+
+- Local development shows four compact role buttons above the login form.
+- Selecting a role only fills the email and shared demo password; the user still submits the normal Fortify form.
+- Production hides demo credentials through environment configuration.
+
 ## 6. Interaction and Motion
 
 - Motion communicates hierarchy, mutation progress, or spatial continuity.

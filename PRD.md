@@ -129,6 +129,7 @@ Deliverables:
 - Order creation, deterministic total calculation, and status tracking.
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.
 - Seeded demonstration data and documented API endpoints.
+- Deterministic demo credentials and role shortcuts on the local login screen.
 
 Exit criteria:
 

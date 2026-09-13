@@ -9,6 +9,10 @@ Every delivered feature receives a document in this directory. A feature documen
 | 1 | [Core operations](phase-1-core-operations.md) | In progress |
 | 2 | [Payments and receipts](phase-2-payments-and-receipts.md) | Planned |
 | 3 | [Communication and Android](phase-3-communication-and-android.md) | Planned |
+
+## Delivered feature notes
+
+- [Demo role authentication](06-demo-role-authentication.md)
 | 4 | [Reporting and scale](phase-4-reporting-and-scale.md) | Planned |
 
 ## Delivered feature contracts
