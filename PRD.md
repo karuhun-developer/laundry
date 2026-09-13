@@ -154,9 +154,18 @@ Deliverables:
 
 - Dynamic QRIS payload generation with CRC16-CCITT tests.
 - Scannable server-rendered QRIS SVG images while retaining the raw payment payload.
-- Payment state and reconciliation workflow.
+- Audited cash and QRIS payment state with optimistic reconciliation and canonical conflict refresh.
 - Bluetooth SPP and USB thermal printer capability through a Capacitor plugin.
-- ESC/POS receipt templates, printer profiles, test print, and digital receipt.
+- ESC/POS receipt templates, device-local printer profiles, discovery, test print, digital receipt, and reprint.
+
+Exit criteria:
+
+- A branch admin can record a full or partial cash payment and generate a dynamic QRIS payment.
+- A pending QRIS payment can be reconciled to paid or failed without leaving stale optimistic state.
+- A branch admin can load the canonical digital receipt and print it through a saved Bluetooth or USB profile.
+- Customers and branch admins see the canonical paid and outstanding totals on every order ticket.
+- Pest, Vitest, PHPStan, strict TypeScript checks, production build, and Capacitor sync pass.
+- Browser and representative Android printer/device checks remain the final release gate.
 
 ### Phase 3: Communication and Android distribution
 

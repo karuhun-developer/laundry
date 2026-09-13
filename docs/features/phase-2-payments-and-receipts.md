@@ -1,10 +1,10 @@
 # Phase 2: Payments and Receipts
 
-Status: In progress
+Status: Delivered
 
 ## Outcome
 
-Branch admins can accept a dynamic QRIS payment, record its state, and print or share a consistent receipt.
+Branch admins can record cash, present a dynamic QRIS payment, reconcile its state, and print a canonical receipt from the Android application.
 
 ## Scope
 
@@ -16,16 +16,51 @@ Branch admins can accept a dynamic QRIS payment, record its state, and print or 
 - Bluetooth SPP and USB printer profiles through a Capacitor transport boundary.
 - Printer discovery, connection, test print, and failure recovery.
 
+## Roles and authorization
+
+- Branch admins can create payments, reconcile pending payments, load receipts, and print orders in assigned branches.
+- Owners and superadmins retain API visibility within their policy scope, while the mobile payment controls remain optimized for branch operations.
+- Customers receive paid and outstanding totals through their canonical order resource but cannot mutate payment state.
+- Nested organization, branch, order, and payment bindings prevent cross-tenant or cross-branch access.
+
+## Payment rules
+
+- Cash payments are recorded as paid immediately; QRIS payments begin as pending and retain the generated raw payload and SVG data URI.
+- Full and partial payments are accepted only up to the current outstanding amount.
+- Paid totals include only payments in the paid state. Failed, cancelled, and refunded records remain in history without reducing the outstanding amount.
+- QRIS reconciliation appends an audited status event. Invalid or stale transitions return a conflict instead of overwriting the canonical state.
+- The mobile client applies payment mutations optimistically. Any failure restores the complete previous order and summary; conflicts fetch a fresh canonical order before another mutation.
+
+## API surface
+
+- `POST /api/v1/organizations/{organization}/branches/{branch}/orders/{order}/payments` records cash or creates a dynamic QRIS payment.
+- `POST /api/v1/organizations/{organization}/branches/{branch}/orders/{order}/payments/{payment}/status-events` reconciles an allowed payment transition.
+- `GET /api/v1/organizations/{organization}/branches/{branch}/orders/{order}/receipt` returns the canonical digital receipt snapshot.
+- Order resources include payment history, paid/outstanding summary, and branch QRIS capability.
+
 ## Delivered API contract
 
 QRIS payment resources expose both `qris_payload` and `qris_image_data_uri`. The image field is a server-rendered SVG data URI and is `null` for non-QRIS payments. Payment creation and reconciliation responses share this resource contract.
 
+The Android printer boundary supports Bluetooth SPP and USB device discovery. A saved profile contains connection type, native device identifier, display name, and paper width. The Vue layer sends encoded ESC/POS bytes through the Capacitor plugin and never implements an offline order cache.
+
+## Mobile interaction contract
+
+- Branch-admin order tickets expose one `Pembayaran & struk` dialog.
+- Pending QRIS takes precedence over payment entry so duplicate pending QR codes cannot be created.
+- Async outcomes are announced in a polite live region and controls remain disabled during the active mutation.
+- The digital receipt is fetched on demand before rendering or printing.
+- Printer configuration lives in the branch-admin account surface and remains local to that device.
+
 ## Verification
 
 - Pest covers dynamic payload creation, SVG image serialization, cash nullability, reconciliation, authorization, and invalid state transitions.
+- Vitest covers optimistic payment insertion, success reconciliation, rollback, conflict refresh failure, QRIS rendering, receipt actions, printer discovery, profile persistence, and print dispatch.
+- Strict Vue TypeScript checks, production bundling, PHPStan, and Capacitor sync are release gates.
 - Browser and Android device end-to-end checks remain deferred to the final release gate.
 
 ## Constraints
 
 - Production provider callbacks require the chosen acquirer's contract.
 - Printer certification requires representative Android devices and printer models.
+- Printer profiles intentionally use device-local storage and do not synchronize between users or devices.

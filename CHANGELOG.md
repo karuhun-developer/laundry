@@ -38,6 +38,11 @@ All notable changes to LaundryHub are documented here. The project follows phase
 ### Phase 2: Payments and receipts
 
 - Added server-rendered, scannable SVG data URIs to dynamic QRIS payment responses while preserving the raw QRIS payload.
+- Added branch-admin cash and QRIS payment controls with partial-payment support, payment history, and paid/outstanding order summaries.
+- Added optimistic payment creation and reconciliation with complete rollback, stale-tenant guards, and canonical refresh after state conflicts.
+- Added canonical digital receipt loading and ESC/POS reprint actions from each branch-admin order ticket.
+- Added Android Bluetooth SPP and USB printer discovery, device-local profiles, 58 mm and 80 mm receipt rendering, and test printing.
+- Added Vitest coverage for payment rollback, QRIS reconciliation, receipt actions, and printer behavior, plus Pest coverage for the mobile payment resource contract.
 
 ## Release policy
 

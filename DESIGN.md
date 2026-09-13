@@ -1,6 +1,6 @@
 # LaundryHub Design System
 
-Status: Phase 1 contract
+Status: Active product contract
 
 Last updated: 2026-09-13
 
@@ -243,6 +243,16 @@ Every primitive must be demonstrated in a development showcase before product sc
 - The QR image sits on an opaque white field with the renderer's four-module quiet zone intact.
 - Cash payments and unavailable QRIS states do not render an empty QR placeholder.
 - The raw QRIS payload remains an API field for diagnostics and provider handoff, but the customer-facing surface uses the generated image.
+
+### Payment reconciliation and receipt surface
+
+- Order tickets always show canonical paid and outstanding totals; payment controls are available only to authorized branch admins.
+- A pending QRIS payment occupies one focused panel with the scannable code and explicit `Tandai lunas` and `Tandai gagal` actions.
+- Cash and QRIS mutations update the order summary immediately, show a pending marker, and restore the complete canonical order when the API rejects or conflicts.
+- Conflict responses reload the order before another payment mutation; refresh failures keep the previous canonical order and expose both failure causes.
+- Digital receipts are loaded from the server immediately before viewing or printing so catalog and payment history are not reconstructed from stale client state.
+- Printer profiles are stored only on the current device and include connection type, device identity, display name, and 58 mm or 80 mm paper width.
+- Bluetooth and USB discovery, test print, and receipt print expose visible progress and recoverable inline errors. Browser surfaces explain that native printer transport requires the Android app.
 
 ## 6. Interaction and Motion
 

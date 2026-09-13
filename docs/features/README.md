@@ -7,7 +7,7 @@ Every delivered feature receives a document in this directory. A feature documen
 | Phase | Document | Status |
 | --- | --- | --- |
 | 1 | [Core operations](phase-1-core-operations.md) | Delivered |
-| 2 | [Payments and receipts](phase-2-payments-and-receipts.md) | In progress |
+| 2 | [Payments and receipts](phase-2-payments-and-receipts.md) | Delivered |
 | 3 | [Communication and Android](phase-3-communication-and-android.md) | Planned |
 | 4 | [Reporting and scale](phase-4-reporting-and-scale.md) | Planned |
 
