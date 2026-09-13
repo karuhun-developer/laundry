@@ -30,7 +30,10 @@ it('lets a customer create their own weighted order with a delivery snapshot', f
         'price_per_kilogram_rupiah' => 12000,
         'minimum_chargeable_grams' => 3000,
     ]);
-    $customer = User::factory()->create(['name' => 'Budi']);
+    $customer = User::factory()->create([
+        'name' => 'Budi',
+        'whatsapp_phone' => '6281234567890',
+    ]);
     $customer->assignRole(RoleName::Customer->value);
     Sanctum::actingAs($customer);
 
@@ -63,9 +66,17 @@ it('lets a customer create their own weighted order with a delivery snapshot', f
     $this->assertDatabaseHas('orders', [
         'customer_id' => $customer->id,
         'created_by_id' => $customer->id,
+        'customer_whatsapp_phone_snapshot' => '6281234567890',
         'items_subtotal_rupiah' => 36000,
         'delivery_fee_rupiah' => 6000,
         'total_rupiah' => 42000,
+    ]);
+
+    $customer->update(['whatsapp_phone' => '6289876543210']);
+
+    $this->assertDatabaseHas('orders', [
+        'customer_id' => $customer->id,
+        'customer_whatsapp_phone_snapshot' => '6281234567890',
     ]);
     $this->assertDatabaseHas('order_items', [
         'price_option_id' => $priceOption->id,

@@ -4,6 +4,7 @@ namespace App\Data;
 
 use App\Enums\RoleName;
 use App\Http\Requests\Cms\StoreUserRequest;
+use App\Services\WhatsAppPhoneNormalizer;
 
 final readonly class UserAccessData
 {
@@ -12,6 +13,7 @@ final readonly class UserAccessData
         public int $organizationId,
         public string $name,
         public string $email,
+        public ?string $whatsappPhone,
         public string $password,
         public RoleName $role,
         public array $branchIds,
@@ -28,6 +30,11 @@ final readonly class UserAccessData
             organizationId: $request->organizationId(),
             name: $request->string('name')->toString(),
             email: $request->string('email')->toString(),
+            whatsappPhone: app(WhatsAppPhoneNormalizer::class)->normalize(
+                $request->filled('whatsapp_phone')
+                    ? $request->string('whatsapp_phone')->toString()
+                    : null,
+            ),
             password: $request->string('password')->toString(),
             role: RoleName::from($request->string('role')->toString()),
             branchIds: $branchIds,

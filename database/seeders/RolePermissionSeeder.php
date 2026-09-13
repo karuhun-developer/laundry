@@ -32,6 +32,7 @@ class RolePermissionSeeder extends Seeder
             PermissionName::ManageUsers->value,
             PermissionName::ManageCatalog->value,
             PermissionName::ManageOrders->value,
+            PermissionName::ManageMessageTemplates->value,
             PermissionName::UpdateOrderStatus->value,
             PermissionName::ViewAudit->value,
         ]);

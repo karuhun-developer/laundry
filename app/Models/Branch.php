@@ -81,6 +81,12 @@ class Branch extends Model implements HasMedia
         return $this->hasMany(Order::class);
     }
 
+    /** @return HasMany<MessageTemplate, $this> */
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('logo')->singleFile();

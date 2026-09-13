@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderReceiptController;
 use App\Http\Controllers\Api\V1\OrderStatusEventController;
 use App\Http\Controllers\Api\V1\OrderTrackingController;
+use App\Http\Controllers\Api\V1\OrderWhatsAppSuggestionController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentStatusEventController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
@@ -51,6 +52,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     )->middleware('auth:sanctum')
         ->scopeBindings()
         ->name('organizations.branches.orders.status-events.store');
+    Route::get(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/whatsapp-suggestion',
+        OrderWhatsAppSuggestionController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.whatsapp-suggestion.show');
     Route::post(
         'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments',
         PaymentController::class,

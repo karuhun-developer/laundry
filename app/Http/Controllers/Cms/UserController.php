@@ -36,7 +36,7 @@ class UserController extends Controller
                 ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
                 ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'superadmin'))
                 ->orderBy('name')
-                ->get(['id', 'organization_id', 'name', 'email']),
+                ->get(['id', 'organization_id', 'name', 'email', 'whatsapp_phone']),
             'branches' => Branch::query()
                 ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
                 ->orderBy('name')

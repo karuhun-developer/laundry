@@ -15,6 +15,7 @@ final class CreateUserWithAccess
                 'organization_id' => $data->organizationId,
                 'name' => $data->name,
                 'email' => $data->email,
+                'whatsapp_phone' => $data->whatsappPhone,
                 'password' => $data->password,
             ]);
 

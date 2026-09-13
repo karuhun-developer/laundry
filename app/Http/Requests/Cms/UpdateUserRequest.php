@@ -4,6 +4,7 @@ namespace App\Http\Requests\Cms;
 
 use App\Enums\RoleName;
 use App\Models\User;
+use App\Rules\ValidWhatsAppPhone;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,6 +36,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($managedUser)],
+            'whatsapp_phone' => ['nullable', 'string', 'max:24', new ValidWhatsAppPhone],
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::in($roles)],
             'branch_ids' => [

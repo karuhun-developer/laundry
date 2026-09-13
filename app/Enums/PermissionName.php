@@ -9,6 +9,7 @@ enum PermissionName: string
     case ManageUsers = 'manage users';
     case ManageCatalog = 'manage catalog';
     case ManageOrders = 'manage orders';
+    case ManageMessageTemplates = 'manage message templates';
     case UpdateOrderStatus = 'update order status';
     case ViewAudit = 'view audit';
 }

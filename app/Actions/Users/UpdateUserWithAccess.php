@@ -15,6 +15,7 @@ final class UpdateUserWithAccess
             $attributes = [
                 'name' => $data->name,
                 'email' => $data->email,
+                'whatsapp_phone' => $data->whatsappPhone,
             ];
 
             if ($data->password !== null) {

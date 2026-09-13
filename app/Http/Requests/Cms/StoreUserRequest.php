@@ -4,6 +4,7 @@ namespace App\Http\Requests\Cms;
 
 use App\Enums\RoleName;
 use App\Models\User;
+use App\Rules\ValidWhatsAppPhone;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -40,6 +41,7 @@ class StoreUserRequest extends FormRequest
             ],
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'whatsapp_phone' => ['nullable', 'string', 'max:24', new ValidWhatsAppPhone],
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::in($roles)],
             'branch_ids' => [

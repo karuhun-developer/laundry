@@ -76,6 +76,7 @@ final readonly class CreateOrder
                 'created_by_id' => $actor->id,
                 'status' => OrderStatus::Received,
                 'customer_name_snapshot' => $customer->name,
+                'customer_whatsapp_phone_snapshot' => $customer->whatsapp_phone,
                 'customer_latitude' => $data->customerLatitude,
                 'customer_longitude' => $data->customerLongitude,
                 'delivery_distance_meters' => $deliveryQuote?->distanceMeters,

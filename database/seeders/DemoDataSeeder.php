@@ -92,6 +92,9 @@ class DemoDataSeeder extends Seeder
                 [
                     'organization_id' => $organizationId,
                     'name' => $account['name'],
+                    'whatsapp_phone' => $account['role'] === RoleName::Customer->value
+                        ? '6281234567890'
+                        : null,
                     'email_verified_at' => now(),
                     'password' => DemoAccounts::PASSWORD,
                 ],

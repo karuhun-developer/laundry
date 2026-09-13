@@ -40,6 +40,12 @@ class Organization extends Model
         return $this->hasMany(Order::class);
     }
 
+    /** @return HasMany<MessageTemplate, $this> */
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class);
+    }
+
     /** @return HasMany<User, $this> */
     public function users(): HasMany
     {

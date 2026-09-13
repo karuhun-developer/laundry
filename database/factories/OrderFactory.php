@@ -31,6 +31,7 @@ class OrderFactory extends Factory
             'order_number' => fake()->unique()->bothify('LDR-########-########'),
             'status' => OrderStatus::Received,
             'customer_name_snapshot' => fake()->name(),
+            'customer_whatsapp_phone_snapshot' => null,
             'customer_latitude' => null,
             'customer_longitude' => null,
             'delivery_distance_meters' => null,

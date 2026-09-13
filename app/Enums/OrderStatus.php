@@ -31,6 +31,20 @@ enum OrderStatus: string
         return $this === self::Completed || $this === self::Cancelled;
     }
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::Received => 'Diterima',
+            self::Weighed => 'Ditimbang',
+            self::Washing => 'Dicuci',
+            self::Drying => 'Dikeringkan',
+            self::Ironing => 'Disetrika',
+            self::ReadyForPickup => 'Siap diambil',
+            self::Completed => 'Selesai',
+            self::Cancelled => 'Dibatalkan',
+        };
+    }
+
     private function nextStatus(): ?self
     {
         return match ($this) {

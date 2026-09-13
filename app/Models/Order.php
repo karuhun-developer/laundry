@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $order_number
  * @property OrderStatus $status
  * @property string $customer_name_snapshot
+ * @property string|null $customer_whatsapp_phone_snapshot
  * @property float|null $customer_latitude
  * @property float|null $customer_longitude
  * @property int|null $delivery_distance_meters
@@ -42,6 +43,7 @@ use Illuminate\Support\Carbon;
     'order_number',
     'status',
     'customer_name_snapshot',
+    'customer_whatsapp_phone_snapshot',
     'customer_latitude',
     'customer_longitude',
     'delivery_distance_meters',
