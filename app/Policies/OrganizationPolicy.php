@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Models\Organization;
 use App\Models\User;
 
@@ -13,7 +14,8 @@ class OrganizationPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can(PermissionName::ManageOrganizations->value);
+        return $user->hasRole(RoleName::Superadmin->value)
+            && $user->can(PermissionName::ManageOrganizations->value);
     }
 
     /**
@@ -21,7 +23,7 @@ class OrganizationPolicy
      */
     public function view(User $user, Organization $organization): bool
     {
-        return $user->can(PermissionName::ManageOrganizations->value);
+        return $this->viewAny($user);
     }
 
     /**
@@ -29,7 +31,7 @@ class OrganizationPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can(PermissionName::ManageOrganizations->value);
+        return $this->viewAny($user);
     }
 
     /**
@@ -37,7 +39,7 @@ class OrganizationPolicy
      */
     public function update(User $user, Organization $organization): bool
     {
-        return $user->can(PermissionName::ManageOrganizations->value);
+        return $this->viewAny($user);
     }
 
     /**
@@ -45,7 +47,7 @@ class OrganizationPolicy
      */
     public function delete(User $user, Organization $organization): bool
     {
-        return $user->can(PermissionName::ManageOrganizations->value);
+        return $this->viewAny($user);
     }
 
     /**

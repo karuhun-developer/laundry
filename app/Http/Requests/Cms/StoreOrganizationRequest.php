@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Cms;
 
-use App\Enums\PermissionName;
+use App\Models\Organization;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -15,7 +15,7 @@ class StoreOrganizationRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(PermissionName::ManageOrganizations->value) === true;
+        return $this->user()?->can('create', Organization::class) === true;
     }
 
     /**
@@ -27,7 +27,7 @@ class StoreOrganizationRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:120'],
-            'slug' => ['nullable', 'string', 'max:120', Rule::unique('organizations', 'slug')],
+            'slug' => ['required', 'string', 'max:120', Rule::unique('organizations', 'slug')],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

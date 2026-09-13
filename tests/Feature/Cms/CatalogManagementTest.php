@@ -65,6 +65,37 @@ it('allows a superadmin to target an organization when creating a service', func
     ]);
 });
 
+it('forbids an owner without an organization from creating services', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)->post(route('cms.services.store'), [
+        'organization_id' => $organization->id,
+        'name' => 'Layanan Silang',
+        'code' => 'SILANG',
+    ])->assertForbidden();
+
+    $this->assertDatabaseMissing('services', ['code' => 'SILANG']);
+});
+
+it('forbids an owner without an organization from creating price options', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $owner = User::factory()->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)->post(route('cms.services.price-options.store', $service), [
+        'branch_id' => $branch->id,
+        'type' => PriceType::PerKilogram->value,
+        'name' => 'Tarif Silang',
+        'price_per_kilogram_rupiah' => 12000,
+    ])->assertForbidden();
+
+    $this->assertDatabaseMissing('price_options', ['name' => 'Tarif Silang']);
+});
+
 it('rejects cross-tenant branch prices and services', function (): void {
     $organization = Organization::factory()->create();
     $otherOrganization = Organization::factory()->create();

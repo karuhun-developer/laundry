@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Cms;
 
+use App\Enums\RoleName;
 use App\Models\Service;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -35,7 +36,7 @@ class StoreServiceRequest extends FormRequest
 
         return [
             'organization_id' => [
-                Rule::requiredIf($this->user()?->organization_id === null),
+                Rule::requiredIf($this->user()?->hasRole(RoleName::Superadmin->value) === true),
                 'nullable',
                 'integer',
                 'exists:organizations,id',
@@ -54,6 +55,8 @@ class StoreServiceRequest extends FormRequest
 
     public function organizationId(): int
     {
-        return (int) ($this->user()->organization_id ?? $this->integer('organization_id'));
+        return $this->user()->hasRole(RoleName::Superadmin->value)
+            ? $this->integer('organization_id')
+            : (int) $this->user()->organization_id;
     }
 }

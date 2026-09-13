@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Models\Service;
 use App\Models\User;
 
@@ -13,7 +14,8 @@ class ServicePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can(PermissionName::ManageCatalog->value);
+        return $user->can(PermissionName::ManageCatalog->value)
+            && ($user->hasRole(RoleName::Superadmin->value) || $user->organization_id !== null);
     }
 
     /**
@@ -22,7 +24,9 @@ class ServicePolicy
     public function view(User $user, Service $service): bool
     {
         return $user->can(PermissionName::ManageCatalog->value)
-            && ($user->organization_id === null || $user->organization_id === $service->organization_id);
+            && ($user->hasRole(RoleName::Superadmin->value)
+                || ($user->organization_id !== null
+                    && $user->organization_id === $service->organization_id));
     }
 
     /**
@@ -30,7 +34,7 @@ class ServicePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can(PermissionName::ManageCatalog->value);
+        return $this->viewAny($user);
     }
 
     /**

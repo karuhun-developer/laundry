@@ -45,8 +45,15 @@ class OrderPolicy
                 || $user->organization_id === $organization->id;
         }
 
-        if (! $user->can(PermissionName::ManageOrders->value)
-            || ($user->organization_id !== null && $user->organization_id !== $organization->id)) {
+        if (! $user->can(PermissionName::ManageOrders->value)) {
+            return false;
+        }
+
+        if ($user->hasRole(RoleName::Superadmin->value)) {
+            return true;
+        }
+
+        if ($user->organization_id === null || $user->organization_id !== $organization->id) {
             return false;
         }
 
@@ -54,7 +61,7 @@ class OrderPolicy
             return $user->branches()->whereKey($branch->id)->exists();
         }
 
-        return true;
+        return $user->hasRole(RoleName::Owner->value);
     }
 
     /**

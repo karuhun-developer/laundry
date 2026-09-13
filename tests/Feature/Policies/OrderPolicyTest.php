@@ -34,6 +34,9 @@ it('enforces the complete role and tenant matrix for order creation', function (
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
+    $orphanOwner = User::factory()->create();
+    $orphanOwner->assignRole(RoleName::Owner->value);
+
     $unprivileged = User::factory()->create();
 
     expect(Gate::forUser($owner)->allows('create', [Order::class, $organization, $branch]))
@@ -50,6 +53,8 @@ it('enforces the complete role and tenant matrix for order creation', function (
         ->toBeFalse()
         ->and(Gate::forUser($superadmin)->allows('create', [Order::class, $organization, $branch]))
         ->toBeTrue()
+        ->and(Gate::forUser($orphanOwner)->allows('create', [Order::class, $organization, $branch]))
+        ->toBeFalse()
         ->and(Gate::forUser($unprivileged)->allows('create', [Order::class, $organization, $branch]))
         ->toBeFalse();
 });

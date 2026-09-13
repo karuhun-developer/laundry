@@ -13,7 +13,8 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can(PermissionName::ManageUsers->value);
+        return $user->can(PermissionName::ManageUsers->value)
+            && ($user->hasRole(RoleName::Superadmin->value) || $user->organization_id !== null);
     }
 
     /**
@@ -23,7 +24,9 @@ class UserPolicy
     {
         return $user->can(PermissionName::ManageUsers->value)
             && ! $model->hasRole(RoleName::Superadmin->value)
-            && ($user->organization_id === null || $user->organization_id === $model->organization_id);
+            && ($user->hasRole(RoleName::Superadmin->value)
+                || ($user->organization_id !== null
+                    && $user->organization_id === $model->organization_id));
     }
 
     /**
@@ -31,7 +34,7 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can(PermissionName::ManageUsers->value);
+        return $this->viewAny($user);
     }
 
     /**

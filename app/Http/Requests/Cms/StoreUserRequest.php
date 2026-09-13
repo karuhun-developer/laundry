@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Cms;
 
-use App\Enums\PermissionName;
 use App\Enums\RoleName;
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,7 +16,7 @@ class StoreUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(PermissionName::ManageUsers->value) === true;
+        return $this->user()?->can('create', User::class) === true;
     }
 
     /**
@@ -33,7 +33,7 @@ class StoreUserRequest extends FormRequest
 
         return [
             'organization_id' => [
-                Rule::requiredIf($this->user()?->organization_id === null),
+                Rule::requiredIf($this->user()?->hasRole(RoleName::Superadmin->value) === true),
                 'nullable',
                 'integer',
                 'exists:organizations,id',
@@ -57,6 +57,8 @@ class StoreUserRequest extends FormRequest
 
     public function organizationId(): int
     {
-        return (int) ($this->user()->organization_id ?? $this->integer('organization_id'));
+        return $this->user()->hasRole(RoleName::Superadmin->value)
+            ? $this->integer('organization_id')
+            : (int) $this->user()->organization_id;
     }
 }

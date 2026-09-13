@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\User;
 
@@ -13,7 +14,8 @@ class BranchPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can(PermissionName::ManageBranches->value);
+        return $user->can(PermissionName::ManageBranches->value)
+            && ($user->hasRole(RoleName::Superadmin->value) || $user->organization_id !== null);
     }
 
     /**
@@ -22,7 +24,9 @@ class BranchPolicy
     public function view(User $user, Branch $branch): bool
     {
         return $user->can(PermissionName::ManageBranches->value)
-            && ($user->organization_id === null || $user->organization_id === $branch->organization_id);
+            && ($user->hasRole(RoleName::Superadmin->value)
+                || ($user->organization_id !== null
+                    && $user->organization_id === $branch->organization_id));
     }
 
     /**
@@ -30,7 +34,7 @@ class BranchPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can(PermissionName::ManageBranches->value);
+        return $this->viewAny($user);
     }
 
     /**

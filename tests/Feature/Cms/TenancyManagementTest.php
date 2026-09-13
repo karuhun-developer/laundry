@@ -58,6 +58,19 @@ it('rejects a generated organization slug that already exists', function (): voi
     expect(Organization::query()->count())->toBe(1);
 });
 
+it('rejects a supplied organization slug that normalizes to an empty value', function (): void {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
+        'name' => 'Karuhun Laundry',
+        'slug' => '---',
+        'is_active' => true,
+    ])->assertSessionHasErrors('slug');
+
+    $this->assertDatabaseCount('organizations', 0);
+});
+
 it('renders organization management only for superadmins', function (): void {
     $organization = Organization::factory()->create();
     Branch::factory()->for($organization)->create();
@@ -187,6 +200,54 @@ it('lets a superadmin view branches across organizations', function (): void {
             ->has('cities', 2)
             ->has('organizations', 2));
 });
+
+it('forbids an owner without an organization from tenant management pages', function (string $routeName): void {
+    $owner = User::factory()->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)
+        ->get(route($routeName))
+        ->assertForbidden();
+})->with([
+    'branches' => 'cms.branches.index',
+    'users' => 'cms.users.index',
+]);
+
+it('forbids an owner without an organization from creating tenant records', function (string $resource): void {
+    $organization = Organization::factory()->create();
+    $city = City::factory()->for($organization)->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    [$routeName, $payload] = match ($resource) {
+        'city' => ['cms.cities.store', [
+            'organization_id' => $organization->id,
+            'name' => 'Jakarta',
+            'province' => 'DKI Jakarta',
+        ]],
+        'branch' => ['cms.branches.store', [
+            'organization_id' => $organization->id,
+            'city_id' => $city->id,
+            'name' => 'Cabang Silang',
+            'code' => 'BAD01',
+            'address' => 'Alamat lain',
+        ]],
+        'user' => ['cms.users.store', [
+            'organization_id' => $organization->id,
+            'name' => 'Admin Silang',
+            'email' => 'admin-silang@example.test',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'role' => RoleName::BranchAdmin->value,
+            'branch_ids' => [$branch->id],
+        ]],
+    };
+
+    $this->actingAs($owner)
+        ->post(route($routeName), $payload)
+        ->assertForbidden();
+})->with(['city', 'branch', 'user']);
 
 it('rejects branch assignments from another organization', function (): void {
     $organization = Organization::factory()->create();

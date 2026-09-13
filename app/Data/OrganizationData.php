@@ -3,7 +3,6 @@
 namespace App\Data;
 
 use App\Http\Requests\Cms\StoreOrganizationRequest;
-use Illuminate\Support\Str;
 
 final readonly class OrganizationData
 {
@@ -15,12 +14,9 @@ final readonly class OrganizationData
 
     public static function fromRequest(StoreOrganizationRequest $request): self
     {
-        $name = $request->string('name')->toString();
-        $slug = $request->string('slug')->toString();
-
         return new self(
-            name: $name,
-            slug: $slug !== '' ? Str::slug($slug) : Str::slug($name),
+            name: $request->string('name')->toString(),
+            slug: $request->string('slug')->toString(),
             isActive: $request->boolean('is_active', true),
         );
     }

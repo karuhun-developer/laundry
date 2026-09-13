@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Models\PriceOption;
 use App\Models\Service;
 use App\Models\User;
@@ -14,7 +15,8 @@ class PriceOptionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can(PermissionName::ManageCatalog->value);
+        return $user->can(PermissionName::ManageCatalog->value)
+            && ($user->hasRole(RoleName::Superadmin->value) || $user->organization_id !== null);
     }
 
     /**
@@ -23,8 +25,9 @@ class PriceOptionPolicy
     public function view(User $user, PriceOption $priceOption): bool
     {
         return $user->can(PermissionName::ManageCatalog->value)
-            && ($user->organization_id === null
-                || $user->organization_id === $priceOption->service->organization_id);
+            && ($user->hasRole(RoleName::Superadmin->value)
+                || ($user->organization_id !== null
+                    && $user->organization_id === $priceOption->service->organization_id));
     }
 
     /**
@@ -33,7 +36,9 @@ class PriceOptionPolicy
     public function create(User $user, Service $service): bool
     {
         return $user->can(PermissionName::ManageCatalog->value)
-            && ($user->organization_id === null || $user->organization_id === $service->organization_id);
+            && ($user->hasRole(RoleName::Superadmin->value)
+                || ($user->organization_id !== null
+                    && $user->organization_id === $service->organization_id));
     }
 
     /**
