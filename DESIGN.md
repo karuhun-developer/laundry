@@ -206,6 +206,10 @@ Every primitive must be demonstrated in a development showcase before product sc
 
 ### Demo login selector
 
+- Authentication uses the split layout on large screens and collapses to a focused single-column form on compact screens.
+- Authentication surfaces use the `brand-*`, `surface-*`, and `ink-*` tokens with Poppins headings and Inter controls.
+- Authentication is intentionally scoped to the light LaundryHub palette so system dark-mode preferences cannot reduce contrast on the white form surface.
+- Default auth inputs, buttons, links, and password visibility controls expose a minimum 44 px interaction target and retain natural DOM tab order.
 - Local development shows four compact role buttons above the login form.
 - Selecting a role only fills the email and shared demo password; the user still submits the normal Fortify form.
 - Production hides demo credentials through environment configuration.

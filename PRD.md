@@ -130,6 +130,7 @@ Deliverables:
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.
 - Seeded demonstration data and documented API endpoints.
 - Deterministic demo credentials and role shortcuts on the local login screen.
+- Responsive split authentication shell with product context on wide screens and a focused single-column form on compact screens.
 
 Exit criteria:
 

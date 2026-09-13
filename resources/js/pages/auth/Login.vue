@@ -55,17 +55,17 @@ const useDemoAccount = (account: DemoAccount): void => {
 
     <div
         v-if="demoAccounts.length > 0"
-        class="rounded-2xl border border-blue-100 bg-blue-50/80 p-4"
+        class="border-brand-100 bg-surface-blue rounded-2xl border p-4"
     >
         <div class="mb-3 flex items-center justify-between gap-3">
             <div>
-                <p class="text-sm font-semibold text-slate-900">Akun demo</p>
-                <p class="text-xs text-slate-500">
+                <p class="text-ink-950 text-sm font-semibold">Akun demo</p>
+                <p class="text-ink-500 text-xs">
                     Pilih role untuk mengisi form otomatis.
                 </p>
             </div>
             <span
-                class="rounded-full bg-white px-2.5 py-1 font-mono text-xs font-medium text-blue-700 shadow-sm"
+                class="bg-surface text-brand-700 rounded-full px-2.5 py-1 font-mono text-xs font-medium shadow-sm"
             >
                 {{ demoPassword }}
             </span>
@@ -75,7 +75,7 @@ const useDemoAccount = (account: DemoAccount): void => {
                 v-for="account in demoAccounts"
                 :key="account.role"
                 type="button"
-                class="min-h-11 rounded-xl border border-blue-100 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                class="border-brand-100 bg-surface text-ink-700 hover:border-brand-600 hover:text-brand-700 focus-visible:outline-brand-600 min-h-11 rounded-xl border px-3 py-2 text-left text-xs font-semibold shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2"
                 @click="useDemoAccount(account)"
             >
                 {{ account.label }}
@@ -101,7 +101,6 @@ const useDemoAccount = (account: DemoAccount): void => {
                     v-model="email"
                     required
                     autofocus
-                    :tabindex="1"
                     autocomplete="email"
                     placeholder="nama@email.com"
                 />
@@ -115,7 +114,6 @@ const useDemoAccount = (account: DemoAccount): void => {
                         v-if="canResetPassword"
                         :href="request()"
                         class="text-sm"
-                        :tabindex="5"
                     >
                         Lupa kata sandi?
                     </TextLink>
@@ -125,7 +123,6 @@ const useDemoAccount = (account: DemoAccount): void => {
                     name="password"
                     v-model="password"
                     required
-                    :tabindex="2"
                     autocomplete="current-password"
                     placeholder="Kata sandi"
                 />
@@ -133,8 +130,11 @@ const useDemoAccount = (account: DemoAccount): void => {
             </div>
 
             <div class="flex items-center justify-between">
-                <Label for="remember" class="flex items-center space-x-3">
-                    <Checkbox id="remember" name="remember" :tabindex="3" />
+                <Label
+                    for="remember"
+                    class="flex min-h-11 cursor-pointer items-center space-x-3"
+                >
+                    <Checkbox id="remember" name="remember" />
                     <span>Ingat saya</span>
                 </Label>
             </div>
@@ -142,7 +142,6 @@ const useDemoAccount = (account: DemoAccount): void => {
             <Button
                 type="submit"
                 class="mt-4 w-full"
-                :tabindex="4"
                 :disabled="processing"
                 data-test="login-button"
             >
@@ -153,7 +152,7 @@ const useDemoAccount = (account: DemoAccount): void => {
 
         <div class="text-muted-foreground text-center text-sm">
             Belum punya akun?
-            <TextLink :href="register()" :tabindex="5">Daftar</TextLink>
+            <TextLink :href="register()">Daftar</TextLink>
         </div>
     </Form>
 </template>

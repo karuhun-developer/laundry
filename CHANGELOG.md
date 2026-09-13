@@ -13,6 +13,7 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Added authenticated order creation for customers and authorized staff with tenant isolation, immutable catalog and delivery snapshots, initial status history, and audited server-calculated totals.
 - Added authenticated order detail tracking and authorized, row-locked status transitions with append-only timelines, audit records, tenant isolation, and optimistic reconciliation responses.
 - Added idempotent demo accounts for customer, branch-admin, owner, and superadmin roles with one-tap local login selection.
+- Changed authentication pages to use the responsive split layout.
 
 ## Release policy
 
