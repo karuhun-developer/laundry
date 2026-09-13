@@ -16,6 +16,7 @@ Owners can manage tenant-safe WhatsApp templates, branch admins receive an expli
 - Explicit preview and open actions without silent background sending.
 - A native Capacitor external-link bridge restricted to the exact `https://wa.me` origin.
 - LaundryHub launcher icons, adaptive icon resources, splash assets, and an Android release guide.
+- Tag-gated CI/CD for signed APK/AAB builds and changelog-backed GitHub Releases.
 
 ## Roles and authorization
 
@@ -64,6 +65,7 @@ Owners can manage tenant-safe WhatsApp templates, branch admins receive an expli
 - Vitest covers CMS template prefill and variable insertion, optimistic transition success/rollback, stale suggestion clearing, dialog behavior, browser delegation, native delegation, and the external-link allowlist.
 - Strict TypeScript, PHPStan, Pint, Biome, production bundling, and Capacitor sync are release gates.
 - Android launcher and splash assets were inspected directly at generated resource sizes. Browser end-to-end, emulator, and Gradle/device builds remain final release checks.
+- Stable semantic-version tags are accepted only when `CHANGELOG.md` contains matching non-empty release notes and all production URL/signing values are configured in GitHub Actions.
 
 ## Constraints
 

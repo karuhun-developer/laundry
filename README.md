@@ -32,3 +32,5 @@ Application use cases belong in Action classes and receive typed DTOs. Controlle
 ## Repository workflow
 
 Each independently reversible feature is committed atomically. User-visible changes are recorded in CHANGELOG.md, and each feature maintains its contract under docs/features.
+
+Signed Android APK/AAB releases are built from stable semantic-version tags. Before pushing a release tag, configure the `PRODUCTION_APP_URL` GitHub Actions variable plus the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` secrets. The full changelog format and release procedure are documented in [docs/android-release.md](docs/android-release.md).

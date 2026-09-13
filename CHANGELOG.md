@@ -53,6 +53,7 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Added LaundryHub launcher, adaptive-icon, and portrait/landscape splash assets for Android.
 - Added Android signing and physical-device release guidance.
 - Added Pest and Vitest coverage for tenant authorization, template precedence and validation, phone snapshots, suggestion generation, optimistic rollback, dialog behavior, and external-link validation.
+- Added tag-gated Android CI/CD that validates release metadata, runs Pest and Vitest, builds signed APK/AAB artifacts, publishes checksums, and creates or updates the matching GitHub Release.
 
 ## Release policy
 
@@ -60,3 +61,5 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - `Changed` for behavior changes.
 - `Fixed` for defect corrections.
 - `Security` for authorization, privacy, and dependency security changes.
+- Every Android release tag must use `vMAJOR.MINOR.PATCH` and have a non-empty matching `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD` section before the tag is pushed.
+- Move the release's completed entries out of `[Unreleased]` into that versioned section; its contents become the GitHub Release notes.
