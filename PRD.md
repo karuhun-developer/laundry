@@ -4,7 +4,7 @@ Status: Active
 
 Owner: Product and Engineering
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
 
 ## Product summary
 
@@ -191,10 +191,17 @@ Exit criteria:
 
 ### Phase 4: Reporting and scale
 
-Deliverables:
+Status: In progress
 
-- Revenue, order volume, turnaround time, and branch comparison reports.
-- Exports, saved filters, and owner dashboards.
+Delivered:
+
+- Owner and superadmin dashboards for paid revenue, order volume, turnaround time, cancellations, and branch comparison.
+- Date, global city, organization, branch, service, and status filters with owner tenant locking.
+- UTF-8 CSV export using the exact applied dashboard filters.
+
+Remaining deliverables:
+
+- Saved report views.
 - Operational monitoring, retention controls, and scale hardening for MySQL.
 
 ## Explicitly out of scope for Phase 1

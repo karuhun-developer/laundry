@@ -55,6 +55,13 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Added Pest and Vitest coverage for tenant authorization, template precedence and validation, phone snapshots, suggestion generation, optimistic rollback, dialog behavior, and external-link validation.
 - Added tag-gated Android CI/CD that validates release metadata, runs Pest and Vitest, builds signed APK/AAB artifacts, publishes checksums, and creates or updates the matching GitHub Release.
 
+### Phase 4: Reporting and scale
+
+- Added an owner and superadmin operations dashboard for paid revenue, order volume, turnaround time, cancellations, and branch comparison.
+- Added date, global city, organization, branch, service, and order-status filters with tenant-safe option validation.
+- Added tenant-isolated UTF-8 CSV exports that use the dashboard's applied filters and metric definitions.
+- Added Pest and Vitest coverage for report authorization, calculations, filters, exports, query serialization, and responsive option filtering.
+
 ## Release policy
 
 - `Added` for new behavior.

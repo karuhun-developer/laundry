@@ -2,7 +2,7 @@
 
 Status: Active product contract
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
 
 ## 0. Research Log
 
@@ -142,6 +142,16 @@ Components respond to their container where possible; viewport breakpoints own o
 - Dependency conflicts and validation errors keep the delete dialog open so the actor can recover without losing context.
 - Empty tenant and location states explain the prerequisite action instead of presenting a disabled control without context.
 - Desktop comparison tables become record cards before they would require horizontal page scrolling. Long names, email addresses, slugs, and addresses truncate or wrap inside their own surface.
+
+### Reporting dashboard
+
+- Filters appear in one bordered surface above the metrics. Date fields lead, superadmins receive an organization selector, and the shared global city selector never depends on an organization selection.
+- Owner requests are locked to the authenticated organization even though the organization field is absent from the interface. Branch and service options narrow to the effective organization, while branch options also narrow to the selected city.
+- Four summary cards show paid revenue, order count, average turnaround, and cancellation count with rate. Paid revenue includes only payments whose current status is paid.
+- Turnaround measures order creation to the first completed status event. Orders without a completed event are excluded from the average, and a missing average is labeled `Belum tersedia`.
+- Branches without matching orders remain visible with zero metrics so an empty operational result is distinguishable from an excluded branch.
+- Wide screens use a comparison table with tabular numerals. Below the wide breakpoint, each branch becomes a compact card and the page never relies on horizontal scrolling.
+- CSV download uses the last successfully applied filters, includes a UTF-8 BOM for spreadsheet compatibility, and preserves the same metric definitions and tenant boundary as the dashboard.
 
 ### Order tracking and optimistic transitions
 
