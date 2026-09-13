@@ -42,7 +42,12 @@ class StoreUserRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::in($roles)],
-            'branch_ids' => ['array'],
+            'branch_ids' => [
+                Rule::requiredIf($this->string('role')->toString() === RoleName::BranchAdmin->value),
+                Rule::prohibitedIf($this->string('role')->toString() !== RoleName::BranchAdmin->value),
+                'array',
+                'min:1',
+            ],
             'branch_ids.*' => [
                 'integer',
                 Rule::exists('branches', 'id')->where('organization_id', $organizationId),

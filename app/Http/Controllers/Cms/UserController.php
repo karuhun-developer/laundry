@@ -25,7 +25,7 @@ class UserController extends Controller
 
         return Inertia::render('cms/Users', [
             'users' => User::query()
-                ->with(['roles:id,name', 'branches:id,name'])
+                ->with(['organization:id,name', 'roles:id,name', 'branches:id,name'])
                 ->when($actor->organization_id !== null, fn ($query) => $query->where('organization_id', $actor->organization_id))
                 ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'superadmin'))
                 ->orderBy('name')

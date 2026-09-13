@@ -5,6 +5,7 @@ namespace App\Http\Requests\Cms;
 use App\Enums\PermissionName;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class StoreBranchRequest extends FormRequest
@@ -58,5 +59,14 @@ class StoreBranchRequest extends FormRequest
     public function organizationId(): int
     {
         return (int) ($this->user()->organization_id ?? $this->integer('organization_id'));
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('code')) {
+            $this->merge([
+                'code' => Str::upper($this->string('code')->toString()),
+            ]);
+        }
     }
 }

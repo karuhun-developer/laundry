@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { Building2, LayoutGrid, MapPinned, UsersRound } from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -15,28 +15,51 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as branchesIndex } from '@/routes/cms/branches';
+import { index as organizationsIndex } from '@/routes/cms/organizations';
+import { index as usersIndex } from '@/routes/cms/users';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const page = usePage();
+const roles = computed(() => page.props.auth.user.roles);
+const canManageTenant = computed(
+    () => roles.value.includes('superadmin') || roles.value.includes('owner'),
+);
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
+const mainNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+    ];
+
+    if (roles.value.includes('superadmin')) {
+        items.push({
+            title: 'Organisasi',
+            href: organizationsIndex(),
+            icon: Building2,
+        });
+    }
+
+    if (canManageTenant.value) {
+        items.push(
+            {
+                title: 'Kota & cabang',
+                href: branchesIndex(),
+                icon: MapPinned,
+            },
+            {
+                title: 'Pengguna & akses',
+                href: usersIndex(),
+                icon: UsersRound,
+            },
+        );
+    }
+
+    return items;
+});
 </script>
 
 <template>
@@ -54,11 +77,10 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :items="mainNavItems" label="Operasional" />
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

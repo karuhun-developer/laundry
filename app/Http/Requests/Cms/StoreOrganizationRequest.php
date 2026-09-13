@@ -5,6 +5,7 @@ namespace App\Http\Requests\Cms;
 use App\Enums\PermissionName;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class StoreOrganizationRequest extends FormRequest
@@ -29,5 +30,16 @@ class StoreOrganizationRequest extends FormRequest
             'slug' => ['nullable', 'string', 'max:120', Rule::unique('organizations', 'slug')],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $source = $this->filled('slug')
+            ? $this->string('slug')->toString()
+            : $this->string('name')->toString();
+
+        $this->merge([
+            'slug' => Str::slug($source),
+        ]);
     }
 }
