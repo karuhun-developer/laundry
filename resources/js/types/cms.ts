@@ -16,6 +16,7 @@ export type CitySummary = {
     organization_id: number;
     name: string;
     province: string;
+    organization: OrganizationOption;
     pending?: boolean;
 };
 
@@ -42,9 +43,11 @@ export type RoleSummary = {
     name: string;
 };
 
+export type ManagedUserRole = 'owner' | 'branch_admin' | 'customer';
+
 export type UserSummary = {
     id: number;
-    organization_id: number;
+    organization_id: number | null;
     name: string;
     email: string;
     roles: RoleSummary[];

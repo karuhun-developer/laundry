@@ -21,16 +21,22 @@ class DemoDataSeeder extends Seeder
             ['name' => 'LaundryHub Demo', 'is_active' => true],
         );
 
-        $city = City::query()->updateOrCreate([
+        $jakartaCity = City::query()->updateOrCreate([
             'organization_id' => $organization->id,
             'name' => 'Jakarta Selatan',
             'province' => 'DKI Jakarta',
         ]);
 
+        City::query()->updateOrCreate([
+            'organization_id' => $organization->id,
+            'name' => 'Bandung',
+            'province' => 'Jawa Barat',
+        ]);
+
         $branch = Branch::query()->updateOrCreate(
             ['organization_id' => $organization->id, 'code' => 'KMG01'],
             [
-                'city_id' => $city->id,
+                'city_id' => $jakartaCity->id,
                 'name' => 'Cabang Kemang',
                 'phone' => '081234567890',
                 'address' => 'Jl. Kemang Raya No. 10, Jakarta Selatan',

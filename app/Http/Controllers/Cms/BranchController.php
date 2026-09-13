@@ -37,6 +37,7 @@ class BranchController extends Controller
                 ->orderBy('name')
                 ->get(),
             'cities' => City::query()
+                ->with('organization:id,name')
                 ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $user->organization_id))
                 ->orderBy('name')
                 ->get(['id', 'organization_id', 'name', 'province']),

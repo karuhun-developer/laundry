@@ -185,8 +185,10 @@ it('scopes the branch management page to an owner organization', function (): vo
 it('lets a superadmin view branches across organizations', function (): void {
     $firstOrganization = Organization::factory()->create();
     $secondOrganization = Organization::factory()->create();
-    Branch::factory()->for($firstOrganization)->create();
-    Branch::factory()->for($secondOrganization)->create();
+    $firstCity = City::factory()->for($firstOrganization)->create(['name' => 'A Jakarta']);
+    Branch::factory()->for($firstOrganization)->for($firstCity)->create();
+    $secondCity = City::factory()->for($secondOrganization)->create(['name' => 'Z Bandung']);
+    Branch::factory()->for($secondOrganization)->for($secondCity)->create();
 
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
@@ -198,6 +200,8 @@ it('lets a superadmin view branches across organizations', function (): void {
             ->component('cms/Branches')
             ->has('branches', 2)
             ->has('cities', 2)
+            ->where('cities.0.organization.id', $firstOrganization->id)
+            ->where('cities.0.organization.name', $firstOrganization->name)
             ->has('organizations', 2));
 });
 

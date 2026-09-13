@@ -114,6 +114,7 @@
     --laundry-brand-600: #1559c7;
     --laundry-brand-100: #ddebff;
     --laundry-sky-400: #69c3f6;
+    --laundry-map-marker-shadow: 0 4px 14px rgb(15 23 42 / 35%);
 
     --background: var(--laundry-surface);
     --foreground: var(--laundry-ink-950);

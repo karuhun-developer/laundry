@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\RoleName;
 use App\Models\Branch;
+use App\Models\City;
+use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,6 +50,24 @@ class DemoAccountSeederTest extends TestCase
 
         $this->assertSame(4, User::query()->count());
         $this->assertSame(1, Branch::query()->where('code', 'KMG01')->count());
+    }
+
+    public function test_demo_organization_has_multiple_selectable_cities(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $organization = Organization::query()
+            ->where('slug', 'laundryhub-demo')
+            ->firstOrFail();
+
+        $this->assertSame(
+            ['Bandung', 'Jakarta Selatan'],
+            City::query()
+                ->whereBelongsTo($organization)
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+        );
     }
 
     public function test_every_demo_account_can_log_in(): void

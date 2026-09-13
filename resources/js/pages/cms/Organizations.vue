@@ -2,13 +2,14 @@
 import { Head } from '@inertiajs/vue3';
 import { Building2, Network, UsersRound } from '@lucide/vue';
 import { computed } from 'vue';
+import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
-import OrganizationCreateForm from '@/components/cms/OrganizationCreateForm.vue';
+import OrganizationFormDialog from '@/components/cms/OrganizationFormDialog.vue';
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes';
-import { index } from '@/routes/cms/organizations';
+import { destroy, index } from '@/routes/cms/organizations';
 import type { OrganizationsPageProps } from '@/types';
 
 defineOptions({
@@ -38,7 +39,11 @@ const branchCount = computed(() =>
                 eyebrow="Kontrol platform"
                 title="Organisasi"
                 description="Kelola tenant laundry dan lihat skala operasional setiap bisnis dari satu tempat."
-            />
+            >
+                <template #actions>
+                    <OrganizationFormDialog />
+                </template>
+            </CmsPageHeader>
 
             <section class="grid gap-4 sm:grid-cols-3" aria-label="Ringkasan organisasi">
                 <CmsMetricCard label="Total organisasi" :value="organizations.length" detail="Tenant terdaftar" :icon="Building2" />
@@ -46,8 +51,7 @@ const branchCount = computed(() =>
                 <CmsMetricCard label="Total cabang" :value="branchCount" detail="Di seluruh tenant" :icon="UsersRound" />
             </section>
 
-            <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-                <section class="border-line bg-surface overflow-hidden rounded-xl border shadow-sm">
+            <section class="border-line bg-surface overflow-hidden rounded-xl border shadow-sm">
                     <div class="border-line border-b px-5 py-4">
                         <h2 class="font-display text-ink-950 font-semibold">Daftar organisasi</h2>
                         <p class="text-ink-500 mt-1 text-sm">Status, jumlah cabang, dan akun terhubung.</p>
@@ -69,13 +73,13 @@ const branchCount = computed(() =>
                                     <th class="px-5 py-3 font-medium">Cabang</th>
                                     <th class="px-5 py-3 font-medium">Pengguna</th>
                                     <th class="px-5 py-3 font-medium">Status</th>
+                                    <th class="px-5 py-3 text-right font-medium">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-line divide-y">
                                 <tr
                                     v-for="organization in organizations"
                                     :key="organization.id"
-                                    :class="organization.pending ? 'opacity-60' : ''"
                                 >
                                     <td class="px-5 py-4">
                                         <p class="text-ink-950 font-medium">{{ organization.name }}</p>
@@ -88,6 +92,19 @@ const branchCount = computed(() =>
                                             {{ organization.pending ? 'Menyimpan' : organization.is_active ? 'Aktif' : 'Nonaktif' }}
                                         </Badge>
                                     </td>
+                                    <td class="px-5 py-4">
+                                        <div class="flex justify-end gap-1">
+                                            <OrganizationFormDialog :organization="organization" />
+                                            <CmsDeleteDialog
+                                                title="Hapus organisasi?"
+                                                :description="`Organisasi ${organization.name} akan dihapus permanen jika sudah tidak memiliki data operasional.`"
+                                                :confirmation="organization.name"
+                                                confirmation-label="Nama organisasi"
+                                                :route="destroy(organization.id)"
+                                                :disabled="organization.pending"
+                                            />
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -98,25 +115,32 @@ const branchCount = computed(() =>
                             v-for="organization in organizations"
                             :key="organization.id"
                             class="space-y-3 p-5"
-                            :class="organization.pending ? 'opacity-60' : ''"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <h2 class="text-ink-950 truncate font-semibold">{{ organization.name }}</h2>
                                     <p class="text-ink-500 truncate text-xs">{{ organization.slug }}</p>
                                 </div>
-                                <Badge>{{ organization.pending ? 'Menyimpan' : organization.is_active ? 'Aktif' : 'Nonaktif' }}</Badge>
+                                <Badge :variant="organization.is_active ? 'default' : 'secondary'">{{ organization.pending ? 'Menyimpan' : organization.is_active ? 'Aktif' : 'Nonaktif' }}</Badge>
                             </div>
                             <dl class="grid grid-cols-2 gap-3 text-sm">
                                 <div><dt class="text-ink-500">Cabang</dt><dd class="font-medium">{{ organization.branches_count }}</dd></div>
                                 <div><dt class="text-ink-500">Pengguna</dt><dd class="font-medium">{{ organization.users_count }}</dd></div>
                             </dl>
+                            <div class="flex justify-end gap-1 border-t pt-3">
+                                <OrganizationFormDialog :organization="organization" />
+                                <CmsDeleteDialog
+                                    title="Hapus organisasi?"
+                                    :description="`Organisasi ${organization.name} akan dihapus permanen jika sudah tidak memiliki data operasional.`"
+                                    :confirmation="organization.name"
+                                    confirmation-label="Nama organisasi"
+                                    :route="destroy(organization.id)"
+                                    :disabled="organization.pending"
+                                />
+                            </div>
                         </article>
                     </div>
                 </section>
-
-                <OrganizationCreateForm />
-            </div>
         </div>
     </main>
 </template>
