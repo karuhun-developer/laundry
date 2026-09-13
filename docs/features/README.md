@@ -9,10 +9,6 @@ Every delivered feature receives a document in this directory. A feature documen
 | 1 | [Core operations](phase-1-core-operations.md) | In progress |
 | 2 | [Payments and receipts](phase-2-payments-and-receipts.md) | Planned |
 | 3 | [Communication and Android](phase-3-communication-and-android.md) | Planned |
-
-## Delivered feature notes
-
-- [Demo role authentication](06-demo-role-authentication.md)
 | 4 | [Reporting and scale](phase-4-reporting-and-scale.md) | Planned |
 
 ## Delivered feature contracts
@@ -24,3 +20,5 @@ Every delivered feature receives a document in this directory. A feature documen
 | 1 | [Service catalog and weight pricing](03-service-catalog-pricing.md) | Delivered |
 | 1 | [Order creation and immutable pricing snapshots](04-order-creation.md) | Delivered |
 | 1 | [Order tracking and status transitions](05-order-tracking-status.md) | Delivered |
+| 1 | [Demo role authentication](06-demo-role-authentication.md) | Delivered |
+| 1 | [Owner management console](07-owner-management-console.md) | Delivered |

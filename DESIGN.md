@@ -120,6 +120,15 @@ Components respond to their container where possible; viewport breakpoints own o
 - A failed mutation rolls the pending ticket back, preserves the user's editable input, and exposes the field error plus a retry action.
 - Duplicate submission controls remain disabled while the same create request is pending.
 
+### Owner CMS management and optimistic reconciliation
+
+- Organization, city, branch, and user creation inserts a visibly pending record immediately while the request is active.
+- Pending cities are informational only and cannot be selected by a branch form until the server confirms their canonical identifier.
+- Success replaces optimistic records through the canonical Inertia page response. Failure removes them and keeps entered form values available for correction.
+- Switching organization clears city and branch selections that no longer belong to the selected tenant. Switching away from branch-admin clears branch assignments.
+- Empty tenant and location states explain the prerequisite action instead of presenting a disabled control without context.
+- Desktop comparison tables become record cards before they would require horizontal page scrolling. Long names, email addresses, slugs, and addresses truncate or wrap inside their own surface.
+
 ### Order tracking and optimistic transitions
 
 - The order detail shows the current status before the timeline, with oldest-to-newest events including actor, timestamp, and optional note.

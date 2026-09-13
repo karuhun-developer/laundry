@@ -30,4 +30,4 @@ Branches expose a single-file `logo` media collection through Spatie Media Libra
 
 ## Tests
 
-`tests/Feature/Cms/TenancyManagementTest.php` covers superadmin organization creation, owner-scoped city and branch creation, rejected cross-tenant branch assignment, and customer denial.
+`tests/Feature/Cms/TenancyManagementTest.php` covers superadmin organization creation, normalized slug and branch-code conflicts, owner-scoped city and branch creation, scoped user and branch assignments, owner role limits, role-aware navigation, rejected cross-tenant assignment, and customer denial.

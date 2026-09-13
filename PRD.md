@@ -128,6 +128,8 @@ Deliverables:
 - Service catalog with package and per-kilogram pricing.
 - Order creation, deterministic total calculation, and status tracking.
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.
+- Owner/superadmin CMS for organizations, cities, branches, users, roles, and branch assignments.
+- Optimistic CMS creation states that reconcile from canonical Inertia responses and roll back on validation or network failure.
 - Seeded demonstration data and documented API endpoints.
 - Deterministic demo credentials and role shortcuts on the local login screen.
 - Responsive split authentication shell with product context on wide screens and a focused single-column form on compact screens.

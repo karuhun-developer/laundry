@@ -43,5 +43,6 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 - [x] Pricing catalog delivered.
 - [x] Order creation and immutable pricing snapshots delivered.
 - [x] Status transitions and tracking timeline delivered.
-- [ ] CMS and mobile surfaces delivered.
+- [x] Owner and superadmin management CMS delivered.
+- [ ] Customer and branch-admin mobile surfaces delivered.
 - [ ] Automated and manual QA passed.
