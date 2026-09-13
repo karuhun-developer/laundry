@@ -72,8 +72,8 @@ class DemoDataSeeder extends Seeder
             [
                 'type' => PriceType::FixedPackage,
                 'package_weight_grams' => 12000,
-                'base_price_rupiah' => 120000,
-                'price_per_kilogram_rupiah' => 12000,
+                'base_price_rupiah' => 12000,
+                'price_per_kilogram_rupiah' => 5000,
                 'minimum_chargeable_grams' => null,
                 'is_active' => true,
             ],

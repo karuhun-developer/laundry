@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\BranchCatalogController;
+use App\Http\Controllers\Api\V1\CustomerIndexController;
+use App\Http\Controllers\Api\V1\MobileContextController;
+use App\Http\Controllers\Api\V1\MobileOrderIndexController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderStatusEventController;
@@ -10,6 +13,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
+    Route::get('mobile/context', MobileContextController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.context');
+    Route::get('organizations/{organization:slug}/orders', MobileOrderIndexController::class)
+        ->middleware('auth:sanctum')
+        ->name('organizations.orders.index');
+    Route::get('organizations/{organization:slug}/customers', CustomerIndexController::class)
+        ->middleware('auth:sanctum')
+        ->name('organizations.customers.index');
     Route::get('organizations/{organization:slug}/branches/nearest', NearestBranchController::class)
         ->name('organizations.branches.nearest');
     Route::get('organizations/{organization:slug}/branches/{branch}/catalog', BranchCatalogController::class)

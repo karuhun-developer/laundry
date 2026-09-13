@@ -76,7 +76,11 @@ it('quotes fixed package excess and reports an unconfigured excess rate', functi
     $priceOption->update(['price_per_kilogram_rupiah' => null]);
 
     $this->postJson($route, ['weight_grams' => 12500])->assertUnprocessable()
-        ->assertJsonPath('code', 'PACKAGE_EXCESS_RATE_REQUIRED');
+        ->assertJsonPath('code', 'PACKAGE_EXCESS_RATE_REQUIRED')
+        ->assertJsonPath(
+            'errors.weight_grams.0',
+            'Berat melebihi batas paket dan tarif kelebihan belum diatur.',
+        );
 });
 
 it('does not quote inactive or cross-tenant catalog records', function (): void {

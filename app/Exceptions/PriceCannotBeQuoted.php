@@ -18,6 +18,9 @@ final class PriceCannotBeQuoted extends RuntimeException
         return response()->json([
             'code' => 'PACKAGE_EXCESS_RATE_REQUIRED',
             'message' => $this->getMessage(),
+            'errors' => [
+                'weight_grams' => [$this->getMessage()],
+            ],
         ], 422);
     }
 }

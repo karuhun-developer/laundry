@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\City;
+use App\Models\PriceOption;
 use App\Models\User;
+use App\Services\PriceCalculator;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +34,11 @@ class DemoAccountSeederTest extends TestCase
             $this->assertTrue(Hash::check('password', $user->password));
             $this->assertTrue($user->hasRole($role));
         }
+
+        $this->assertSame(
+            'Pelanggan Demo',
+            User::query()->where('email', 'customer@laundryhub.test')->value('name'),
+        );
 
         $branchAdmin = User::query()
             ->where('email', 'branch@laundryhub.test')
@@ -62,6 +69,20 @@ class DemoAccountSeederTest extends TestCase
                 ->pluck('name')
                 ->all(),
         );
+    }
+
+    public function test_demo_fixed_package_prices_decimal_excess_weight(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $priceOption = PriceOption::query()
+            ->where('name', 'Paket 12 kg')
+            ->firstOrFail();
+        $quote = app(PriceCalculator::class)->quote($priceOption, 12500);
+
+        $this->assertSame(12000, $priceOption->base_price_rupiah);
+        $this->assertSame(5000, $priceOption->price_per_kilogram_rupiah);
+        $this->assertSame(14500, $quote->totalRupiah);
     }
 
     public function test_every_demo_account_can_log_in(): void

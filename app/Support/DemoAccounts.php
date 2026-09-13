@@ -14,7 +14,7 @@ final class DemoAccounts
     public static function all(): array
     {
         return [
-            ['name' => 'Demo Customer', 'label' => 'Pelanggan', 'email' => 'customer@laundryhub.test', 'role' => RoleName::Customer->value],
+            ['name' => 'Pelanggan Demo', 'label' => 'Pelanggan', 'email' => 'customer@laundryhub.test', 'role' => RoleName::Customer->value],
             ['name' => 'Admin Kemang', 'label' => 'Admin Cabang', 'email' => 'branch@laundryhub.test', 'role' => RoleName::BranchAdmin->value],
             ['name' => 'Demo Owner', 'label' => 'Owner', 'email' => 'owner@laundryhub.test', 'role' => RoleName::Owner->value],
             ['name' => 'Super Admin', 'label' => 'Superadmin', 'email' => 'superadmin@laundryhub.test', 'role' => RoleName::Superadmin->value],
