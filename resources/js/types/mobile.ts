@@ -206,6 +206,24 @@ export type TransitionOrderPayload = {
     note?: string;
 };
 
+export type WhatsAppSuggestion =
+    | {
+          readonly available: true;
+          readonly phone: string;
+          readonly message: string;
+          readonly url: string;
+          readonly template_id: number;
+          readonly unavailable_reason: null;
+      }
+    | {
+          readonly available: false;
+          readonly phone: null;
+          readonly message: null;
+          readonly url: null;
+          readonly template_id: null;
+          readonly unavailable_reason: string;
+      };
+
 export type CreatePaymentPayload = {
     method: MobilePaymentMethod;
     amount_rupiah: number;

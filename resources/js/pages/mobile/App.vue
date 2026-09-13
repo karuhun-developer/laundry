@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, RefreshCw, Shirt } from '@lucide/vue';
+import { AlertTriangle, MessageCircle, RefreshCw, Shirt } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import MobileWorkspaceSwitcher from '@/components/mobile/molecules/MobileWorkspaceSwitcher.vue';
+import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSuggestionDialog.vue';
 import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
@@ -23,6 +24,7 @@ const page = usePage();
 const workspace = useMobileWorkspace();
 const activeTab = ref<MobileTab>('home');
 const deliveryCoordinates = ref<Coordinates | null>(null);
+const whatsAppDialogOpen = ref(false);
 
 const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
 
@@ -68,14 +70,18 @@ const onCreateOrder = (payload: CreateOrderPayload, quote: MobilePriceQuote): vo
     void workspace.createOrder(payload, quote);
 };
 
-const onTransition = (orderId: number, status: MobileOrderStatus): void => {
-    void workspace.transitionOrder(orderId, {
+const onTransition = async (orderId: number, status: MobileOrderStatus): Promise<void> => {
+    const saved = await workspace.transitionOrder(orderId, {
         status,
         note:
             status === 'cancelled'
                 ? 'Pesanan dibatalkan oleh admin cabang'
                 : `Status diperbarui menjadi ${orderStatusLabels[status]}`,
     });
+
+    if (saved) {
+        whatsAppDialogOpen.value = true;
+    }
 };
 </script>
 
@@ -217,6 +223,21 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                         @transition="onTransition"
                     />
 
+                    <button
+                        v-if="
+                            activeTab === 'queue' &&
+                            (workspace.whatsAppSuggestion.value ||
+                                workspace.whatsAppSuggestionError.value)
+                        "
+                        type="button"
+                        class="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-mint-500/30 bg-mint-500/10 px-4 text-sm font-semibold text-mint-500"
+                        data-test="reopen-whatsapp-suggestion"
+                        @click="whatsAppDialogOpen = true"
+                    >
+                        <MessageCircle class="size-4" aria-hidden="true" />
+                        Buka preview WhatsApp terakhir
+                    </button>
+
                     <OrderComposer
                         v-else-if="activeTab === 'new-order'"
                         role="branch_admin"
@@ -261,6 +282,12 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
             v-if="workspace.context.value"
             v-model="activeTab"
             :role="workspace.context.value.role"
+        />
+
+        <WhatsAppSuggestionDialog
+            v-model:open="whatsAppDialogOpen"
+            :suggestion="workspace.whatsAppSuggestion.value"
+            :load-error="workspace.whatsAppSuggestionError.value"
         />
     </div>
 </template>

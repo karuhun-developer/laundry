@@ -6,12 +6,14 @@ import {
     store as storeOrderRoute,
 } from '@/routes/api/v1/organizations/branches/orders';
 import { store as storeStatusRoute } from '@/routes/api/v1/organizations/branches/orders/status-events';
+import { show as showWhatsAppSuggestionRoute } from '@/routes/api/v1/organizations/branches/orders/whatsapp-suggestion';
 import { index as orderIndexRoute } from '@/routes/api/v1/organizations/orders';
 import type {
     ApiEnvelope,
     CreateOrderPayload,
     MobileOrder,
     TransitionOrderPayload,
+    WhatsAppSuggestion,
 } from '@/types/mobile';
 
 type EmptyRequest = Record<string, never>;
@@ -24,6 +26,7 @@ export const useMobileOrderApi = () => {
         status: 'received',
         note: '',
     });
+    const whatsAppSuggestionRequest = useHttp<EmptyRequest, ApiEnvelope<WhatsAppSuggestion>>({});
 
     const loadOrders = async (organizationSlug: string): Promise<MobileOrder[]> => {
         ordersRequest.cancel();
@@ -129,10 +132,31 @@ export const useMobileOrderApi = () => {
         return response.data;
     };
 
+    const fetchWhatsAppSuggestion = async (
+        organizationSlug: string,
+        order: MobileOrder,
+    ): Promise<WhatsAppSuggestion> => {
+        whatsAppSuggestionRequest.cancel();
+        const response = await whatsAppSuggestionRequest.get(
+            showWhatsAppSuggestionRoute({
+                organization: organizationSlug,
+                branch: order.branch.id,
+                order: order.id,
+            }).url,
+        );
+
+        if (!response) {
+            throw new Error('Saran pesan WhatsApp tidak dapat dimuat.');
+        }
+
+        return response.data;
+    };
+
     return {
         createOrder,
         createProcessing: computed(() => createRequest.processing),
         fetchOrder,
+        fetchWhatsAppSuggestion,
         loadOrders,
         transitionOrder,
         transitionProcessing: computed(() => transitionRequest.processing),

@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/vue3';
 import type { ComputedRef, Ref } from 'vue';
+import { readonly, ref } from 'vue';
 import { useMobileOrderApi } from '@/composables/useMobileOrderApi';
 import { useMobilePaymentApi } from '@/composables/useMobilePaymentApi';
 import { useOptimisticOrders } from '@/composables/useOptimisticOrders';
@@ -14,7 +15,9 @@ import type {
     MobilePriceQuote,
     MobileService,
     NearestMobileBranch,
+    TransitionOrderPayload,
     TransitionPaymentStatusPayload,
+    WhatsAppSuggestion,
 } from '@/types/mobile';
 
 type MobileOrderWorkspaceState = {
@@ -30,6 +33,9 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     const page = usePage();
     const api = useMobileOrderApi();
     const paymentApi = useMobilePaymentApi();
+    const whatsAppSuggestion = ref<WhatsAppSuggestion | null>(null);
+    const whatsAppSuggestionError = ref<string | null>(null);
+    let whatsAppSuggestionGeneration = 0;
     const optimistic = useOptimisticOrders({
         createOrder: async (payload) => {
             const context = state.context.value;
@@ -131,6 +137,50 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     const createPayment = (orderId: number, payload: CreatePaymentPayload): Promise<boolean> =>
         optimistic.createPayment(orderId, payload);
 
+    const clearWhatsAppSuggestion = (): void => {
+        whatsAppSuggestionGeneration += 1;
+        whatsAppSuggestion.value = null;
+        whatsAppSuggestionError.value = null;
+    };
+
+    const setOrders = (orders: Parameters<typeof optimistic.setOrders>[0]): void => {
+        clearWhatsAppSuggestion();
+        optimistic.setOrders(orders);
+    };
+
+    const transitionOrder = async (
+        orderId: number,
+        payload: TransitionOrderPayload,
+    ): Promise<boolean> => {
+        const context = state.context.value;
+        const order = optimistic.orders.value.find((entry) => entry.id === orderId);
+        const requestGeneration = ++whatsAppSuggestionGeneration;
+        whatsAppSuggestion.value = null;
+        whatsAppSuggestionError.value = null;
+        const saved = await optimistic.transitionOrder(orderId, payload);
+
+        if (!saved || !context || !order) {
+            return saved;
+        }
+
+        try {
+            const suggestion = await api.fetchWhatsAppSuggestion(context.organization.slug, order);
+
+            if (requestGeneration === whatsAppSuggestionGeneration) {
+                whatsAppSuggestion.value = suggestion;
+            }
+        } catch (error: unknown) {
+            if (requestGeneration === whatsAppSuggestionGeneration) {
+                whatsAppSuggestionError.value =
+                    error instanceof Error
+                        ? error.message
+                        : 'Saran pesan WhatsApp tidak dapat dimuat.';
+            }
+        }
+
+        return true;
+    };
+
     const transitionPaymentStatus = (
         orderId: number,
         paymentId: number,
@@ -156,10 +206,12 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         loadOrders: api.loadOrders,
         orders: optimistic.orders,
         rollbackMessage: optimistic.rollbackMessage,
-        setOrders: optimistic.setOrders,
-        transitionOrder: optimistic.transitionOrder,
+        setOrders,
+        transitionOrder,
         transitionProcessing: api.transitionProcessing,
         transitionPaymentStatus,
         paymentProcessing: paymentApi.processing,
+        whatsAppSuggestion: readonly(whatsAppSuggestion),
+        whatsAppSuggestionError: readonly(whatsAppSuggestionError),
     };
 };

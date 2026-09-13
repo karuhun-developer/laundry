@@ -238,6 +238,8 @@ export const useMobileWorkspace = () => {
         requestError: readonly(requestError),
         orders: orderWorkspace.orders,
         rollbackMessage: orderWorkspace.rollbackMessage,
+        whatsAppSuggestion: orderWorkspace.whatsAppSuggestion,
+        whatsAppSuggestionError: orderWorkspace.whatsAppSuggestionError,
         createProcessing: orderWorkspace.createProcessing,
         transitionProcessing: orderWorkspace.transitionProcessing,
         paymentProcessing: orderWorkspace.paymentProcessing,
