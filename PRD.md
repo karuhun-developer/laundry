@@ -153,6 +153,7 @@ Exit criteria:
 Deliverables:
 
 - Dynamic QRIS payload generation with CRC16-CCITT tests.
+- Scannable server-rendered QRIS SVG images while retaining the raw payment payload.
 - Payment state and reconciliation workflow.
 - Bluetooth SPP and USB thermal printer capability through a Capacitor plugin.
 - ESC/POS receipt templates, printer profiles, test print, and digital receipt.

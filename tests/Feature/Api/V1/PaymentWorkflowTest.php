@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 const PAYMENT_TEST_STATIC_QRIS = '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
@@ -48,6 +49,16 @@ it('creates and manually reconciles a dynamic QRIS payment with audit history', 
 
     $payload = $response->json('data.qris_payload');
     expect($payload)->toBeString()->toContain('010212')->toContain('540550000');
+
+    $imageDataUri = $response->json('data.qris_image_data_uri');
+    expect($imageDataUri)->toBeString()->toStartWith('data:image/svg+xml;base64,');
+    assert(is_string($imageDataUri));
+
+    $svg = base64_decode(Str::after($imageDataUri, 'data:image/svg+xml;base64,'), true);
+    expect($svg)->toBeString()
+        ->toContain('<svg')
+        ->toContain('width="360"')
+        ->toContain('height="360"');
 
     $payment = Payment::query()->findOrFail($response->json('data.id'));
 
@@ -97,7 +108,8 @@ it('records cash as paid immediately and rejects overpayment', function (): void
         'method' => PaymentMethod::Cash->value,
         'amount_rupiah' => 20000,
     ])->assertCreated()
-        ->assertJsonPath('data.status', PaymentStatus::Paid->value);
+        ->assertJsonPath('data.status', PaymentStatus::Paid->value)
+        ->assertJsonPath('data.qris_image_data_uri', null);
 
     $this->postJson($route, [
         'method' => PaymentMethod::Cash->value,

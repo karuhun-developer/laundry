@@ -237,6 +237,13 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Selecting a role only fills the email and shared demo password; the user still submits the normal Fortify form.
 - Production hides demo credentials through environment configuration.
 
+### QRIS payment surface
+
+- Dynamic QRIS payments expose a 360 px SVG as a base64 data URI so the same scannable artifact works in the web and Capacitor surfaces.
+- The QR image sits on an opaque white field with the renderer's four-module quiet zone intact.
+- Cash payments and unavailable QRIS states do not render an empty QR placeholder.
+- The raw QRIS payload remains an API field for diagnostics and provider handoff, but the customer-facing surface uses the generated image.
+
 ## 6. Interaction and Motion
 
 - Motion communicates hierarchy, mutation progress, or spatial continuity.

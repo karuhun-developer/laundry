@@ -35,6 +35,10 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Changed the demo 12 kg package to Rp12.000 plus Rp5.000 per excess kilogram, including decimal-weight pricing such as 12,5 kg for Rp14.500.
 - Added Pest and Vitest coverage for the Phase 1 mobile workspaces; browser end-to-end verification remains the final release gate.
 
+### Phase 2: Payments and receipts
+
+- Added server-rendered, scannable SVG data URIs to dynamic QRIS payment responses while preserving the raw QRIS payload.
+
 ## Release policy
 
 - `Added` for new behavior.

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Payment;
+use App\Services\Qris\QrisImageGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,6 +26,9 @@ class PaymentResource extends JsonResource
             'status_label' => $this->status->label(),
             'amount_rupiah' => $this->amount_rupiah,
             'qris_payload' => $this->qris_payload,
+            'qris_image_data_uri' => $this->qris_payload === null
+                ? null
+                : (new QrisImageGenerator)->dataUri($this->qris_payload),
             'note' => $this->note,
             'settled_at' => $this->settled_at?->toISOString(),
             'status_history' => PaymentStatusEventResource::collection(
