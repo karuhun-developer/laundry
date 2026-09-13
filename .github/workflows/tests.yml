@@ -34,3 +34,6 @@ jobs:
 
       - name: Run CI Checks
         run: composer ci:check
+
+      - name: Run frontend unit tests
+        run: bun run test
