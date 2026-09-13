@@ -97,6 +97,10 @@ Cancelled is a terminal exception state. Every transition is authorized, recorde
 
 New orders start at `received`, receive a server-generated `LDR-YYYYMMDD-########` number, and append an initial status event in the same transaction as their item and delivery snapshots. Clients cannot submit authoritative totals, statuses, or snapshot values.
 
+Normal transitions advance exactly one step. Any non-terminal status may transition to `cancelled`; `completed` and `cancelled` cannot transition again. Duplicate, skipped, backward, and terminal transitions are rejected as state conflicts. The server locks the current order row, updates its status, appends the actor-snapshotted event, and writes audit activity atomically.
+
+Customers can read only their own order timeline. Assigned branch admins, organization owners, and superadmins can read and transition orders in their authorization scope. Nested organization, branch, and order bindings hide cross-tenant records.
+
 ## Non-functional requirements
 
 - Strict TypeScript with no `any`, ignored errors, or unchecked boundary data.

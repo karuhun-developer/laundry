@@ -53,3 +53,47 @@ it('enforces the complete role and tenant matrix for order creation', function (
         ->and(Gate::forUser($unprivileged)->allows('create', [Order::class, $organization, $branch]))
         ->toBeFalse();
 });
+
+it('enforces viewing and status updates by customer ownership, tenant, and branch assignment', function (): void {
+    $organization = Organization::factory()->create();
+    $otherOrganization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $order = Order::factory()->for($organization)->for($branch)->create();
+
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $order->update(['customer_id' => $customer->id]);
+
+    $otherCustomer = User::factory()->create();
+    $otherCustomer->assignRole(RoleName::Customer->value);
+
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+
+    $unassignedAdmin = User::factory()->for($organization)->create();
+    $unassignedAdmin->assignRole(RoleName::BranchAdmin->value);
+
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $otherOwner = User::factory()->for($otherOrganization)->create();
+    $otherOwner->assignRole(RoleName::Owner->value);
+
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    expect(Gate::forUser($customer)->allows('view', $order))->toBeTrue()
+        ->and(Gate::forUser($customer)->allows('updateStatus', $order))->toBeFalse()
+        ->and(Gate::forUser($otherCustomer)->allows('view', $order))->toBeFalse()
+        ->and(Gate::forUser($branchAdmin)->allows('view', $order))->toBeTrue()
+        ->and(Gate::forUser($branchAdmin)->allows('updateStatus', $order))->toBeTrue()
+        ->and(Gate::forUser($unassignedAdmin)->allows('view', $order))->toBeFalse()
+        ->and(Gate::forUser($unassignedAdmin)->allows('updateStatus', $order))->toBeFalse()
+        ->and(Gate::forUser($owner)->allows('view', $order))->toBeTrue()
+        ->and(Gate::forUser($owner)->allows('updateStatus', $order))->toBeTrue()
+        ->and(Gate::forUser($otherOwner)->allows('view', $order))->toBeFalse()
+        ->and(Gate::forUser($otherOwner)->allows('updateStatus', $order))->toBeFalse()
+        ->and(Gate::forUser($superadmin)->allows('view', $order))->toBeTrue()
+        ->and(Gate::forUser($superadmin)->allows('updateStatus', $order))->toBeTrue();
+});

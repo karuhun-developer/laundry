@@ -61,4 +61,4 @@ The web and Capacitor clients may show a locally pending order immediately by us
 
 ## Deferred
 
-Order listing/detail, authorized status transitions, customer tracking screens, WhatsApp actions, payments, QRIS, and receipt printing are delivered in their respective later increments.
+Order queues and tracking screens, WhatsApp actions, payments, QRIS, and receipt printing are delivered in their respective later increments.

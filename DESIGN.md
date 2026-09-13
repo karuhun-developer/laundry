@@ -120,6 +120,15 @@ Components respond to their container where possible; viewport breakpoints own o
 - A failed mutation rolls the pending ticket back, preserves the user's editable input, and exposes the field error plus a retry action.
 - Duplicate submission controls remain disabled while the same create request is pending.
 
+### Order tracking and optimistic transitions
+
+- The order detail shows the current status before the timeline, with oldest-to-newest events including actor, timestamp, and optional note.
+- Customers receive a read-only timeline. Authorized staff see only the valid next action plus cancellation while the order is active.
+- After staff confirms a transition, the selected status appears immediately with a pending marker while the previous canonical order remains available for rollback.
+- Success replaces the entire local order and timeline with the canonical API response. Failure restores both, explains the validation, access, network, or state-conflict cause, and exposes retry where safe.
+- A state conflict triggers a fresh detail fetch before another transition. Locally generated event timestamps or actor identities are never displayed as durable history.
+- Completed and cancelled orders replace transition controls with a terminal-state summary.
+
 ### Branch admin mobile navigation
 
 - Queue

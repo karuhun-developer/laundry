@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\BranchCatalogController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\OrderStatusEventController;
+use App\Http\Controllers\Api\V1\OrderTrackingController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +24,18 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     )->middleware('auth:sanctum')
         ->scopeBindings()
         ->name('organizations.branches.orders.store');
+    Route::get(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}',
+        OrderTrackingController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.show');
+    Route::post(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/status-events',
+        OrderStatusEventController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.status-events.store');
 });
 
 Route::get('/user', function (Request $request) {

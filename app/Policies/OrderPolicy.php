@@ -24,7 +24,11 @@ class OrderPolicy
      */
     public function view(User $user, Order $order): bool
     {
-        return false;
+        if ($user->hasRole(RoleName::Customer->value)) {
+            return $order->customer_id === $user->id;
+        }
+
+        return $this->staffCanAccessOrder($user, $order, PermissionName::ManageOrders);
     }
 
     /**
@@ -58,7 +62,12 @@ class OrderPolicy
      */
     public function update(User $user, Order $order): bool
     {
-        return false;
+        return $this->updateStatus($user, $order);
+    }
+
+    public function updateStatus(User $user, Order $order): bool
+    {
+        return $this->staffCanAccessOrder($user, $order, PermissionName::UpdateOrderStatus);
     }
 
     /**
@@ -83,5 +92,29 @@ class OrderPolicy
     public function forceDelete(User $user, Order $order): bool
     {
         return false;
+    }
+
+    private function staffCanAccessOrder(
+        User $user,
+        Order $order,
+        PermissionName $permission,
+    ): bool {
+        if (! $user->can($permission->value)) {
+            return false;
+        }
+
+        if ($user->hasRole(RoleName::Superadmin->value)) {
+            return true;
+        }
+
+        if ($user->organization_id !== $order->organization_id) {
+            return false;
+        }
+
+        if ($user->hasRole(RoleName::BranchAdmin->value)) {
+            return $user->branches()->whereKey($order->branch_id)->exists();
+        }
+
+        return $user->hasRole(RoleName::Owner->value);
     }
 }
