@@ -70,6 +70,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Calculation never uses binary floating-point values.
 - The order stores a pricing snapshot so future catalog changes do not rewrite historical totals.
 - Package example: a 12 kg package at Rp12.000 with 500 g excess is charged according to the package excess rule configured for that option.
+- Pricing calculations use integer grams and rupiah. Fractional rupiah is rounded half-up, and overweight packages without an excess tariff cannot be quoted.
 
 ## Delivery coverage rules
 

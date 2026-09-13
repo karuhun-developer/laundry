@@ -34,6 +34,12 @@ class Organization extends Model
         return $this->hasMany(Branch::class);
     }
 
+    /** @return HasMany<Service, $this> */
+    public function services(): HasMany
+    {
+        return $this->hasMany(Service::class);
+    }
+
     /** @return HasMany<User, $this> */
     public function users(): HasMany
     {

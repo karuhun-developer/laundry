@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PriceType;
 use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\City;
 use App\Models\Organization;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -45,6 +47,34 @@ class DatabaseSeeder extends Seeder
             'free_delivery_radius_meters' => 10000,
             'delivery_fee_per_km_rupiah' => 3000,
             'is_active' => true,
+        ]);
+
+        $service = Service::query()->create([
+            'organization_id' => $organization->id,
+            'name' => 'Cuci Kering Lipat',
+            'code' => 'CKL',
+            'description' => 'Layanan cuci, kering, dan lipat untuk pakaian harian.',
+            'is_active' => true,
+        ]);
+
+        $service->priceOptions()->createMany([
+            [
+                'branch_id' => $branch->id,
+                'type' => PriceType::PerKilogram,
+                'name' => 'Kiloan reguler',
+                'price_per_kilogram_rupiah' => 12000,
+                'minimum_chargeable_grams' => 1000,
+                'is_active' => true,
+            ],
+            [
+                'branch_id' => $branch->id,
+                'type' => PriceType::FixedPackage,
+                'name' => 'Paket 12 kg',
+                'package_weight_grams' => 12000,
+                'base_price_rupiah' => 120000,
+                'price_per_kilogram_rupiah' => 12000,
+                'is_active' => true,
+            ],
         ]);
 
         User::factory()->create([

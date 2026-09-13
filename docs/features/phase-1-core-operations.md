@@ -38,9 +38,9 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 
 ## Completion checklist
 
-- [ ] Foundation scaffolded and dependencies configured.
-- [ ] Multi-branch roles and authorization delivered.
-- [ ] Pricing catalog delivered.
+- [x] Foundation scaffolded and dependencies configured.
+- [x] Multi-branch roles and authorization delivered.
+- [x] Pricing catalog delivered.
 - [ ] Orders and tracking delivered.
 - [ ] CMS and mobile surfaces delivered.
 - [ ] Automated and manual QA passed.

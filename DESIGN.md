@@ -104,6 +104,14 @@ Components respond to their container where possible; viewport breakpoints own o
 - Location denial and empty coverage states provide a clear manual path instead of blocking order creation.
 - Machine availability is not shown until capacity scheduling and slot-locking semantics are implemented.
 
+### Service catalog and pricing
+
+- Catalog content is grouped by service, then by the selected branch's active price options.
+- Fixed packages show the included weight, base price, and excess tariff when configured.
+- Per-kilogram options show the kilogram tariff and minimum chargeable weight when configured.
+- Quote interactions display requested weight, chargeable weight, base/excess breakdown, and total rupiah before order confirmation.
+- An overweight package without an excess tariff presents a blocking configuration message instead of an estimated total.
+
 ### Branch admin mobile navigation
 
 - Queue
