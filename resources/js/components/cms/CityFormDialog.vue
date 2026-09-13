@@ -112,6 +112,7 @@ const submit = (): void => {
                 type="button"
                 :variant="isEditing ? 'ghost' : 'outline'"
                 :size="isEditing ? 'icon-sm' : 'default'"
+                :class="isEditing ? 'min-h-11 min-w-11' : undefined"
                 :disabled="city?.pending"
                 :aria-label="isEditing ? `Edit kota ${city?.name}` : undefined"
                 data-test="open-city-dialog"

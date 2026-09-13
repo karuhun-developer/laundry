@@ -2,8 +2,10 @@
 import { LoaderCircle, LocateFixed, MapPin } from '@lucide/vue';
 import type { Map as LeafletMap, Marker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const props = defineProps<{
     latitude: string;
@@ -18,6 +20,14 @@ const emit = defineEmits<{
 const mapElement = ref<HTMLDivElement | null>(null);
 const locating = ref(false);
 const locationError = ref('');
+const latitudeModel = computed({
+    get: () => props.latitude,
+    set: (value: string | number) => emit('update:latitude', String(value)),
+});
+const longitudeModel = computed({
+    get: () => props.longitude,
+    set: (value: string | number) => emit('update:longitude', String(value)),
+});
 let map: LeafletMap | null = null;
 let marker: Marker | null = null;
 
@@ -171,9 +181,19 @@ onBeforeUnmount(() => {
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
                 <p class="text-sm font-medium">Titik lokasi outlet</p>
-                <p class="text-ink-500 mt-1 text-xs">Klik peta atau geser pin untuk menentukan lokasi.</p>
+                <p id="branch-location-help" class="text-ink-500 mt-1 text-xs">
+                    Klik peta, geser pin, atau isi koordinat secara manual.
+                </p>
             </div>
-            <Button type="button" variant="outline" size="sm" :disabled="locating" @click="useCurrentLocation">
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                class="min-h-11"
+                :disabled="locating"
+                data-test="use-current-location"
+                @click="useCurrentLocation"
+            >
                 <LoaderCircle v-if="locating" class="animate-spin" />
                 <LocateFixed v-else />
                 {{ locating ? 'Mencari...' : 'Lokasi saya' }}
@@ -182,10 +202,41 @@ onBeforeUnmount(() => {
 
         <div
             ref="mapElement"
-            class="border-line h-72 overflow-hidden rounded-lg border bg-slate-100"
+            class="border-line bg-canvas h-72 overflow-hidden rounded-lg border"
             aria-label="Peta pemilih lokasi outlet"
             data-test="location-map"
         />
+
+        <div class="grid gap-3 sm:grid-cols-2">
+            <div class="space-y-2">
+                <Label for="branch-latitude">Latitude</Label>
+                <Input
+                    id="branch-latitude"
+                    v-model="latitudeModel"
+                    type="number"
+                    inputmode="decimal"
+                    min="-90"
+                    max="90"
+                    step="any"
+                    placeholder="-6.917500"
+                    aria-describedby="branch-location-help"
+                />
+            </div>
+            <div class="space-y-2">
+                <Label for="branch-longitude">Longitude</Label>
+                <Input
+                    id="branch-longitude"
+                    v-model="longitudeModel"
+                    type="number"
+                    inputmode="decimal"
+                    min="-180"
+                    max="180"
+                    step="any"
+                    placeholder="107.619100"
+                    aria-describedby="branch-location-help"
+                />
+            </div>
+        </div>
 
         <div class="bg-surface-blue flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg px-3 py-2 text-xs">
             <span class="text-brand-700 inline-flex items-center gap-1.5 font-medium">

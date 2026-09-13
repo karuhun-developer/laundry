@@ -63,7 +63,7 @@ const submit = (): void => {
                 type="button"
                 variant="ghost"
                 size="sm"
-                class="text-red-600 hover:bg-red-50 hover:text-red-700"
+                class="text-destructive hover:bg-destructive/10 hover:text-destructive min-h-11 min-w-11"
                 :disabled="disabled"
                 :aria-label="`Hapus ${confirmation}`"
                 data-test="open-delete-dialog"
@@ -79,7 +79,7 @@ const submit = (): void => {
                     <DialogDescription>{{ description }}</DialogDescription>
                 </DialogHeader>
 
-                <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <div class="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border p-3 text-sm">
                     Tindakan ini tidak dapat dibatalkan. Ketik
                     <strong>{{ confirmation }}</strong> untuk melanjutkan.
                 </div>

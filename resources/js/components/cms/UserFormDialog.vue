@@ -188,6 +188,7 @@ const submit = (): void => {
                 type="button"
                 :variant="isEditing ? 'ghost' : 'default'"
                 :size="isEditing ? 'sm' : 'default'"
+                :class="isEditing ? 'min-h-11 min-w-11' : undefined"
                 :disabled="user?.pending"
                 :aria-label="isEditing ? 'Edit ' + user?.name : undefined"
                 data-test="open-user-dialog"

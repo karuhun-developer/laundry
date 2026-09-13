@@ -110,6 +110,7 @@ const submit = (): void => {
                 type="button"
                 :variant="isEditing ? 'ghost' : 'default'"
                 :size="isEditing ? 'sm' : 'default'"
+                :class="isEditing ? 'min-h-11 min-w-11' : undefined"
                 :disabled="organization?.pending"
                 :aria-label="isEditing ? `Edit ${organization?.name}` : undefined"
                 data-test="open-organization-dialog"

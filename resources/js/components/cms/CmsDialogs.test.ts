@@ -175,9 +175,11 @@ describe('CMS dialogs', () => {
         });
 
         const input = wrapper.get('[data-test="delete-confirmation"]');
+        const trigger = wrapper.get('[data-test="open-delete-dialog"]');
         const submit = wrapper.get<HTMLButtonElement>('[data-test="confirm-delete"]');
 
         expect(wrapper.text()).toContain('Kirei Wash');
+        expect(trigger.classes()).toEqual(expect.arrayContaining(['min-h-11', 'min-w-11']));
         expect(submit.element.disabled).toBe(true);
 
         await input.setValue('kirei wash');
@@ -315,6 +317,20 @@ describe('CMS dialogs', () => {
         expect(wrapper.emitted('update:latitude')?.at(-1)).toEqual(['-6.917500']);
         expect(wrapper.emitted('update:longitude')?.at(-1)).toEqual(['107.619100']);
         expect(leafletHarness.markerOpacity()).toBe(1);
+    });
+
+    it('allows keyboard users to enter coordinates directly', async () => {
+        const wrapper = mount(LocationPicker, {
+            props: { latitude: '', longitude: '' },
+        });
+
+        await flushPromises();
+        await wrapper.get('#branch-latitude').setValue('-6.917500');
+        await wrapper.get('#branch-longitude').setValue('107.619100');
+
+        expect(wrapper.emitted('update:latitude')?.at(-1)).toEqual(['-6.9175']);
+        expect(wrapper.emitted('update:longitude')?.at(-1)).toEqual(['107.6191']);
+        expect(wrapper.get('[data-test="use-current-location"]').classes()).toContain('min-h-11');
     });
 
     it('updates coordinates when the map marker is dragged', async () => {
