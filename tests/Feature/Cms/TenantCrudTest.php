@@ -46,9 +46,9 @@ it('rejects another organization slug after normalization during update', functi
     expect($organization->refresh()->slug)->toBe('target-laundry');
 });
 
-it('requires exact confirmation and an empty tenant before deleting an organization', function (): void {
+it('requires exact confirmation and no operational data before deleting an organization', function (): void {
     $organization = Organization::factory()->create(['name' => 'Tenant Berisi']);
-    City::factory()->for($organization)->create();
+    Branch::factory()->for($organization)->create();
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
@@ -71,6 +71,20 @@ it('requires exact confirmation and an empty tenant before deleting an organizat
     $this->assertDatabaseMissing('organizations', ['id' => $empty->id]);
 });
 
+it('does not delete global cities when an organization is deleted', function (): void {
+    $organization = Organization::factory()->create(['name' => 'Tenant Tanpa Operasional']);
+    $city = City::factory()->create(['name' => 'Bandung', 'province' => 'Jawa Barat']);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->delete(route('cms.organizations.destroy', $organization), [
+        'confirmation' => 'Tenant Tanpa Operasional',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->assertDatabaseMissing('organizations', ['id' => $organization->id]);
+    $this->assertDatabaseHas('cities', ['id' => $city->id]);
+});
+
 it('forbids owners from updating or deleting organizations', function (): void {
     $organization = Organization::factory()->create();
     $owner = User::factory()->for($organization)->create();
@@ -87,18 +101,13 @@ it('forbids owners from updating or deleting organizations', function (): void {
     ])->assertForbidden();
 });
 
-it('lets an owner update cities and branches only inside their organization', function (): void {
+it('lets an owner update branches only inside their organization', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create();
+    $city = City::factory()->create();
     $branch = Branch::factory()->for($organization)->for($city)->create(['code' => 'JKT01']);
     $otherBranch = Branch::factory()->create();
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
-
-    $this->actingAs($owner)->patch(route('cms.cities.update', $city), [
-        'name' => 'Jakarta Selatan',
-        'province' => 'DKI Jakarta',
-    ])->assertRedirect()->assertSessionHasNoErrors();
 
     $this->actingAs($owner)->patch(route('cms.branches.update', $branch), [
         'city_id' => $city->id,
@@ -128,15 +137,51 @@ it('lets an owner update cities and branches only inside their organization', fu
     ])->assertForbidden();
 });
 
+it('lets owners create global cities but reserves updates and deletion for superadmins', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)->post(route('cms.cities.store'), [
+        'name' => 'Bandung',
+        'province' => 'Jawa Barat',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $city = City::query()->where('name', 'Bandung')->firstOrFail();
+
+    $this->actingAs($owner)->patch(route('cms.cities.update', $city), [
+        'name' => 'Kota Bandung',
+        'province' => 'Jawa Barat',
+    ])->assertForbidden();
+
+    $this->actingAs($owner)->delete(route('cms.cities.destroy', $city), [
+        'confirmation' => 'Bandung',
+    ])->assertForbidden();
+
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->patch(route('cms.cities.update', $city), [
+        'name' => 'Kota Bandung',
+        'province' => 'Jawa Barat',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->actingAs($superadmin)->delete(route('cms.cities.destroy', $city), [
+        'confirmation' => 'Kota Bandung',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+});
+
 it('protects cities and branches that still have operational dependencies', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create(['name' => 'Bandung']);
+    $city = City::factory()->create(['name' => 'Bandung']);
     $branch = Branch::factory()->for($organization)->for($city)->create(['name' => 'Cabang Dago']);
     Order::factory()->for($organization)->for($branch)->create();
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
 
-    $this->actingAs($owner)->delete(route('cms.cities.destroy', $city), [
+    $this->actingAs($superadmin)->delete(route('cms.cities.destroy', $city), [
         'confirmation' => 'Bandung',
     ])->assertSessionHasErrors('confirmation');
 
@@ -150,16 +195,18 @@ it('protects cities and branches that still have operational dependencies', func
 
 it('deletes empty cities and branches after exact modal confirmation', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create(['name' => 'Jakarta']);
+    $city = City::factory()->create(['name' => 'Jakarta']);
     $branch = Branch::factory()->for($organization)->for($city)->create(['name' => 'Cabang Kosong']);
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($owner)->delete(route('cms.branches.destroy', $branch), [
         'confirmation' => 'Cabang Kosong',
     ])->assertRedirect()->assertSessionHasNoErrors();
 
-    $this->actingAs($owner)->delete(route('cms.cities.destroy', $city), [
+    $this->actingAs($superadmin)->delete(route('cms.cities.destroy', $city), [
         'confirmation' => 'Jakarta',
     ])->assertRedirect()->assertSessionHasNoErrors();
 

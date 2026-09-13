@@ -26,18 +26,12 @@ class UpdateCityRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('cities')
-                    ->where('organization_id', $city?->organization_id)
+                Rule::unique('cities', 'name')
                     ->where('province', $this->string('province')->toString())
                     ->ignore($city),
             ],
             'province' => ['required', 'string', 'max:100'],
         ];
-    }
-
-    public function organizationId(): int
-    {
-        return (int) $this->city()?->organization_id;
     }
 
     private function city(): ?City

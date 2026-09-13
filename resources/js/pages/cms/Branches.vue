@@ -42,11 +42,7 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                 description="Atur lokasi outlet, radius gratis antar-jemput, dan tarif kelebihan jarak per kilometer."
             >
                 <template #actions>
-                    <CityFormDialog
-                        :organizations="organizations"
-                        :current-organization-id="currentOrganizationId"
-                        :is-superadmin="isSuperadmin"
-                    />
+                    <CityFormDialog />
                     <BranchFormDialog
                         :cities="cities"
                         :organizations="organizations"
@@ -77,18 +73,10 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                         <div class="min-w-0">
                             <p class="text-ink-950 truncate text-sm font-medium">{{ city.name }}</p>
                             <p class="text-ink-500 truncate text-xs">{{ city.province }}</p>
-                            <p v-if="isSuperadmin" class="text-brand-700 mt-1 truncate text-xs font-medium">
-                                {{ city.organization.name }}
-                            </p>
                             <Badge v-if="city.pending" class="mt-2" variant="secondary">Menyimpan</Badge>
                         </div>
-                        <div class="flex shrink-0 gap-1">
-                            <CityFormDialog
-                                :city="city"
-                                :organizations="organizations"
-                                :current-organization-id="currentOrganizationId"
-                                :is-superadmin="isSuperadmin"
-                            />
+                        <div v-if="isSuperadmin" class="flex shrink-0 gap-1">
+                            <CityFormDialog :city="city" />
                             <CmsDeleteDialog
                                 title="Hapus kota?"
                                 :description="`Kota ${city.name} akan dihapus permanen jika tidak lagi dipakai oleh cabang.`"

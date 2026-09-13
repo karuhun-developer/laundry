@@ -9,13 +9,12 @@ final class DeleteOrganization
 {
     public function handle(Organization $organization): void
     {
-        if ($organization->cities()->exists()
-            || $organization->branches()->exists()
+        if ($organization->branches()->exists()
             || $organization->services()->exists()
             || $organization->orders()->exists()
             || $organization->users()->exists()) {
             throw ValidationException::withMessages([
-                'confirmation' => 'Organisasi masih memiliki kota, cabang, layanan, order, atau pengguna.',
+                'confirmation' => 'Organisasi masih memiliki cabang, layanan, order, atau pengguna.',
             ]);
         }
 

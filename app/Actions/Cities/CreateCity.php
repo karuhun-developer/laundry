@@ -10,7 +10,6 @@ final class CreateCity
     public function handle(CityData $data): City
     {
         return City::query()->create([
-            'organization_id' => $data->organizationId,
             'name' => $data->name,
             'province' => $data->province,
         ]);

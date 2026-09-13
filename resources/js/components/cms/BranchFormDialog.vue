@@ -48,17 +48,7 @@ const selectedOrganizationId = computed(
         props.currentOrganizationId ??
         Number(form.organization_id),
 );
-const availableCities = computed(() =>
-    props.cities.filter(
-        (city) => city.organization_id === selectedOrganizationId.value && city.pending !== true,
-    ),
-);
-
-watch(selectedOrganizationId, () => {
-    if (!availableCities.value.some((city) => city.id.toString() === form.city_id)) {
-        form.city_id = '';
-    }
-});
+const availableCities = computed(() => props.cities.filter((city) => city.pending !== true));
 
 const restoreValues = (): void => {
     form.organization_id = defaultOrganizationId();
@@ -191,7 +181,7 @@ const submit = (): void => {
 
                 <div class="space-y-2">
                     <Label for="branch-city">Kota</Label>
-                    <p class="text-ink-500 text-xs">Kota mengikuti organisasi yang dipilih.</p>
+                    <p class="text-ink-500 text-xs">Semua kota dapat dipakai oleh setiap organisasi.</p>
                     <select
                         id="branch-city"
                         v-model="form.city_id"

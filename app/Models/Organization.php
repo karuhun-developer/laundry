@@ -22,12 +22,6 @@ class Organization extends Model
     /** @use HasFactory<OrganizationFactory> */
     use HasFactory, LogsActivity;
 
-    /** @return HasMany<City, $this> */
-    public function cities(): HasMany
-    {
-        return $this->hasMany(City::class);
-    }
-
     /** @return HasMany<Branch, $this> */
     public function branches(): HasMany
     {

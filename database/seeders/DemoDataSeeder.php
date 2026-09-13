@@ -22,13 +22,11 @@ class DemoDataSeeder extends Seeder
         );
 
         $jakartaCity = City::query()->updateOrCreate([
-            'organization_id' => $organization->id,
             'name' => 'Jakarta Selatan',
             'province' => 'DKI Jakarta',
         ]);
 
         City::query()->updateOrCreate([
-            'organization_id' => $organization->id,
             'name' => 'Bandung',
             'province' => 'Jawa Barat',
         ]);

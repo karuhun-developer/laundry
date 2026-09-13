@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Cms;
 
-use App\Enums\RoleName;
 use App\Models\City;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,27 +25,14 @@ class StoreCityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'organization_id' => [
-                Rule::requiredIf($this->user()?->hasRole(RoleName::Superadmin->value) === true),
-                'nullable',
-                'integer',
-                'exists:organizations,id',
-            ],
             'name' => [
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('cities')->where('organization_id', $this->organizationId())
+                Rule::unique('cities', 'name')
                     ->where('province', $this->string('province')->toString()),
             ],
             'province' => ['required', 'string', 'max:100'],
         ];
-    }
-
-    public function organizationId(): int
-    {
-        return $this->user()->hasRole(RoleName::Superadmin->value)
-            ? $this->integer('organization_id')
-            : (int) $this->user()->organization_id;
     }
 }

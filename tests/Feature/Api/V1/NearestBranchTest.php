@@ -6,7 +6,7 @@ use App\Models\Organization;
 
 it('returns nearest active branches with delivery quotes in distance order', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create();
+    $city = City::factory()->create();
 
     $farBranch = Branch::factory()->for($organization)->for($city)->create([
         'name' => 'Cabang Jauh',
@@ -54,7 +54,7 @@ it('returns nearest active branches with delivery quotes in distance order', fun
 
 it('limits the number of nearest branches returned', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create();
+    $city = City::factory()->create();
 
     Branch::factory()->count(3)->for($organization)->for($city)->create();
 

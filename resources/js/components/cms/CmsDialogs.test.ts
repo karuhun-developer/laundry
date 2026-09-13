@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, nextTick } from 'vue';
 import BranchFormDialog from '@/components/cms/BranchFormDialog.vue';
+import CityFormDialog from '@/components/cms/CityFormDialog.vue';
 import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import LocationPicker from '@/components/cms/LocationPicker.vue';
 import OrganizationFormDialog from '@/components/cms/OrganizationFormDialog.vue';
@@ -248,30 +249,24 @@ describe('CMS dialogs', () => {
         expect(wrapper.attributes('aria-atomic')).toBe('true');
     });
 
-    it('explains and updates branch cities when the selected organization changes', async () => {
+    it('shows every global city and keeps the selection when organization changes', async () => {
         const wrapper = mount(BranchFormDialog, {
             props: {
                 cities: [
                     {
                         id: 1,
-                        organization_id: 1,
                         name: 'Jakarta Selatan',
                         province: 'DKI Jakarta',
-                        organization: { id: 1, name: 'LaundryHub Demo' },
                     },
                     {
                         id: 2,
-                        organization_id: 1,
                         name: 'Bandung',
                         province: 'Jawa Barat',
-                        organization: { id: 1, name: 'LaundryHub Demo' },
                     },
                     {
                         id: 3,
-                        organization_id: 2,
                         name: 'Bogor',
                         province: 'Jawa Barat',
-                        organization: { id: 2, name: 'Laundry Bandung' },
                     },
                 ],
                 organizations: [
@@ -284,16 +279,28 @@ describe('CMS dialogs', () => {
             global: { stubs: dialogStubs },
         });
 
-        expect(wrapper.text()).toContain('Kota mengikuti organisasi yang dipilih.');
+        expect(wrapper.text()).toContain('Semua kota dapat dipakai oleh setiap organisasi.');
         expect(wrapper.get('#branch-city').text()).toContain('Jakarta Selatan');
         expect(wrapper.get('#branch-city').text()).toContain('Bandung');
-        expect(wrapper.get('#branch-city').text()).not.toContain('Bogor');
+        expect(wrapper.get('#branch-city').text()).toContain('Bogor');
+
+        await wrapper.get('#branch-city').setValue('2');
 
         await wrapper.get('#branch-organization').setValue('2');
 
+        expect(wrapper.get<HTMLSelectElement>('#branch-city').element.value).toBe('2');
         expect(wrapper.get('#branch-city').text()).toContain('Bogor');
-        expect(wrapper.get('#branch-city').text()).not.toContain('Bandung');
-        expect(wrapper.get('#branch-city').text()).not.toContain('Jakarta Selatan');
+        expect(wrapper.get('#branch-city').text()).toContain('Bandung');
+        expect(wrapper.get('#branch-city').text()).toContain('Jakarta Selatan');
+    });
+
+    it('does not submit organization ownership from the global city form', () => {
+        const wrapper = mount(CityFormDialog, {
+            global: { stubs: dialogStubs },
+        });
+
+        expect(wrapper.find('#city-organization').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Master kota ini dapat dipakai oleh semua organisasi.');
     });
 
     it('keeps blank coordinates unselected when the map opens', async () => {

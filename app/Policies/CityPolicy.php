@@ -23,10 +23,7 @@ class CityPolicy
      */
     public function view(User $user, City $city): bool
     {
-        return $user->can(PermissionName::ManageBranches->value)
-            && ($user->hasRole(RoleName::Superadmin->value)
-                || ($user->organization_id !== null
-                    && $user->organization_id === $city->organization_id));
+        return $this->viewAny($user);
     }
 
     /**
@@ -42,7 +39,8 @@ class CityPolicy
      */
     public function update(User $user, City $city): bool
     {
-        return $this->view($user, $city);
+        return $user->hasRole(RoleName::Superadmin->value)
+            && $user->can(PermissionName::ManageBranches->value);
     }
 
     /**
@@ -50,7 +48,7 @@ class CityPolicy
      */
     public function delete(User $user, City $city): bool
     {
-        return $this->view($user, $city);
+        return $this->update($user, $city);
     }
 
     /**

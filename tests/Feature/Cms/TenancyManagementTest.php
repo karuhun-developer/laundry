@@ -97,10 +97,9 @@ it('renders organization management only for superadmins', function (): void {
         ->assertForbidden();
 });
 
-it('allows an owner to create cities and branches only in their organization', function (): void {
+it('allows an owner to create global cities and use any city for their branches', function (): void {
     $organization = Organization::factory()->create();
-    $otherOrganization = Organization::factory()->create();
-    $otherCity = City::factory()->for($otherOrganization)->create();
+    $otherCity = City::factory()->create(['name' => 'Jakarta Selatan']);
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
 
@@ -109,7 +108,7 @@ it('allows an owner to create cities and branches only in their organization', f
         'province' => 'Jawa Barat',
     ])->assertRedirect();
 
-    $city = City::query()->where('organization_id', $organization->id)->firstOrFail();
+    $city = City::query()->where('name', 'Bandung')->firstOrFail();
 
     $this->actingAs($owner)->post(route('cms.branches.store'), [
         'city_id' => $city->id,
@@ -135,17 +134,42 @@ it('allows an owner to create cities and branches only in their organization', f
 
     $this->actingAs($owner)->post(route('cms.branches.store'), [
         'city_id' => $otherCity->id,
-        'name' => 'Cabang Silang',
-        'code' => 'BAD01',
+        'name' => 'Cabang Kemang',
+        'code' => 'JKT01',
         'address' => 'Alamat lain',
-    ])->assertSessionHasErrors('city_id');
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    $this->assertDatabaseMissing('branches', ['code' => 'BAD01']);
+    $this->assertDatabaseHas('branches', [
+        'organization_id' => $organization->id,
+        'city_id' => $otherCity->id,
+        'code' => 'JKT01',
+    ]);
+});
+
+it('enforces city uniqueness globally by name and province', function (): void {
+    $firstOrganization = Organization::factory()->create();
+    $secondOrganization = Organization::factory()->create();
+    $firstOwner = User::factory()->for($firstOrganization)->create();
+    $secondOwner = User::factory()->for($secondOrganization)->create();
+    $firstOwner->assignRole(RoleName::Owner->value);
+    $secondOwner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($firstOwner)->post(route('cms.cities.store'), [
+        'name' => 'Bandung',
+        'province' => 'Jawa Barat',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->actingAs($secondOwner)->post(route('cms.cities.store'), [
+        'name' => 'Bandung',
+        'province' => 'Jawa Barat',
+    ])->assertSessionHasErrors('name');
+
+    $this->assertDatabaseCount('cities', 1);
 });
 
 it('rejects a branch code that duplicates after normalization', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create();
+    $city = City::factory()->create();
     Branch::factory()->for($organization)->for($city)->create(['code' => 'BDG01']);
 
     $owner = User::factory()->for($organization)->create();
@@ -163,9 +187,10 @@ it('rejects a branch code that duplicates after normalization', function (): voi
 
 it('scopes the branch management page to an owner organization', function (): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create();
+    $city = City::factory()->create(['name' => 'A Jakarta']);
+    $otherCity = City::factory()->create(['name' => 'Z Bandung']);
     $branch = Branch::factory()->for($organization)->for($city)->create();
-    Branch::factory()->create();
+    Branch::factory()->for($otherCity)->create();
 
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
@@ -177,7 +202,7 @@ it('scopes the branch management page to an owner organization', function (): vo
             ->component('cms/Branches')
             ->has('branches', 1)
             ->where('branches.0.id', $branch->id)
-            ->has('cities', 1)
+            ->has('cities', 2)
             ->where('cities.0.id', $city->id)
             ->has('organizations', 0));
 });
@@ -185,9 +210,9 @@ it('scopes the branch management page to an owner organization', function (): vo
 it('lets a superadmin view branches across organizations', function (): void {
     $firstOrganization = Organization::factory()->create();
     $secondOrganization = Organization::factory()->create();
-    $firstCity = City::factory()->for($firstOrganization)->create(['name' => 'A Jakarta']);
+    $firstCity = City::factory()->create(['name' => 'A Jakarta']);
     Branch::factory()->for($firstOrganization)->for($firstCity)->create();
-    $secondCity = City::factory()->for($secondOrganization)->create(['name' => 'Z Bandung']);
+    $secondCity = City::factory()->create(['name' => 'Z Bandung']);
     Branch::factory()->for($secondOrganization)->for($secondCity)->create();
 
     $superadmin = User::factory()->create();
@@ -200,8 +225,9 @@ it('lets a superadmin view branches across organizations', function (): void {
             ->component('cms/Branches')
             ->has('branches', 2)
             ->has('cities', 2)
-            ->where('cities.0.organization.id', $firstOrganization->id)
-            ->where('cities.0.organization.name', $firstOrganization->name)
+            ->where('cities.0.id', $firstCity->id)
+            ->missing('cities.0.organization_id')
+            ->missing('cities.0.organization')
             ->has('organizations', 2));
 });
 
@@ -219,7 +245,7 @@ it('forbids an owner without an organization from tenant management pages', func
 
 it('forbids an owner without an organization from creating tenant records', function (string $resource): void {
     $organization = Organization::factory()->create();
-    $city = City::factory()->for($organization)->create();
+    $city = City::factory()->create();
     $branch = Branch::factory()->for($organization)->create();
     $owner = User::factory()->create();
     $owner->assignRole(RoleName::Owner->value);

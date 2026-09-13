@@ -21,9 +21,7 @@ class BranchFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'city_id' => fn (array $attributes) => City::factory()->create([
-                'organization_id' => $attributes['organization_id'],
-            ])->id,
+            'city_id' => City::factory(),
             'name' => 'Cabang '.fake()->unique()->city(),
             'code' => strtoupper(fake()->unique()->bothify('??###')),
             'phone' => fake()->numerify('08##########'),

@@ -38,7 +38,7 @@ class StoreBranchRequest extends FormRequest
             'city_id' => [
                 'required',
                 'integer',
-                Rule::exists('cities', 'id')->where('organization_id', $organizationId),
+                Rule::exists('cities', 'id'),
             ],
             'name' => ['required', 'string', 'max:120'],
             'code' => [

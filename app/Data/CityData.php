@@ -8,7 +8,6 @@ use App\Http\Requests\Cms\UpdateCityRequest;
 final readonly class CityData
 {
     public function __construct(
-        public int $organizationId,
         public string $name,
         public string $province,
     ) {}
@@ -16,7 +15,6 @@ final readonly class CityData
     public static function fromRequest(StoreCityRequest|UpdateCityRequest $request): self
     {
         return new self(
-            organizationId: $request->organizationId(),
             name: $request->string('name')->toString(),
             province: $request->string('province')->toString(),
         );

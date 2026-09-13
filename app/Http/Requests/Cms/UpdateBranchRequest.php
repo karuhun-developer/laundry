@@ -26,7 +26,7 @@ class UpdateBranchRequest extends FormRequest
             'city_id' => [
                 'required',
                 'integer',
-                Rule::exists('cities', 'id')->where('organization_id', $branch?->organization_id),
+                Rule::exists('cities', 'id'),
             ],
             'name' => ['required', 'string', 'max:120'],
             'code' => [

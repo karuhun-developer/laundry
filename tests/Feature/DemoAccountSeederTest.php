@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\City;
-use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,14 +55,9 @@ class DemoAccountSeederTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
 
-        $organization = Organization::query()
-            ->where('slug', 'laundryhub-demo')
-            ->firstOrFail();
-
         $this->assertSame(
             ['Bandung', 'Jakarta Selatan'],
             City::query()
-                ->whereBelongsTo($organization)
                 ->orderBy('name')
                 ->pluck('name')
                 ->all(),

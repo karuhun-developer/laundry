@@ -13,10 +13,8 @@ export type OrganizationSummary = OrganizationOption & {
 
 export type CitySummary = {
     id: number;
-    organization_id: number;
     name: string;
     province: string;
-    organization: OrganizationOption;
     pending?: boolean;
 };
 

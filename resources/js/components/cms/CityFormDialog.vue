@@ -8,31 +8,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { store, update } from '@/routes/cms/cities';
-import type { BranchesPageProps, CitySummary, OrganizationOption } from '@/types';
+import type { BranchesPageProps, CitySummary } from '@/types';
 
 const props = defineProps<{
     city?: CitySummary;
-    organizations: OrganizationOption[];
-    currentOrganizationId: number | null;
-    isSuperadmin: boolean;
 }>();
 
 const open = ref(false);
 const isEditing = computed(() => props.city !== undefined);
-const defaultOrganizationId = (): string =>
-    (
-        props.city?.organization_id ??
-        props.currentOrganizationId ??
-        props.organizations[0]?.id
-    )?.toString() ?? '';
 const form = useForm({
-    organization_id: defaultOrganizationId(),
     name: props.city?.name ?? '',
     province: props.city?.province ?? '',
 });
 
 const restoreValues = (): void => {
-    form.organization_id = defaultOrganizationId();
     form.name = props.city?.name ?? '';
     form.province = props.city?.province ?? '';
     form.clearErrors();
@@ -45,14 +34,6 @@ watch(open, (isOpen) => {
 });
 
 const submit = (): void => {
-    const organizationId =
-        props.city?.organization_id ?? props.currentOrganizationId ?? Number(form.organization_id);
-
-    if (organizationId <= 0) {
-        form.setError('organization_id', 'Pilih organisasi terlebih dahulu.');
-        return;
-    }
-
     if (props.city) {
         const pending = {
             ...props.city,
@@ -75,13 +56,8 @@ const submit = (): void => {
 
     const pending: CitySummary = {
         id: -Date.now(),
-        organization_id: organizationId,
         name: form.name,
         province: form.province,
-        organization: props.organizations.find((item) => item.id === organizationId) ?? {
-            id: organizationId,
-            name: 'Organisasi saya',
-        },
         pending: true,
     };
 
@@ -102,7 +78,7 @@ const submit = (): void => {
         v-model:open="open"
         form-test="city-form"
         :title="isEditing ? 'Edit kota' : 'Tambah kota'"
-        description="Kelompokkan cabang berdasarkan area operasional."
+        description="Master kota ini dapat dipakai oleh semua organisasi."
         :processing="form.processing"
         :submit-label="isEditing ? 'Simpan perubahan' : 'Tambah kota'"
         @submit="submit"
@@ -123,25 +99,6 @@ const submit = (): void => {
             </Button>
         </template>
         <template #icon><MapPinned class="size-5" /></template>
-
-                <div v-if="isSuperadmin" class="space-y-2">
-                    <Label for="city-organization">Organisasi</Label>
-                    <select
-                        id="city-organization"
-                        v-model="form.organization_id"
-                        class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-11 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-3 disabled:opacity-50"
-                        :disabled="isEditing"
-                        required
-                        :aria-invalid="Boolean(form.errors.organization_id)"
-                        aria-describedby="city-organization-error"
-                    >
-                        <option value="" disabled>Pilih organisasi</option>
-                        <option v-for="organization in organizations" :key="organization.id" :value="organization.id.toString()">
-                            {{ organization.name }}
-                        </option>
-                    </select>
-                    <InputError id="city-organization-error" :message="form.errors.organization_id" />
-                </div>
 
                 <div class="space-y-2">
                     <Label for="city-name">Kota / kabupaten</Label>
