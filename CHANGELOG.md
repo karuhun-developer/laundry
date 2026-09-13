@@ -7,6 +7,7 @@ All notable changes to LaundryHub are documented here. The project follows phase
 ### Phase 1: Core operations
 
 - Added the initial product requirements, delivery roadmap, and design-system contract.
+- Added organization-scoped cities, branches, users, roles, permissions, audit logs, and branch media collections.
 
 ## Release policy
 
