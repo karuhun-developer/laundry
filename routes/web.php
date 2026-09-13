@@ -6,12 +6,15 @@ use App\Http\Controllers\Cms\OrganizationController;
 use App\Http\Controllers\Cms\PriceOptionController;
 use App\Http\Controllers\Cms\ServiceController;
 use App\Http\Controllers\Cms\UserController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MobileAppController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('app', MobileAppController::class)->name('mobile.app');
 
     Route::prefix('cms')->name('cms.')->group(function () {
         Route::get('organizations', [OrganizationController::class, 'index'])->name('organizations.index');

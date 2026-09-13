@@ -25,6 +25,11 @@
     --color-brand-600: var(--laundry-brand-600);
     --color-brand-100: var(--laundry-brand-100);
     --color-sky-400: var(--laundry-sky-400);
+    --color-mint-500: var(--laundry-mint-500);
+    --color-amber-500: var(--laundry-amber-500);
+    --color-red-600: var(--laundry-red-600);
+    --shadow-low: var(--laundry-shadow-low);
+    --shadow-raised: var(--laundry-shadow-raised);
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -114,6 +119,11 @@
     --laundry-brand-600: #1559c7;
     --laundry-brand-100: #ddebff;
     --laundry-sky-400: #69c3f6;
+    --laundry-mint-500: #17a673;
+    --laundry-amber-500: #e98a15;
+    --laundry-red-600: #d92d20;
+    --laundry-shadow-low: 0 8px 24px rgb(9 67 169 / 8%);
+    --laundry-shadow-raised: 0 18px 48px rgb(9 67 169 / 14%);
     --laundry-map-marker-shadow: 0 4px 14px rgb(15 23 42 / 35%);
 
     --background: var(--laundry-surface);
@@ -229,5 +239,51 @@
     }
     body {
         @apply bg-background text-foreground;
+    }
+
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+        outline: 1px solid var(--laundry-brand-600);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 3px rgb(21 89 199 / 24%);
+    }
+}
+
+@layer utilities {
+    .mobile-shell {
+        height: 100dvh;
+        overflow: hidden;
+        padding-right: env(safe-area-inset-right);
+        padding-left: env(safe-area-inset-left);
+    }
+
+    .mobile-fixed-header {
+        padding-top: env(safe-area-inset-top);
+    }
+
+    .mobile-scroll-owner {
+        position: fixed;
+        top: calc(4rem + env(safe-area-inset-top));
+        right: env(safe-area-inset-right);
+        bottom: calc(4rem + max(0.75rem, env(safe-area-inset-bottom)) + 1px);
+        left: env(safe-area-inset-left);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        scroll-padding-bottom: 1.5rem;
+    }
+
+    .safe-bottom {
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
