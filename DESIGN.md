@@ -254,6 +254,22 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Printer profiles are stored only on the current device and include connection type, device identity, display name, and 58 mm or 80 mm paper width.
 - Bluetooth and USB discovery, test print, and receipt print expose visible progress and recoverable inline errors. Browser surfaces explain that native printer transport requires the Android app.
 
+### WhatsApp template and suggestion surface
+
+- Template management uses the same focused modal pattern as other CMS records. Branch overrides remain visibly distinct from organization defaults.
+- Variable chips insert at the current text cursor, while a nearby live preview substitutes realistic non-sensitive sample values.
+- Template deletion requires the exact scope/status key and never uses a native JavaScript confirmation dialog.
+- A successful order transition may reveal a WhatsApp preview dialog; a failed or rolled-back transition never reveals one.
+- The dialog shows the destination and complete rendered message before exposing `Buka WhatsApp`. No page load, transition, or suggestion fetch opens an external application automatically.
+- Unavailable templates and invalid customer numbers remain recoverable inline states instead of disabled controls without explanation.
+
+### Android shell and external links
+
+- The launcher uses the brand-700 field with a high-contrast washing-machine mark, sky-blue water, and mint completion accent. Adaptive foreground artwork stays inside the Android safe zone.
+- Splash resources use the canvas and surface-blue palette in both portrait and landscape orientations.
+- The native external-link bridge accepts only exact `https://wa.me` destinations without credentials or custom ports. All other external navigation is rejected before an Android intent is created.
+- External applications open only from an explicit user action. The web fallback follows the same validation contract before calling `window.open`.
+
 ## 6. Interaction and Motion
 
 - Motion communicates hierarchy, mutation progress, or spatial continuity.
@@ -294,9 +310,9 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Each feature document records routes, authorization, API shape, test coverage, and known constraints.
 - `CHANGELOG.md` records user-visible changes by phase.
 
-### Accepted Phase 1 debt
+### Accepted product debt
 
-- Final brand name and logo are intentionally absent; the wordmark is typographic.
+- `LaundryHub` remains a working product name, while the Android shell now carries a project-specific launcher and splash identity.
 - Charts are deferred until reporting requirements are implemented.
-- Native Android safe-area and printer interaction can only be fully certified in Phases 2 and 3.
+- Native Android safe-area, external-link, printer, and release-signing behavior still requires representative physical-device certification.
 - Bahasa Indonesia is delivered first; localization infrastructure may precede translated content.

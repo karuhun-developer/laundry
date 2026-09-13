@@ -173,8 +173,21 @@ Deliverables:
 
 - Configurable WhatsApp `wa.me` templates.
 - Validated template variables such as `{customer_name}`, `{order_number}`, and `{status}`.
-- Trigger suggestions on status changes without background WhatsApp automation.
-- Capacitor Android project, permissions, signed build documentation, and device QA.
+- Organization defaults with branch-level overrides for each order status.
+- Customer WhatsApp phone storage and an immutable phone snapshot on every order.
+- Trigger suggestions only after successful status changes without background WhatsApp automation.
+- Explicit destination/message preview with a user-initiated open action.
+- A Capacitor Android bridge restricted to exact `https://wa.me` URLs.
+- LaundryHub launcher/adaptive icons, splash assets, signed build documentation, and device QA checklist.
+
+Exit criteria:
+
+- Owners and superadmins can manage templates in modal workflows with optimistic reconciliation and typed deletion confirmation.
+- Branch-specific templates take precedence over organization templates without crossing tenant boundaries.
+- Failed order transitions roll back and never request or open a WhatsApp suggestion.
+- Native and browser transports open WhatsApp only after explicit confirmation and reject non-allowlisted URLs.
+- Pest, Vitest, PHPStan, strict TypeScript checks, production build, and Capacitor sync pass.
+- Browser end-to-end, emulator, signed Gradle build, and physical-device checks remain the final release gate.
 
 ### Phase 4: Reporting and scale
 

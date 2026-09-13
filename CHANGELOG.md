@@ -44,6 +44,16 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Added Android Bluetooth SPP and USB printer discovery, device-local profiles, 58 mm and 80 mm receipt rendering, and test printing.
 - Added Vitest coverage for payment rollback, QRIS reconciliation, receipt actions, and printer behavior, plus Pest coverage for the mobile payment resource contract.
 
+### Phase 3: Communication and Android
+
+- Added organization and branch-scoped WhatsApp templates with branch precedence, validated variables, modal CMS workflows, optimistic reconciliation, and typed deletion confirmation.
+- Added normalized WhatsApp phone management for users and immutable customer phone snapshots on orders.
+- Added status-aware WhatsApp suggestions with RFC 3986 encoded `wa.me` URLs, explicit message preview, and manual open actions after successful order transitions.
+- Security: restricted native and browser external-link transport to exact `https://wa.me` URLs without subdomains, credentials, alternate schemes, or custom ports.
+- Added LaundryHub launcher, adaptive-icon, and portrait/landscape splash assets for Android.
+- Added Android signing and physical-device release guidance.
+- Added Pest and Vitest coverage for tenant authorization, template precedence and validation, phone snapshots, suggestion generation, optimistic rollback, dialog behavior, and external-link validation.
+
 ## Release policy
 
 - `Added` for new behavior.
