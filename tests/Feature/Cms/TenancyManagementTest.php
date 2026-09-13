@@ -420,7 +420,7 @@ it('scopes the user management page and excludes superadmins', function (): void
 });
 
 it('shares authenticated roles for role-aware navigation', function (): void {
-    $owner = User::factory()->create();
+    $owner = User::factory()->for(Organization::factory())->create();
     $owner->assignRole(RoleName::Owner->value);
 
     $this->actingAs($owner)

@@ -9,12 +9,14 @@ use App\Http\Controllers\Cms\ServiceController;
 use App\Http\Controllers\Cms\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MobileAppController;
+use App\Http\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('dashboard/export', ReportExportController::class)->name('dashboard.export');
     Route::get('app', MobileAppController::class)->name('mobile.app');
 
     Route::prefix('cms')->name('cms.')->group(function () {
