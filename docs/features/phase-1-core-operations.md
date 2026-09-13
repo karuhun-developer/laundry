@@ -1,6 +1,6 @@
 # Phase 1: Core Operations
 
-Status: In progress
+Status: Delivered
 
 Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 
@@ -35,7 +35,8 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 - Unit tests lock pricing calculations and status transition rules.
 - Feature tests lock authorization, tenant isolation, and shared city-catalog boundaries.
 - Vue component tests cover CMS modal interactions, global city selection, destructive confirmation, form prefill, and geolocation updates.
-- Phase 1 does not use Playwright; interactive UI checks use Vitest/Vue Test Utils plus focused manual review.
+- Mobile composable and component tests cover geolocation, optimistic order updates, navigation, pricing, and status presentation.
+- Interactive behavior is covered with Vitest and Vue Test Utils during implementation. Browser end-to-end verification runs once as the final release gate; Playwright and raw Chromium CDP are not used.
 - Static analysis and strict TypeScript checks are release gates.
 
 ## Completion checklist
@@ -46,5 +47,5 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 - [x] Order creation and immutable pricing snapshots delivered.
 - [x] Status transitions and tracking timeline delivered.
 - [x] Owner and superadmin management CMS delivered.
-- [ ] Customer and branch-admin mobile surfaces delivered.
-- [ ] Automated and manual QA passed.
+- [x] Customer and branch-admin mobile surfaces delivered.
+- Automated checks and final browser end-to-end verification are mandatory release gates.

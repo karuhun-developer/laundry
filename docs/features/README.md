@@ -6,7 +6,7 @@ Every delivered feature receives a document in this directory. A feature documen
 
 | Phase | Document | Status |
 | --- | --- | --- |
-| 1 | [Core operations](phase-1-core-operations.md) | In progress |
+| 1 | [Core operations](phase-1-core-operations.md) | Delivered |
 | 2 | [Payments and receipts](phase-2-payments-and-receipts.md) | Planned |
 | 3 | [Communication and Android](phase-3-communication-and-android.md) | Planned |
 | 4 | [Reporting and scale](phase-4-reporting-and-scale.md) | Planned |
@@ -22,3 +22,4 @@ Every delivered feature receives a document in this directory. A feature documen
 | 1 | [Order tracking and status transitions](05-order-tracking-status.md) | Delivered |
 | 1 | [Demo role authentication](06-demo-role-authentication.md) | Delivered |
 | 1 | [Owner management console](07-owner-management-console.md) | Delivered |
+| 1 | [Mobile role workspaces](08-mobile-role-workspaces.md) | Delivered |

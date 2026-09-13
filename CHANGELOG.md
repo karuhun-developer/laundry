@@ -25,6 +25,15 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Fixed organization slug and branch code uniqueness validation so normalized duplicates return field errors instead of database constraint failures.
 - Added idempotent demo accounts for customer, branch-admin, owner, and superadmin roles with one-tap local login selection.
 - Changed authentication pages to use the responsive split layout.
+- Added the authenticated mobile workspace for customer order entry, tracking, nearest-branch discovery, and account access.
+- Added the branch-admin mobile workspace for branch queues, optimistic status transitions, counter order entry, customer lookup, and account access.
+- Added session-authenticated mobile context, order-list, and customer-directory APIs with role and tenant authorization.
+- Added optimistic order creation and status transitions with canonical server reconciliation and automatic rollback.
+- Changed mobile data loading to cancel superseded requests and ignore stale tenant responses during organization or branch switching.
+- Fixed delivery coordinates becoming active before nearest-branch fees were available, preventing a temporary Rp0 delivery estimate.
+- Security: restricted branch-admin customer directories to organization customers and neutral customers with an existing order in that organization.
+- Changed the demo 12 kg package to Rp12.000 plus Rp5.000 per excess kilogram, including decimal-weight pricing such as 12,5 kg for Rp14.500.
+- Added Pest and Vitest coverage for the Phase 1 mobile workspaces; browser end-to-end verification remains the final release gate.
 
 ## Release policy
 
