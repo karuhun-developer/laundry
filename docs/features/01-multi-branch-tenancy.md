@@ -4,8 +4,8 @@ Phase: 1
 
 ## Scope
 
-Organizations are the tenant boundary. Cities, branches, owners, and branch admins belong to one organization. Customers remain organization-neutral so an account can receive orders from different laundry businesses.
-The same city name may exist once per organization; a branch can only select cities owned by its organization.
+Organizations are the tenant boundary for branches, owners, branch admins, services, and orders. Customers remain organization-neutral so an account can receive orders from different laundry businesses.
+Cities are shared platform master data without organization ownership. Each name and province pair is globally unique, and every organization may assign any global city to a branch.
 
 ## Authorization
 
@@ -14,8 +14,8 @@ The same city name may exist once per organization; a branch can only select cit
 - `branch_admin`: assigned through the `branch_user` pivot and receives order permissions.
 - `customer`: no CMS management permissions.
 
-Spatie Permission owns roles and permissions. Laravel policies enforce model-level tenant checks. Request validation also scopes foreign keys to the actor's organization to prevent cross-tenant assignment.
-The CMS mirrors that rule by filtering branch city choices after organization selection and showing city ownership to superadmins.
+Spatie Permission owns roles and permissions. Laravel policies enforce model-level tenant checks. Request validation scopes tenant-owned foreign keys to the actor's organization while accepting any existing global city for a branch.
+Owners may list and create cities so a missing area does not block branch setup. Only superadmins may edit or delete a city because those changes affect every tenant, and deletion is rejected while any branch still references the city.
 
 ## Routes
 
@@ -32,4 +32,4 @@ Branches expose a single-file `logo` media collection through Spatie Media Libra
 
 ## Tests
 
-`tests/Feature/Cms/TenancyManagementTest.php` and `tests/Feature/Cms/TenantCrudTest.php` cover scoped lists and creates, updates, protected deletion, exact confirmation, dependency conflicts, nullable-tenant customers, role boundaries, and cross-tenant denial.
+`tests/Feature/Cms/TenancyManagementTest.php` and `tests/Feature/Cms/TenantCrudTest.php` cover tenant-scoped resources, globally shared city lists and uniqueness, cross-organization city assignment, owner create-only city access, superadmin city governance, protected deletion, exact confirmation, dependency conflicts, nullable-tenant customers, role boundaries, and cross-tenant denial.

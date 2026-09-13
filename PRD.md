@@ -40,18 +40,20 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 ### Owner
 
-- Manages their organization, cities, branches, branch staff, catalogs, and reports.
+- Manages their organization, branches, branch staff, catalogs, and reports.
+- Can add a missing city to the shared city catalog, but cannot edit or delete existing global cities.
 - Can view all organization data but cannot access another organization.
 
 ### Superadmin
 
 - Manages all organizations and platform users.
+- Governs edits and deletion of the shared city catalog.
 - Can inspect audit activity and platform health.
 
 ## Core domain
 
 - Organization: tenant boundary and owner scope.
-- City: organization-owned geographic grouping for branch discovery and reporting. A city record is never shared across tenants.
+- City: globally shared geographic master data for branch discovery and reporting, unique by name and province.
 - Branch: operational unit with contact details, coordinates, free-delivery radius, and excess-distance tariff.
 - User: authenticated actor with global or organization/branch-scoped roles.
 - Service: laundry service category, for example wash-and-fold or dry cleaning.
@@ -123,7 +125,7 @@ Deliverables:
 
 - Laravel, Inertia, Vue 3, TypeScript, Tailwind, and Laravel Boost foundation.
 - Authentication and role-aware navigation.
-- Multi-organization, city, branch, and branch-membership domain.
+- Multi-organization branch and branch-membership domain backed by a shared global city catalog.
 - Coordinate-based nearest-branch discovery with configurable free-delivery radius and excess-distance pricing.
 - Service catalog with package and per-kilogram pricing.
 - Order creation, deterministic total calculation, and status tracking.
@@ -133,7 +135,7 @@ Deliverables:
 - Optimistic CMS mutation states that reconcile from canonical Inertia responses and roll back on validation or network failure.
 - Accessible outlet coordinate selection with device geolocation, click-to-place, draggable markers, and keyboard-editable latitude/longitude fields.
 - Seeded demonstration data and documented API endpoints.
-- LaundryHub Demo seed data includes Jakarta Selatan and Bandung as selectable cities in the same organization.
+- LaundryHub Demo seed data includes Jakarta Selatan and Bandung in the global city catalog.
 - Deterministic demo credentials and role shortcuts on the local login screen.
 - Responsive split authentication shell with product context on wide screens and a focused single-column form on compact screens.
 

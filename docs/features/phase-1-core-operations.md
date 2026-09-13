@@ -8,7 +8,7 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 
 - Project foundation and development tooling.
 - Authentication and role-aware access.
-- Organization, city, branch, and branch membership management.
+- Organization, branch, and branch membership management with a shared global city catalog.
 - Service catalog with fixed-package and per-kilogram prices.
 - Order creation with immutable pricing snapshots.
 - Authorized order status transitions and customer timeline.
@@ -18,6 +18,7 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 
 - Superadmins can access every organization.
 - Owners are restricted to their organization.
+- Owners can add global cities; only superadmins can edit or delete them.
 - Branch admins are restricted to assigned branches.
 - Customers can access only their own orders and public branch/catalog data.
 - Server policies are authoritative; navigation visibility is convenience only.
@@ -32,8 +33,8 @@ Target: a runnable, tested vertical slice for owner, branch admin, and customer.
 ## Testing contract
 
 - Unit tests lock pricing calculations and status transition rules.
-- Feature tests lock authorization and tenant isolation.
-- Vue component tests cover CMS modal interactions, destructive confirmation, form prefill, and geolocation updates.
+- Feature tests lock authorization, tenant isolation, and shared city-catalog boundaries.
+- Vue component tests cover CMS modal interactions, global city selection, destructive confirmation, form prefill, and geolocation updates.
 - Phase 1 does not use Playwright; interactive UI checks use Vitest/Vue Test Utils plus focused manual review.
 - Static analysis and strict TypeScript checks are release gates.
 

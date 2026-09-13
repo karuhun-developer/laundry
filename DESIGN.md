@@ -134,9 +134,10 @@ Components respond to their container where possible; viewport breakpoints own o
 - Organization, city, branch, and user creation and editing happen in focused dialogs instead of permanent sidebar forms.
 - Create and edit mutations insert or replace a visibly pending record immediately while the request is active.
 - Pending cities are informational only and cannot be selected by a branch form until the server confirms their canonical identifier.
-- City choices are scoped to the selected organization; superadmins see city ownership before opening a branch dialog.
+- City choices come from one shared global catalog and remain available regardless of the selected branch organization.
+- Owners may add a missing city. Only superadmins receive city edit and delete controls because those mutations affect every organization.
 - Success replaces optimistic records through the canonical Inertia page response. Failure removes them and keeps entered form values available for correction.
-- Switching organization clears city and branch selections that no longer belong to the selected tenant. Switching away from branch-admin clears branch assignments.
+- Switching organization preserves a valid global city selection. Switching away from branch-admin clears branch assignments.
 - Delete dialogs require the exact organization name, city name, branch code, or user email before enabling the destructive action.
 - Dependency conflicts and validation errors keep the delete dialog open so the actor can recover without losing context.
 - Empty tenant and location states explain the prerequisite action instead of presenting a disabled control without context.
