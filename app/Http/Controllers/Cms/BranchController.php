@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Cms;
 
 use App\Actions\Branches\CreateBranch;
+use App\Actions\Branches\DeleteBranch;
+use App\Actions\Branches\UpdateBranch;
 use App\Data\BranchData;
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cms\DeleteBranchRequest;
 use App\Http\Requests\Cms\StoreBranchRequest;
+use App\Http\Requests\Cms\UpdateBranchRequest;
 use App\Models\Branch;
 use App\Models\City;
 use App\Models\Organization;
@@ -47,5 +51,25 @@ class BranchController extends Controller
         $createBranch->handle(BranchData::fromRequest($request));
 
         return back()->with('success', 'Cabang berhasil dibuat.');
+    }
+
+    public function update(
+        UpdateBranchRequest $request,
+        Branch $branch,
+        UpdateBranch $updateBranch,
+    ): RedirectResponse {
+        $updateBranch->handle($branch, BranchData::fromRequest($request));
+
+        return back()->with('success', 'Cabang berhasil diperbarui.');
+    }
+
+    public function destroy(
+        DeleteBranchRequest $request,
+        Branch $branch,
+        DeleteBranch $deleteBranch,
+    ): RedirectResponse {
+        $deleteBranch->handle($branch);
+
+        return back()->with('success', 'Cabang berhasil dihapus.');
     }
 }

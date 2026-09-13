@@ -3,6 +3,7 @@
 namespace App\Data;
 
 use App\Http\Requests\Cms\StoreBranchRequest;
+use App\Http\Requests\Cms\UpdateBranchRequest;
 
 final readonly class BranchData
 {
@@ -20,7 +21,7 @@ final readonly class BranchData
         public bool $isActive,
     ) {}
 
-    public static function fromRequest(StoreBranchRequest $request): self
+    public static function fromRequest(StoreBranchRequest|UpdateBranchRequest $request): self
     {
         return new self(
             organizationId: $request->organizationId(),

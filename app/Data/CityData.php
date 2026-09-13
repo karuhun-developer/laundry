@@ -3,6 +3,7 @@
 namespace App\Data;
 
 use App\Http\Requests\Cms\StoreCityRequest;
+use App\Http\Requests\Cms\UpdateCityRequest;
 
 final readonly class CityData
 {
@@ -12,7 +13,7 @@ final readonly class CityData
         public string $province,
     ) {}
 
-    public static function fromRequest(StoreCityRequest $request): self
+    public static function fromRequest(StoreCityRequest|UpdateCityRequest $request): self
     {
         return new self(
             organizationId: $request->organizationId(),

@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Cms;
 
 use App\Actions\Users\CreateUserWithAccess;
+use App\Actions\Users\DeleteUser;
+use App\Actions\Users\UpdateUserWithAccess;
+use App\Data\UpdateUserAccessData;
 use App\Data\UserAccessData;
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cms\DeleteUserRequest;
 use App\Http\Requests\Cms\StoreUserRequest;
+use App\Http\Requests\Cms\UpdateUserRequest;
 use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\User;
@@ -49,5 +54,25 @@ class UserController extends Controller
         $createUserWithAccess->handle(UserAccessData::fromRequest($request));
 
         return back()->with('success', 'Pengguna dan akses berhasil dibuat.');
+    }
+
+    public function update(
+        UpdateUserRequest $request,
+        User $user,
+        UpdateUserWithAccess $updateUserWithAccess,
+    ): RedirectResponse {
+        $updateUserWithAccess->handle($user, UpdateUserAccessData::fromRequest($request));
+
+        return back()->with('success', 'Pengguna dan akses berhasil diperbarui.');
+    }
+
+    public function destroy(
+        DeleteUserRequest $request,
+        User $user,
+        DeleteUser $deleteUser,
+    ): RedirectResponse {
+        $deleteUser->handle($user, $request->user());
+
+        return back()->with('success', 'Pengguna berhasil dihapus.');
     }
 }

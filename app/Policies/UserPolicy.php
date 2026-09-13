@@ -22,11 +22,18 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        return $user->can(PermissionName::ManageUsers->value)
-            && ! $model->hasRole(RoleName::Superadmin->value)
-            && ($user->hasRole(RoleName::Superadmin->value)
-                || ($user->organization_id !== null
-                    && $user->organization_id === $model->organization_id));
+        if (! $user->can(PermissionName::ManageUsers->value)
+            || $model->hasRole(RoleName::Superadmin->value)) {
+            return false;
+        }
+
+        if ($user->hasRole(RoleName::Superadmin->value)) {
+            return true;
+        }
+
+        return ! $model->hasRole(RoleName::Owner->value)
+            && $user->organization_id !== null
+            && $user->organization_id === $model->organization_id;
     }
 
     /**
