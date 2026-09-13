@@ -13,6 +13,10 @@ final readonly class BranchData
         public string $code,
         public ?string $phone,
         public string $address,
+        public ?float $latitude,
+        public ?float $longitude,
+        public int $freeDeliveryRadiusMeters,
+        public int $deliveryFeePerKmRupiah,
         public bool $isActive,
     ) {}
 
@@ -25,6 +29,10 @@ final readonly class BranchData
             code: strtoupper($request->string('code')->toString()),
             phone: $request->filled('phone') ? $request->string('phone')->toString() : null,
             address: $request->string('address')->toString(),
+            latitude: $request->filled('latitude') ? $request->float('latitude') : null,
+            longitude: $request->filled('longitude') ? $request->float('longitude') : null,
+            freeDeliveryRadiusMeters: $request->integer('free_delivery_radius_meters', 10000),
+            deliveryFeePerKmRupiah: $request->integer('delivery_fee_per_km_rupiah'),
             isActive: $request->boolean('is_active', true),
         );
     }

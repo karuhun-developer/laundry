@@ -16,6 +16,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 - Let one organization manage branches across many cities without mixing branch-level data.
 - Let a customer choose a branch, service, package, or per-kilogram price and follow order progress.
+- Recommend the nearest eligible branch and show any pickup/delivery surcharge before checkout.
 - Let branch admins create, price, update, and complete orders quickly from an Android-sized screen.
 - Give owners and superadmins a CMS for branches, users, catalogs, and operational visibility.
 - Keep every privileged action auditable.
@@ -51,7 +52,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 - Organization: tenant boundary and owner scope.
 - City: geographic grouping for branch discovery and reporting.
-- Branch: operational unit with contact and address information.
+- Branch: operational unit with contact details, coordinates, free-delivery radius, and excess-distance tariff.
 - User: authenticated actor with global or organization/branch-scoped roles.
 - Service: laundry service category, for example wash-and-fold or dry cleaning.
 - Price option: fixed package or per-kilogram price attached to a service and branch.
@@ -69,6 +70,15 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Calculation never uses binary floating-point values.
 - The order stores a pricing snapshot so future catalog changes do not rewrite historical totals.
 - Package example: a 12 kg package at Rp12.000 with 500 g excess is charged according to the package excess rule configured for that option.
+
+## Delivery coverage rules
+
+- Each branch may store latitude and longitude coordinates. Branches without coordinates are excluded from automatic routing.
+- Customers receive nearest-branch recommendations only from active branches in the selected organization.
+- Distance uses the Haversine formula in application code for identical SQLite and MySQL behavior. A spatial database optimization may be introduced later without changing the API contract.
+- Pickup and delivery are free up to the branch's configured radius. The initial default radius is 10,000 meters.
+- Distance beyond the free radius is charged per started kilometer: `ceil(excess meters / 1,000) × configured rupiah per km`.
+- The final order stores the selected branch, customer coordinates, calculated distance, free radius, per-kilometer tariff, and delivery-fee snapshot.
 
 ## Order lifecycle
 
@@ -107,6 +117,7 @@ Deliverables:
 - Laravel, Inertia, Vue 3, TypeScript, Tailwind, and Laravel Boost foundation.
 - Authentication and role-aware navigation.
 - Multi-organization, city, branch, and branch-membership domain.
+- Coordinate-based nearest-branch discovery with configurable free-delivery radius and excess-distance pricing.
 - Service catalog with package and per-kilogram pricing.
 - Order creation, deterministic total calculation, and status tracking.
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.
@@ -117,6 +128,7 @@ Exit criteria:
 - An owner can manage branches and catalogs within their organization.
 - A branch admin can create an order and advance its status.
 - A customer can see the order total and full status timeline.
+- A customer can see nearest eligible branches and a deterministic pickup/delivery quote.
 - Cross-organization access is denied by automated tests.
 - Tests, PHPStan, TypeScript checks, production build, API smoke checks, and browser QA pass.
 
@@ -152,7 +164,8 @@ Deliverables:
 - Automated WhatsApp Business API delivery.
 - Production QRIS acquirer integration.
 - Printer discovery or native Android packaging.
-- Payroll, inventory, courier routing, or franchise royalty accounting.
+- Machine-capacity calendars and transactional machine-slot locking.
+- Multi-stop courier route optimization, live driver tracking, payroll, inventory, or franchise royalty accounting.
 
 ## Success metrics
 

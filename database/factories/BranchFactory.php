@@ -28,6 +28,10 @@ class BranchFactory extends Factory
             'code' => strtoupper(fake()->unique()->bothify('??###')),
             'phone' => fake()->numerify('08##########'),
             'address' => fake()->address(),
+            'latitude' => fake()->latitude(-6.4, -6.0),
+            'longitude' => fake()->longitude(106.6, 107.0),
+            'free_delivery_radius_meters' => 10000,
+            'delivery_fee_per_km_rupiah' => 3000,
             'is_active' => true,
         ];
     }

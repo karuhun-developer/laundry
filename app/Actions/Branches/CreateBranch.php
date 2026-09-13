@@ -16,6 +16,10 @@ final class CreateBranch
             'code' => $data->code,
             'phone' => $data->phone,
             'address' => $data->address,
+            'latitude' => $data->latitude,
+            'longitude' => $data->longitude,
+            'free_delivery_radius_meters' => $data->freeDeliveryRadiusMeters,
+            'delivery_fee_per_km_rupiah' => $data->deliveryFeePerKmRupiah,
             'is_active' => $data->isActive,
         ]);
     }

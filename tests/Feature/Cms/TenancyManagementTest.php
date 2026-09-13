@@ -47,12 +47,20 @@ it('allows an owner to create cities and branches only in their organization', f
         'code' => 'BDG01',
         'phone' => '081234567890',
         'address' => 'Jl. Dago No. 1',
+        'latitude' => -6.8781,
+        'longitude' => 107.5953,
+        'free_delivery_radius_meters' => 10000,
+        'delivery_fee_per_km_rupiah' => 3500,
     ])->assertRedirect();
 
     $this->assertDatabaseHas('branches', [
         'organization_id' => $organization->id,
         'city_id' => $city->id,
         'code' => 'BDG01',
+        'latitude' => -6.8781,
+        'longitude' => 107.5953,
+        'free_delivery_radius_meters' => 10000,
+        'delivery_fee_per_km_rupiah' => 3500,
     ]);
 
     $this->actingAs($owner)->post(route('cms.branches.store'), [

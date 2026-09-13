@@ -40,6 +40,10 @@ class DatabaseSeeder extends Seeder
             'code' => 'KMG01',
             'phone' => '081234567890',
             'address' => 'Jl. Kemang Raya No. 10, Jakarta Selatan',
+            'latitude' => -6.2607,
+            'longitude' => 106.8136,
+            'free_delivery_radius_meters' => 10000,
+            'delivery_fee_per_km_rupiah' => 3000,
             'is_active' => true,
         ]);
 

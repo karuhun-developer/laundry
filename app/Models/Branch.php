@@ -21,9 +21,26 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string $code
  * @property string|null $phone
  * @property string $address
+ * @property float|null $latitude
+ * @property float|null $longitude
+ * @property int $free_delivery_radius_meters
+ * @property int $delivery_fee_per_km_rupiah
  * @property bool $is_active
+ * @property-read City $city
  */
-#[Fillable(['organization_id', 'city_id', 'name', 'code', 'phone', 'address', 'is_active'])]
+#[Fillable([
+    'organization_id',
+    'city_id',
+    'name',
+    'code',
+    'phone',
+    'address',
+    'latitude',
+    'longitude',
+    'free_delivery_radius_meters',
+    'delivery_fee_per_km_rupiah',
+    'is_active',
+])]
 class Branch extends Model implements HasMedia
 {
     /** @use HasFactory<BranchFactory> */
@@ -60,6 +77,12 @@ class Branch extends Model implements HasMedia
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'free_delivery_radius_meters' => 'integer',
+            'delivery_fee_per_km_rupiah' => 'integer',
+            'is_active' => 'boolean',
+        ];
     }
 }

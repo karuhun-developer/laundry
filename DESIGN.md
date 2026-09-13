@@ -96,6 +96,14 @@ Components respond to their container where possible; viewport breakpoints own o
 - Branches
 - Account
 
+### Location and branch discovery
+
+- Ask for device location only when the customer chooses automatic branch discovery; manual address/coordinate entry remains available.
+- Nearest-branch cards show branch name, locality, distance, free-delivery coverage, and any extra fee before selection.
+- Never imply GPS precision beyond the returned meter distance. Use Indonesian labels such as `Gratis antar-jemput` or `Biaya jarak Rp6.000`.
+- Location denial and empty coverage states provide a clear manual path instead of blocking order creation.
+- Machine availability is not shown until capacity scheduling and slot-locking semantics are implemented.
+
 ### Branch admin mobile navigation
 
 - Queue

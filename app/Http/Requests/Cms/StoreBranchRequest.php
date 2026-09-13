@@ -47,6 +47,10 @@ class StoreBranchRequest extends FormRequest
             ],
             'phone' => ['nullable', 'string', 'max:24'],
             'address' => ['required', 'string', 'max:1000'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'free_delivery_radius_meters' => ['sometimes', 'integer', 'min:0', 'max:100000'],
+            'delivery_fee_per_km_rupiah' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
