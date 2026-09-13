@@ -138,7 +138,7 @@ final readonly class CreateOrder
                 ])
                 ->log('order created');
 
-            return $order->load(['branch', 'items', 'statusEvents']);
+            return $order->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
         });
     }
 

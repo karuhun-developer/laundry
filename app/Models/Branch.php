@@ -26,6 +26,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property float|null $longitude
  * @property int $free_delivery_radius_meters
  * @property int $delivery_fee_per_km_rupiah
+ * @property bool $qris_enabled
+ * @property string|null $qris_static_payload
  * @property bool $is_active
  * @property-read City $city
  */
@@ -40,6 +42,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'longitude',
     'free_delivery_radius_meters',
     'delivery_fee_per_km_rupiah',
+    'qris_enabled',
+    'qris_static_payload',
     'is_active',
 ])]
 class Branch extends Model implements HasMedia
@@ -95,6 +99,8 @@ class Branch extends Model implements HasMedia
             'longitude' => 'float',
             'free_delivery_radius_meters' => 'integer',
             'delivery_fee_per_km_rupiah' => 'integer',
+            'qris_enabled' => 'boolean',
+            'qris_static_payload' => 'encrypted',
             'is_active' => 'boolean',
         ];
     }

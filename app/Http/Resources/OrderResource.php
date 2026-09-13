@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +18,12 @@ class OrderResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $paidRupiah = $this->relationLoaded('payments')
+            ? $this->payments
+                ->filter(static fn (Payment $payment): bool => $payment->status === PaymentStatus::Paid)
+                ->sum('amount_rupiah')
+            : 0;
+
         return [
             'id' => $this->id,
             'order_number' => $this->order_number,
@@ -49,6 +57,12 @@ class OrderResource extends JsonResource
             'status_history' => OrderStatusEventResource::collection(
                 $this->whenLoaded('statusEvents'),
             ),
+            'payments' => PaymentResource::collection($this->whenLoaded('payments')),
+            'payment_summary' => $this->when($this->relationLoaded('payments'), [
+                'paid_rupiah' => $paidRupiah,
+                'outstanding_rupiah' => max(0, $this->total_rupiah - $paidRupiah),
+                'is_paid' => $paidRupiah >= $this->total_rupiah,
+            ]),
             'created_at' => $this->created_at->toISOString(),
         ];
     }

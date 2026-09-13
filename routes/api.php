@@ -6,8 +6,11 @@ use App\Http\Controllers\Api\V1\MobileContextController;
 use App\Http\Controllers\Api\V1\MobileOrderIndexController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\OrderReceiptController;
 use App\Http\Controllers\Api\V1\OrderStatusEventController;
 use App\Http\Controllers\Api\V1\OrderTrackingController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PaymentStatusEventController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +51,24 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     )->middleware('auth:sanctum')
         ->scopeBindings()
         ->name('organizations.branches.orders.status-events.store');
+    Route::post(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments',
+        PaymentController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.payments.store');
+    Route::post(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments/{payment}/status-events',
+        PaymentStatusEventController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.payments.status-events.store');
+    Route::get(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/receipt',
+        OrderReceiptController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.receipt.show');
 });
 
 Route::get('/user', function (Request $request) {

@@ -17,6 +17,11 @@ class OrderTrackingController extends Controller
         Branch $branch,
         Order $order,
     ): OrderResource {
-        return new OrderResource($order->load(['branch', 'items', 'statusEvents']));
+        return new OrderResource($order->load([
+            'branch',
+            'items',
+            'statusEvents',
+            'payments.statusEvents',
+        ]));
     }
 }

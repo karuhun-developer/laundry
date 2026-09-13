@@ -44,7 +44,7 @@ final readonly class TransitionOrderStatus
                 ])
                 ->log('order status transitioned');
 
-            return $lockedOrder->load(['branch', 'items', 'statusEvents']);
+            return $lockedOrder->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
         });
     }
 }

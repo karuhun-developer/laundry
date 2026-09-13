@@ -16,7 +16,7 @@ final class ListMobileOrders
     {
         $query = Order::query()
             ->where('organization_id', $organization->id)
-            ->with(['branch', 'items', 'statusEvents']);
+            ->with(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
 
         if ($user->hasRole(RoleName::Customer->value)) {
             $query->where('customer_id', $user->id);

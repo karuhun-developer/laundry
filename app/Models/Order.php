@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrderStatus;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Branch $branch
+ * @property-read Collection<int, Payment> $payments
  */
 #[Fillable([
     'organization_id',
@@ -89,6 +91,12 @@ class Order extends Model
     public function statusEvents(): HasMany
     {
         return $this->hasMany(OrderStatusEvent::class)->oldest('id');
+    }
+
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->oldest('id');
     }
 
     /** @return array<string, string> */

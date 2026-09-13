@@ -30,6 +30,8 @@ class BranchFactory extends Factory
             'longitude' => fake()->longitude(106.6, 107.0),
             'free_delivery_radius_meters' => 10000,
             'delivery_fee_per_km_rupiah' => 3000,
+            'qris_enabled' => false,
+            'qris_static_payload' => null,
             'is_active' => true,
         ];
     }
