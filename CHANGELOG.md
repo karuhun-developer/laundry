@@ -4,6 +4,10 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-14
+
+- Fixed the Android release workflow by installing and configuring the Android SDK before invoking `sdkmanager`.
+
 ## [1.0.0] - 2026-09-14
 
 ### Phase 1: Core operations
