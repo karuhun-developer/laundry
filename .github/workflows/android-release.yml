@@ -158,17 +158,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_VERSION: ${{ steps.release.outputs.version_name }}
           RELEASE_NOTES_PATH: ${{ steps.release.outputs.release_notes_path }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
               gh release edit "$RELEASE_TAG" \
-                  --title "LaundryHub $RELEASE_VERSION" \
+                  --title "$RELEASE_TAG" \
                   --notes-file "$RELEASE_NOTES_PATH"
           else
               gh release create "$RELEASE_TAG" \
                   --verify-tag \
-                  --title "LaundryHub $RELEASE_VERSION" \
+                  --title "$RELEASE_TAG" \
                   --notes-file "$RELEASE_NOTES_PATH"
           fi
 

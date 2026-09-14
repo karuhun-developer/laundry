@@ -4,6 +4,8 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+- Changed GitHub Release titles to exactly match their Git tags while continuing to source descriptions from the matching changelog section.
+
 ## [1.0.4] - 2026-09-14
 
 - Fixed Android resource linking by removing backup-rule references that had no matching XML resources while keeping application backup disabled.
