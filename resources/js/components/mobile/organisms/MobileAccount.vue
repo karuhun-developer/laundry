@@ -11,7 +11,7 @@ withDefaults(
         name: string;
         email: string;
         role: MobileRole;
-        organization: MobileOrganization;
+        organization?: MobileOrganization | null;
         printerAvailable?: boolean;
         printerProfile?: PrinterProfile | null;
         printerDevices?: readonly PrinterDevice[];
@@ -22,6 +22,7 @@ withDefaults(
     }>(),
     {
         printerAvailable: false,
+        organization: null,
         printerProfile: null,
         printerDevices: () => [],
         printerDiscovering: false,
@@ -57,11 +58,16 @@ defineEmits<{
                     <dd class="mt-0.5 [overflow-wrap:anywhere] text-sm font-semibold text-ink-950">{{ email }}</dd>
                 </div>
             </div>
-            <div class="flex items-start gap-3 border-b border-line p-4">
+            <div
+                v-if="role === 'branch_admin' && organization"
+                class="flex items-start gap-3 border-b border-line p-4"
+            >
                 <Building2 class="mt-0.5 size-5 text-brand-700" aria-hidden="true" />
                 <div>
                     <dt class="text-xs text-ink-500">Organisasi aktif</dt>
-                    <dd class="mt-0.5 text-sm font-semibold text-ink-950">{{ organization.name }}</dd>
+                    <dd class="mt-0.5 text-sm font-semibold text-ink-950">
+                        {{ organization?.name }}
+                    </dd>
                 </div>
             </div>
             <div class="flex items-start gap-3 p-4">

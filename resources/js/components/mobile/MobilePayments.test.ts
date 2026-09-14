@@ -34,6 +34,7 @@ const makeOrder = (): MobileOrder => ({
     order_number: 'LDR-20260913-00000021',
     status: 'washing',
     organization_id: 1,
+    organization: { id: 1, slug: 'laundryhub-demo' },
     branch: { id: 7, name: 'Cabang Kemang', code: 'KMG01', qris_enabled: true },
     customer: { id: 9, name: 'Customer Demo' },
     items: [],

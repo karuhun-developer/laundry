@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MapPin, Navigation, Store } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import LocationPicker from '@/components/LocationPicker.vue';
 import type { Coordinates } from '@/composables/useGeolocation';
 import { formatDistance, formatRupiah } from '@/lib/mobileOrders';
@@ -23,12 +23,47 @@ const emit = defineEmits<{
 const selectedLatitude = ref(props.selectedCoordinates?.latitude.toString() ?? '');
 const selectedLongitude = ref(props.selectedCoordinates?.longitude.toString() ?? '');
 const locationError = ref<string | null>(null);
+const branchResults = computed<readonly BranchResult[]>(() =>
+    props.nearestBranches.length > 0 ? props.nearestBranches : props.branches,
+);
+const mapBranchLocations = computed(() =>
+    branchResults.value.flatMap((branch) => {
+        const { latitude, longitude } = branch.coordinates;
+
+        if (latitude === null || longitude === null) {
+            return [];
+        }
+
+        return [
+            {
+                id: branch.id,
+                name: branch.name,
+                latitude,
+                longitude,
+                freeRadiusMeters: branch.delivery.free_radius_meters,
+                selected: branch.id === props.selectedBranchId,
+            },
+        ];
+    }),
+);
 
 const branchDistance = (branch: BranchResult): number | null =>
     'distance_meters' in branch.delivery ? branch.delivery.distance_meters : null;
 
 const branchFee = (branch: BranchResult): number | null =>
     'fee_rupiah' in branch.delivery ? branch.delivery.fee_rupiah : null;
+
+const branchCoverageLabel = (branch: BranchResult): string | null => {
+    const fee = branchFee(branch);
+
+    if (fee === null) {
+        return null;
+    }
+
+    return fee === 0
+        ? 'Gratis jemput & antar'
+        : `Di luar radius gratis · tambahan ${formatRupiah(fee)}`;
+};
 
 watch(
     () => props.selectedCoordinates,
@@ -94,7 +129,9 @@ const locateSelectedPoint = (): void => {
                 selected-label="Titik antar-jemput"
                 map-label="Peta pemilih titik antar-jemput"
                 input-id-prefix="delivery"
+                :branch-locations="mapBranchLocations"
                 @located="locateCoordinates"
+                @branch-select="emit('select', $event)"
             />
             <p v-if="locationError" class="text-sm text-red-600" role="status">
                 {{ locationError }}
@@ -110,7 +147,7 @@ const locateSelectedPoint = (): void => {
 
         <div class="mt-5 space-y-3">
             <article
-                v-for="branch in nearestBranches.length ? nearestBranches : branches"
+                v-for="branch in branchResults"
                 :key="branch.id"
                 class="rounded-2xl border bg-surface p-5 shadow-low transition"
                 :class="selectedBranchId === branch.id ? 'border-brand-600 ring-2 ring-brand-100' : 'border-line'"
@@ -134,11 +171,20 @@ const locateSelectedPoint = (): void => {
                             {{ branch.address }}
                         </p>
                         <p class="mt-2 text-xs text-ink-500">
-                            Gratis antar-jemput hingga {{ formatDistance(branch.delivery.free_radius_meters) }} · Biaya tambahan
+                            Radius gratis {{ formatDistance(branch.delivery.free_radius_meters) }} · tarif kelebihan
                             {{ formatRupiah(branch.delivery.fee_per_km_rupiah) }}/km
                         </p>
-                        <p v-if="branchFee(branch) !== null" class="mt-1 text-xs font-semibold text-mint-500">
-                            {{ (branchFee(branch) ?? 0) === 0 ? 'Gratis antar-jemput' : `Biaya jarak ${formatRupiah(branchFee(branch) ?? 0)}` }}
+                        <p
+                            v-if="branchCoverageLabel(branch)"
+                            class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                            :class="
+                                (branchFee(branch) ?? 0) === 0
+                                    ? 'bg-mint-500/10 text-mint-500'
+                                    : 'bg-amber-500/10 text-amber-600'
+                            "
+                            :data-test="`branch-coverage-${branch.id}`"
+                        >
+                            {{ branchCoverageLabel(branch) }}
                         </p>
                     </div>
                 </div>

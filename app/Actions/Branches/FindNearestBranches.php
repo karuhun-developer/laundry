@@ -15,15 +15,22 @@ final readonly class FindNearestBranches
     public function __construct(private DeliveryRouteCalculator $routeCalculator) {}
 
     /** @return Collection<int, NearestBranchData> */
-    public function handle(Organization $organization, NearestBranchQueryData $query): Collection
+    public function handle(?Organization $organization, NearestBranchQueryData $query): Collection
     {
-        if (! $organization->is_active) {
+        if ($organization !== null && ! $organization->is_active) {
             throw (new ModelNotFoundException)->setModel(Organization::class, [$organization->id]);
         }
 
-        return Branch::query()
-            ->with('city:id,name,province')
-            ->where('organization_id', $organization->id)
+        $branches = Branch::query()
+            ->with(['city:id,name,province', 'organization:id,slug'])
+            ->when(
+                $organization !== null,
+                fn ($branchQuery) => $branchQuery->where('organization_id', $organization?->id),
+                fn ($branchQuery) => $branchQuery->whereHas(
+                    'organization',
+                    fn ($organizationQuery) => $organizationQuery->where('is_active', true),
+                ),
+            )
             ->where('is_active', true)
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
@@ -37,7 +44,8 @@ final readonly class FindNearestBranches
                 ),
             ))
             ->sortBy(fn (NearestBranchData $result): int => $result->deliveryQuote->distanceMeters)
-            ->take($query->limit)
             ->values();
+
+        return $query->limit === null ? $branches : $branches->take($query->limit)->values();
     }
 }

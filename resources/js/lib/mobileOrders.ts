@@ -134,7 +134,8 @@ export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
         id: -Date.now(),
         order_number: 'Menunggu nomor',
         status: 'received',
-        organization_id: 0,
+        organization_id: input.branch.organization.id,
+        organization: input.branch.organization,
         branch: {
             id: input.branch.id,
             name: input.branch.name,

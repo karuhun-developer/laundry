@@ -100,10 +100,13 @@ Components respond to their container where possible; viewport breakpoints own o
 ### Location and branch discovery
 
 - Customers select their pickup point on an OpenStreetMap surface before calculating nearby branches.
+- Customers never select an organization. The selected branch and each existing order carry the internal organization identity needed for tenant-safe API routing.
 - Ask for device location only when the customer chooses `Gunakan lokasi saya`; the returned point centers the map pin and immediately calculates nearby branches.
 - Clicking the map or dragging its pin adjusts the pickup point before the customer chooses `Hitung dari titik ini`; labeled latitude and longitude fields remain the keyboard-accessible fallback.
+- The branch dropdown and branch cards use the same nearest-to-farthest ordering after distance calculation. Branches without calculable coordinates remain available after ranked options.
+- The map shows outlet markers and translucent free-delivery radius overlays. The selected branch uses the stronger brand marker, and tapping an outlet marker selects that branch.
 - Nearest-branch cards show branch name, locality, distance, free-delivery coverage, and any extra fee before selection.
-- Never imply GPS precision beyond the returned meter distance. Use Indonesian labels such as `Gratis antar-jemput` or `Biaya jarak Rp6.000`.
+- Never imply GPS precision beyond the returned meter distance. Use `Gratis jemput & antar` inside coverage and `Di luar radius gratis · tambahan Rp6.000` outside coverage.
 - Location denial and empty coverage states keep map placement and coordinate entry available instead of blocking order creation.
 - Machine availability is not shown until capacity scheduling and slot-locking semantics are implemented.
 

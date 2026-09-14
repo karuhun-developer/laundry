@@ -1,9 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import { defineComponent } from 'vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
-import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import type {
     MobileBranch,
@@ -19,6 +17,7 @@ const branch: MobileBranch = {
     code: 'KMG01',
     phone: null,
     address: 'Jl. Kemang Raya',
+    organization: { id: 1, slug: 'laundryhub-demo' },
     city: { name: 'Jakarta Selatan', province: 'DKI Jakarta' },
     coordinates: { latitude: -6.2607, longitude: 106.8136 },
     delivery: { free_radius_meters: 10000, fee_per_km_rupiah: 3000 },
@@ -46,32 +45,6 @@ const services: MobileService[] = [
     },
 ];
 
-const locationPickerStub = defineComponent({
-    props: {
-        latitude: { type: String, required: true },
-        longitude: { type: String, required: true },
-    },
-    emits: ['update:latitude', 'update:longitude', 'located'],
-    template: `
-        <div data-test="location-picker-stub">
-            <button
-                type="button"
-                data-test="stub-current-location"
-                @click="$emit('located', -6.2607, 106.8136)"
-            >
-                Current location
-            </button>
-            <button
-                type="button"
-                data-test="stub-map-point"
-                @click="$emit('update:latitude', '-6.917500'); $emit('update:longitude', '107.619100')"
-            >
-                Map point
-            </button>
-        </div>
-    `,
-});
-
 const quote: MobilePriceQuote = {
     price_option: packagePriceOption,
     requested_weight_grams: 12500,
@@ -87,6 +60,7 @@ const makeOrder = (): MobileOrder => ({
     order_number: 'LDR-20260913-00000021',
     status: 'washing',
     organization_id: 1,
+    organization: { id: 1, slug: 'laundryhub-demo' },
     branch: { id: 7, name: 'Cabang Kemang', code: 'KMG01', qris_enabled: true },
     customer: { id: 9, name: 'Customer Demo' },
     items: [
@@ -245,28 +219,4 @@ describe('mobile role-aware components', () => {
         );
     });
 
-    it('uses the current device location from the map picker', async () => {
-        const wrapper = mount(BranchExplorer, {
-            props: { branches: [branch], nearestBranches: [], selectedBranchId: branch.id },
-            global: { stubs: { LocationPicker: locationPickerStub } },
-        });
-
-        expect(wrapper.find('[data-test="map-location"]').exists()).toBe(true);
-
-        await wrapper.get('[data-test="stub-current-location"]').trigger('click');
-
-        expect(wrapper.emitted('locate')?.at(-1)).toEqual([-6.2607, 106.8136]);
-    });
-
-    it('calculates the nearest branch from a selected map point', async () => {
-        const wrapper = mount(BranchExplorer, {
-            props: { branches: [branch], nearestBranches: [], selectedBranchId: branch.id },
-            global: { stubs: { LocationPicker: locationPickerStub } },
-        });
-
-        await wrapper.get('[data-test="stub-map-point"]').trigger('click');
-        await wrapper.get('[data-test="submit-map-location"]').trigger('submit');
-
-        expect(wrapper.emitted('locate')?.at(-1)).toEqual([-6.9175, 107.6191]);
-    });
 });

@@ -4,6 +4,9 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+- Changed the customer mobile workspace to hide organization selection and discover active branches across organizations, while preserving branch- and order-derived tenant routing for API mutations.
+- Added nearest-first customer branch options with explicit free pickup/delivery coverage or estimated excess-distance fees.
+- Added selectable outlet markers and free-delivery radius overlays to the customer pickup map, including a distinct selected-branch marker.
 - Changed GitHub Release titles to exactly match their Git tags while continuing to source descriptions from the matching changelog section.
 - Changed customer pickup coordinates to a shared OpenStreetMap picker with current-location centering, click-to-place, and a draggable pin.
 - Fixed Android current-location discovery by declaring coarse and fine location permissions in the application manifest.

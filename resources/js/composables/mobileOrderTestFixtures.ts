@@ -17,6 +17,7 @@ export const makeOrder = (id: number, status: MobileOrder['status'] = 'received'
     order_number: id < 0 ? 'Menunggu nomor' : `LDR-20260913-${String(id).padStart(8, '0')}`,
     status,
     organization_id: 1,
+    organization: { id: 1, slug: 'laundryhub-demo' },
     branch: { id: 7, name: 'Cabang Kemang', code: 'KMG01', qris_enabled: true },
     customer: { id: 9, name: 'Customer Demo' },
     items: [],

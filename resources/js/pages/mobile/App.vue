@@ -35,23 +35,6 @@ watch(
     },
 );
 
-const changeOrganization = async (organizationSlug: string): Promise<void> => {
-    const previousCoordinates = deliveryCoordinates.value;
-    deliveryCoordinates.value = null;
-    await workspace.load(organizationSlug);
-
-    if (
-        previousCoordinates &&
-        workspace.context.value?.organization.slug === organizationSlug &&
-        (await workspace.findNearestBranches(
-            previousCoordinates.latitude,
-            previousCoordinates.longitude,
-        ))
-    ) {
-        deliveryCoordinates.value = previousCoordinates;
-    }
-};
-
 const onBranchSelected = (branchId: number): void => {
     void workspace.selectBranch(branchId);
 };
@@ -98,7 +81,11 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                     <div class="min-w-0">
                         <p class="truncate font-display text-base font-semibold text-ink-950">LaundryHub</p>
                         <p v-if="workspace.context.value" class="truncate text-xs text-ink-500">
-                            {{ workspace.context.value.organization.name }}
+                            {{
+                                workspace.context.value.role === 'customer'
+                                    ? 'Jemput, cuci, antar'
+                                    : workspace.context.value.organization.name
+                            }}
                         </p>
                     </div>
                 </div>
@@ -136,8 +123,8 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
             <template v-else>
                 <MobileWorkspaceSwitcher
                     :context="workspace.context.value"
+                    :nearest-branches="workspace.nearestBranches.value"
                     :selected-branch-id="workspace.selectedBranchId.value"
-                    @organization-change="changeOrganization"
                     @branch-change="workspace.selectBranch"
                 />
 
@@ -199,7 +186,6 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         :name="page.props.auth.user.name"
                         :email="page.props.auth.user.email"
                         role="customer"
-                        :organization="workspace.context.value.organization"
                         :printer-available="workspace.printer.available"
                         :printer-profile="workspace.printer.profile.value"
                         :printer-devices="workspace.printer.devices.value"

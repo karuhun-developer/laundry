@@ -4,7 +4,7 @@ Phase: 1
 
 ## Scope
 
-Each branch can store coordinates, a free pickup/delivery radius, and a rupiah tariff for every started kilometer beyond that radius. Customers can query the nearest active branches inside one organization before creating an order.
+Each branch can store coordinates, a free pickup/delivery radius, and a rupiah tariff for every started kilometer beyond that radius. Customers can query active branches across organizations, ordered nearest first, before creating an order. Organization identity remains an internal tenant-routing detail derived from the selected branch.
 
 The initial implementation calculates Haversine distance in PHP. This keeps development on SQLite behaviorally compatible with MySQL and avoids binding the API contract to a database-specific spatial extension.
 
@@ -19,17 +19,16 @@ Example: a customer 11.12 km from a branch with a 10 km free radius and a Rp3.00
 
 ## API
 
-`GET /api/v1/organizations/{organization-slug}/branches/nearest`
+`GET /api/v1/mobile/branches/nearest`
 
 Query parameters:
 
 - `latitude`: required, -90 through 90.
 - `longitude`: required, -180 through 180.
-- `limit`: optional, 1 through 20; defaults to 5.
 
-The public response is organization-scoped and includes branch identity, city, coordinates, distance in meters, whether the customer is inside the free radius, the configured tariff, and the calculated fee in integer rupiah. Results are sorted nearest first.
+The authenticated customer response includes branch identity, internal organization identity, city, coordinates, distance in meters, whether the customer is inside the free radius, the configured tariff, and the calculated fee in integer rupiah. Results include every eligible active branch and are sorted nearest first.
 
-Inactive organizations, inactive branches, branches from other organizations, and branches without complete coordinates are not exposed.
+Inactive organizations, inactive branches, and branches without complete coordinates are not exposed by the ranked endpoint. The mobile context may still list active branches without coordinates after ranked options so a customer can select them manually.
 
 ## Administration
 
@@ -40,8 +39,9 @@ Branch creation accepts paired latitude/longitude values, `free_delivery_radius_
 - Known-point Haversine distance in integer meters.
 - Free pickup/delivery inside the configured radius.
 - Per-started-kilometer rounding beyond the free radius.
-- Nearest-first API ordering and result limits.
-- Tenant, active-state, and coordinate filtering.
+- Nearest-first API ordering across active organizations.
+- Active-tenant, active-branch, and coordinate filtering.
+- Selectable map markers, free-radius overlays, and matching nearest-first dropdown options.
 - Coordinate boundary validation.
 
 ## Deferred capacity routing

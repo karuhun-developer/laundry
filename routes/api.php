@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\BranchCatalogController;
 use App\Http\Controllers\Api\V1\CustomerIndexController;
+use App\Http\Controllers\Api\V1\CustomerNearestBranchController;
+use App\Http\Controllers\Api\V1\CustomerOrderIndexController;
 use App\Http\Controllers\Api\V1\MobileContextController;
 use App\Http\Controllers\Api\V1\MobileOrderIndexController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
@@ -20,6 +22,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('mobile/context', MobileContextController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.context');
+    Route::get('mobile/branches/nearest', CustomerNearestBranchController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.branches.nearest');
+    Route::get('mobile/orders', CustomerOrderIndexController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.orders.index');
     Route::get('organizations/{organization:slug}/orders', MobileOrderIndexController::class)
         ->middleware('auth:sanctum')
         ->name('organizations.orders.index');

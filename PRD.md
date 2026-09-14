@@ -27,7 +27,8 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ### Customer
 
 - Registers and signs in from the mobile surface.
-- Selects a city, branch, service, and pricing option.
+- Sets a pickup point, chooses from globally discovered branches ordered nearest first, then selects a service and pricing option.
+- Does not select or need to understand an organization; tenant routing is derived internally from the selected branch and existing order.
 - Views order totals and status history.
 - Receives an actionable WhatsApp link when a configured message is available.
 
@@ -77,10 +78,12 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ## Delivery coverage rules
 
 - Each branch may store latitude and longitude coordinates. Branches without coordinates are excluded from automatic routing.
-- Customers receive nearest-branch recommendations only from active branches in the selected organization.
+- Customers receive nearest-branch recommendations across active branches in every active organization. Branches without coordinates are listed after ranked branches and are excluded from distance calculation.
 - Distance uses the Haversine formula in application code for identical SQLite and MySQL behavior. A spatial database optimization may be introduced later without changing the API contract.
 - Pickup and delivery are free up to the branch's configured radius. The initial default radius is 10,000 meters.
 - Distance beyond the free radius is charged per started kilometer: `ceil(excess meters / 1,000) × configured rupiah per km`.
+- The branch dropdown remains available, ordered nearest to farthest after a pickup point is calculated, and labels each ranked branch as free or outside the free radius with an estimated surcharge.
+- The pickup map shows outlet markers and configured free-radius overlays; selecting a marker selects the matching branch.
 - The final order stores the selected branch, customer coordinates, calculated distance, free radius, per-kilometer tariff, and delivery-fee snapshot.
 
 ## Order lifecycle
@@ -127,6 +130,7 @@ Deliverables:
 - Authentication and role-aware navigation.
 - Multi-organization branch and branch-membership domain backed by a shared global city catalog.
 - Coordinate-based nearest-branch discovery with configurable free-delivery radius and excess-distance pricing.
+- Customer branch discovery across active organizations without exposing an organization selector.
 - Service catalog with package and per-kilogram pricing.
 - Order creation, deterministic total calculation, and status tracking.
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.

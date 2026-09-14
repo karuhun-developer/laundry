@@ -13,28 +13,38 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('returns customer context with active organizations and branches', function (): void {
+it('returns customer context with active branches across organizations', function (): void {
     $organization = Organization::factory()->create(['slug' => 'jakarta-laundry']);
     $branch = Branch::factory()->for($organization)->create([
         'name' => 'Kemang',
         'qris_enabled' => true,
     ]);
     $otherOrganization = Organization::factory()->create(['slug' => 'bandung-laundry']);
-    Branch::factory()->for($otherOrganization)->create(['name' => 'Dago']);
+    $otherBranch = Branch::factory()->for($otherOrganization)->create(['name' => 'Dago']);
+    $inactiveOrganization = Organization::factory()->create(['is_active' => false]);
+    Branch::factory()->for($inactiveOrganization)->create(['name' => 'Cabang Nonaktif']);
     $customer = User::factory()->create(['organization_id' => null]);
     $customer->assignRole(RoleName::Customer->value);
     Sanctum::actingAs($customer);
 
-    $this->getJson(route('api.v1.mobile.context', ['organization' => $organization->slug]))
+    $this->getJson(route('api.v1.mobile.context'))
         ->assertOk()
         ->assertJsonPath('data.role', RoleName::Customer->value)
-        ->assertJsonPath('data.organization.slug', $organization->slug)
-        ->assertJsonPath('data.branches.0.id', $branch->id)
-        ->assertJsonPath('data.branches.0.payments.qris_enabled', true)
-        ->assertJsonCount(2, 'data.organizations');
+        ->assertJsonCount(2, 'data.branches')
+        ->assertJsonFragment([
+            'id' => $branch->id,
+            'name' => 'Kemang',
+            'slug' => 'jakarta-laundry',
+        ])
+        ->assertJsonFragment([
+            'id' => $otherBranch->id,
+            'name' => 'Dago',
+            'slug' => 'bandung-laundry',
+        ])
+        ->assertJsonMissing(['name' => 'Cabang Nonaktif']);
 });
 
-it('defaults neutral customers to an organization with an active branch', function (): void {
+it('does not restrict customer branches to their account organization', function (): void {
     Organization::factory()->create([
         'name' => 'Alpha Laundry',
         'slug' => 'alpha-laundry',
@@ -44,14 +54,16 @@ it('defaults neutral customers to an organization with an active branch', functi
         'slug' => 'zulu-laundry',
     ]);
     $branch = Branch::factory()->for($operationalOrganization)->create();
-    $customer = User::factory()->create(['organization_id' => null]);
+    $customer = User::factory()->forOrganization()->create();
     $customer->assignRole(RoleName::Customer->value);
     Sanctum::actingAs($customer);
 
     $this->getJson(route('api.v1.mobile.context'))
         ->assertOk()
-        ->assertJsonPath('data.organization.id', $operationalOrganization->id)
-        ->assertJsonPath('data.branches.0.id', $branch->id);
+        ->assertJsonFragment([
+            'id' => $branch->id,
+            'slug' => $operationalOrganization->slug,
+        ]);
 });
 
 it('accepts browser session authentication for mobile api requests', function (): void {
@@ -69,10 +81,10 @@ it('accepts browser session authentication for mobile api requests', function ()
     ])->assertRedirect(route('dashboard'));
 
     $this->withHeader('Origin', config('app.url'))
-        ->getJson(route('api.v1.mobile.context', ['organization' => $organization->slug]))
+        ->getJson(route('api.v1.mobile.context'))
         ->assertOk()
         ->assertJsonPath('data.role', RoleName::Customer->value)
-        ->assertJsonPath('data.organization.id', $organization->id);
+        ->assertJsonPath('data.branches.0.organization.id', $organization->id);
 });
 
 it('locks branch admin context to their tenant and assigned branches', function (): void {
@@ -109,6 +121,37 @@ it('filters customer orders to the authenticated customer', function (): void {
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.id', $ownOrder->id);
+});
+
+it('returns customer orders across organizations without exposing an organization choice', function (): void {
+    $firstOrganization = Organization::factory()->create(['slug' => 'jakarta-laundry']);
+    $secondOrganization = Organization::factory()->create(['slug' => 'bandung-laundry']);
+    $firstBranch = Branch::factory()->for($firstOrganization)->create();
+    $secondBranch = Branch::factory()->for($secondOrganization)->create();
+    $customer = User::factory()->for($firstOrganization)->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $firstOrder = Order::factory()->for($firstOrganization)->for($firstBranch)->create([
+        'customer_id' => $customer->id,
+        'created_by_id' => $customer->id,
+    ]);
+    $secondOrder = Order::factory()->for($secondOrganization)->for($secondBranch)->create([
+        'customer_id' => $customer->id,
+        'created_by_id' => $customer->id,
+    ]);
+    Order::factory()->for($secondOrganization)->for($secondBranch)->create();
+    Sanctum::actingAs($customer);
+
+    $this->getJson(route('api.v1.mobile.orders.index'))
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonFragment([
+            'id' => $firstOrder->id,
+            'slug' => 'jakarta-laundry',
+        ])
+        ->assertJsonFragment([
+            'id' => $secondOrder->id,
+            'slug' => 'bandung-laundry',
+        ]);
 });
 
 it('filters branch admin orders to assigned branches', function (): void {

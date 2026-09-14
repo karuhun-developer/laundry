@@ -22,6 +22,10 @@ class MobileBranchResource extends JsonResource
             'code' => $this->code,
             'phone' => $this->phone,
             'address' => $this->address,
+            'organization' => [
+                'id' => $this->organization->id,
+                'slug' => $this->organization->slug,
+            ],
             'city' => [
                 'name' => $this->city->name,
                 'province' => $this->city->province,

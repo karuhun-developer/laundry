@@ -54,6 +54,7 @@ const branch: MobileBranch = {
     code: 'KMG01',
     phone: null,
     address: 'Jl. Kemang Raya',
+    organization: { id: 1, slug: 'laundryhub-demo' },
     city: { name: 'Jakarta Selatan', province: 'DKI Jakarta' },
     coordinates: { latitude: -6.2607, longitude: 106.8136 },
     delivery: { free_radius_meters: 10000, fee_per_km_rupiah: 3000 },

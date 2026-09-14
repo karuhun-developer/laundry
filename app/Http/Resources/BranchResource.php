@@ -26,6 +26,10 @@ class BranchResource extends JsonResource
             'code' => $branch->code,
             'phone' => $branch->phone,
             'address' => $branch->address,
+            'organization' => [
+                'id' => $branch->organization->id,
+                'slug' => $branch->organization->slug,
+            ],
             'city' => [
                 'id' => $branch->city->id,
                 'name' => $branch->city->name,

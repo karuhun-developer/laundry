@@ -38,51 +38,22 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     let whatsAppSuggestionGeneration = 0;
     const optimistic = useOptimisticOrders({
         createOrder: async (payload) => {
-            const context = state.context.value;
             const branch = state.selectedBranch.value;
 
-            if (!context || !branch) {
+            if (!branch) {
                 throw new Error('Pilih cabang sebelum membuat pesanan.');
             }
 
-            return api.createOrder(context.organization.slug, branch.id, payload);
+            return api.createOrder(branch.organization.slug, branch.id, payload);
         },
-        fetchOrder: async (order) => {
-            const context = state.context.value;
-
-            if (!context) {
-                throw new Error('Konteks organisasi tidak tersedia.');
-            }
-
-            return api.fetchOrder(context.organization.slug, order);
-        },
-        transitionOrder: async (order, payload) => {
-            const context = state.context.value;
-
-            if (!context) {
-                throw new Error('Konteks organisasi tidak tersedia.');
-            }
-
-            return api.transitionOrder(context.organization.slug, order, payload);
-        },
-        createPayment: async (order, payload) => {
-            const context = state.context.value;
-
-            if (!context) {
-                throw new Error('Konteks organisasi tidak tersedia.');
-            }
-
-            return paymentApi.createPayment(context.organization.slug, order, payload);
-        },
+        fetchOrder: async (order) => api.fetchOrder(order.organization.slug, order),
+        transitionOrder: async (order, payload) =>
+            api.transitionOrder(order.organization.slug, order, payload),
+        createPayment: async (order, payload) =>
+            paymentApi.createPayment(order.organization.slug, order, payload),
         transitionPaymentStatus: async (order, payment, payload) => {
-            const context = state.context.value;
-
-            if (!context) {
-                throw new Error('Konteks organisasi tidak tersedia.');
-            }
-
             return paymentApi.transitionPaymentStatus(
-                context.organization.slug,
+                order.organization.slug,
                 order,
                 payment,
                 payload,
@@ -152,19 +123,18 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         orderId: number,
         payload: TransitionOrderPayload,
     ): Promise<boolean> => {
-        const context = state.context.value;
         const order = optimistic.orders.value.find((entry) => entry.id === orderId);
         const requestGeneration = ++whatsAppSuggestionGeneration;
         whatsAppSuggestion.value = null;
         whatsAppSuggestionError.value = null;
         const saved = await optimistic.transitionOrder(orderId, payload);
 
-        if (!saved || !context || !order) {
+        if (!saved || !order) {
             return saved;
         }
 
         try {
-            const suggestion = await api.fetchWhatsAppSuggestion(context.organization.slug, order);
+            const suggestion = await api.fetchWhatsAppSuggestion(order.organization.slug, order);
 
             if (requestGeneration === whatsAppSuggestionGeneration) {
                 whatsAppSuggestion.value = suggestion;
@@ -188,14 +158,13 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     ): Promise<boolean> => optimistic.transitionPaymentStatus(orderId, paymentId, payload);
 
     const loadReceipt = async (orderId: number): Promise<MobileOrderReceipt> => {
-        const context = state.context.value;
         const order = optimistic.orders.value.find((entry) => entry.id === orderId);
 
-        if (!context || !order) {
+        if (!order) {
             throw new Error('Pesanan tidak lagi tersedia. Muat ulang daftar pesanan.');
         }
 
-        return paymentApi.loadReceipt(context.organization.slug, order);
+        return paymentApi.loadReceipt(order.organization.slug, order);
     };
 
     return {

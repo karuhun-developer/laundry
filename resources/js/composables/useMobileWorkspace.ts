@@ -52,17 +52,16 @@ export const useMobileWorkspace = () => {
 
     const loadCatalog = async (): Promise<void> => {
         const requestGeneration = ++catalogGeneration;
-        const currentContext = context.value;
         const branch = selectedBranch.value;
 
-        if (!currentContext || !branch) {
+        if (!branch) {
             services.value = [];
             return;
         }
 
         try {
             const response = await catalogApi.loadCatalog(
-                currentContext.organization.slug,
+                branch.organization.slug,
                 branch.id,
             );
 
@@ -84,7 +83,11 @@ export const useMobileWorkspace = () => {
         }
 
         const [orders, organizationCustomers] = await Promise.all([
-            orderWorkspace.loadOrders(currentContext.organization.slug),
+            orderWorkspace.loadOrders(
+                currentContext.role === 'branch_admin'
+                    ? currentContext.organization.slug
+                    : undefined,
+            ),
             currentContext.role === 'branch_admin'
                 ? catalogApi.loadCustomers(currentContext.organization.slug)
                 : Promise.resolve([]),
@@ -165,11 +168,7 @@ export const useMobileWorkspace = () => {
         requestError.value = null;
 
         try {
-            const response = await catalogApi.findNearest(
-                currentContext.organization.slug,
-                latitude,
-                longitude,
-            );
+            const response = await catalogApi.findNearest(latitude, longitude);
 
             if (requestGeneration !== nearestGeneration) {
                 return false;
@@ -191,15 +190,14 @@ export const useMobileWorkspace = () => {
         priceOptionId: number,
         weightGrams: number,
     ): Promise<MobilePriceQuote> => {
-        const currentContext = context.value;
         const branch = selectedBranch.value;
 
-        if (!currentContext || !branch) {
+        if (!branch) {
             throw new Error('Pilih cabang sebelum meminta rincian harga.');
         }
 
         return catalogApi.quoteOrder(
-            currentContext.organization.slug,
+            branch.organization.slug,
             branch.id,
             priceOptionId,
             weightGrams,

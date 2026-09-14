@@ -30,6 +30,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string|null $qris_static_payload
  * @property bool $is_active
  * @property-read City $city
+ * @property-read Organization $organization
  */
 #[Fillable([
     'organization_id',

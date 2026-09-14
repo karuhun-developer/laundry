@@ -1,9 +1,9 @@
 import { useHttp } from '@inertiajs/vue3';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
 import { context as contextRoute } from '@/routes/api/v1/mobile';
+import { nearest as customerNearestRoute } from '@/routes/api/v1/mobile/branches';
 import {
     catalog as catalogRoute,
-    nearest as nearestRoute,
 } from '@/routes/api/v1/organizations/branches';
 import { quote as quoteRoute } from '@/routes/api/v1/organizations/branches/catalog';
 import { index as customerIndexRoute } from '@/routes/api/v1/organizations/customers';
@@ -17,7 +17,7 @@ import type {
 } from '@/types/mobile';
 
 type EmptyRequest = Record<string, never>;
-type NearestRequest = { latitude: number; longitude: number; limit: number };
+type NearestRequest = { latitude: number; longitude: number };
 type PriceQuoteRequest = { weight_grams: number };
 
 export const useMobileCatalogApi = () => {
@@ -27,7 +27,6 @@ export const useMobileCatalogApi = () => {
     const nearestRequest = useHttp<NearestRequest, ApiEnvelope<NearestMobileBranch[]>>({
         latitude: 0,
         longitude: 0,
-        limit: 10,
     });
     const quoteRequest = useHttp<PriceQuoteRequest, ApiEnvelope<MobilePriceQuote>>({
         weight_grams: 1,
@@ -76,14 +75,13 @@ export const useMobileCatalogApi = () => {
     };
 
     const findNearest = async (
-        organizationSlug: string,
         latitude: number,
         longitude: number,
     ): Promise<NearestMobileBranch[]> => {
         nearestRequest.cancel();
         nearestRequest.latitude = latitude;
         nearestRequest.longitude = longitude;
-        const response = await nearestRequest.get(nearestRoute(organizationSlug).url);
+        const response = await nearestRequest.get(customerNearestRoute().url);
 
         if (!response) {
             throw new Error('Cabang terdekat tidak dapat dihitung.');

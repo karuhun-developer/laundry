@@ -5,6 +5,7 @@ namespace App\Actions\Mobile;
 use App\Data\MobileContextData;
 use App\Data\MobileContextQueryData;
 use App\Enums\RoleName;
+use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -30,18 +31,17 @@ final class ResolveMobileContext
             ? Organization::query()->whereKey($user->organization_id)->where('is_active', true)->firstOrFail()
             : $this->customerOrganization($user, $query, $organizations);
 
-        $branches = $organization->branches()
-            ->with('city:id,name,province')
-            ->where('is_active', true)
-            ->when(
-                $role === RoleName::BranchAdmin,
-                fn (Builder $branchQuery): Builder => $branchQuery->whereHas(
+        $branches = $role === RoleName::Customer
+            ? $this->customerBranches()
+            : $organization->branches()
+                ->with(['city:id,name,province', 'organization:id,slug'])
+                ->where('is_active', true)
+                ->whereHas(
                     'staff',
                     fn (Builder $staffQuery): Builder => $staffQuery->whereKey($user->id),
-                ),
-            )
-            ->orderBy('name')
-            ->get();
+                )
+                ->orderBy('name')
+                ->get();
 
         return new MobileContextData(
             role: $role,
@@ -49,6 +49,20 @@ final class ResolveMobileContext
             organizations: $role === RoleName::Customer ? $organizations : collect([$organization]),
             branches: $branches,
         );
+    }
+
+    /** @return Collection<int, Branch> */
+    private function customerBranches(): Collection
+    {
+        return Branch::query()
+            ->with(['city:id,name,province', 'organization:id,slug'])
+            ->where('is_active', true)
+            ->whereHas(
+                'organization',
+                fn (Builder $organizationQuery): Builder => $organizationQuery->where('is_active', true),
+            )
+            ->orderBy('name')
+            ->get();
     }
 
     private function operationalRole(User $user): RoleName

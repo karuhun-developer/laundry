@@ -47,6 +47,7 @@ export type MobileBranch = {
     code: string;
     phone: string | null;
     address: string;
+    organization: Pick<MobileOrganization, 'id' | 'slug'>;
     city: {
         name: string;
         province: string;
@@ -166,6 +167,7 @@ export type MobileOrder = {
     order_number: string;
     status: MobileOrderStatus;
     organization_id: number;
+    organization: Pick<MobileOrganization, 'id' | 'slug'>;
     branch: Pick<MobileBranch, 'id' | 'name' | 'code'> & { qris_enabled: boolean };
     customer: Pick<MobileCustomer, 'id' | 'name'>;
     items: readonly MobileOrderItem[];

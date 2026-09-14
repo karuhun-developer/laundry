@@ -8,6 +8,7 @@ import {
 import { store as storeStatusRoute } from '@/routes/api/v1/organizations/branches/orders/status-events';
 import { show as showWhatsAppSuggestionRoute } from '@/routes/api/v1/organizations/branches/orders/whatsapp-suggestion';
 import { index as orderIndexRoute } from '@/routes/api/v1/organizations/orders';
+import { index as customerOrderIndexRoute } from '@/routes/api/v1/mobile/orders';
 import type {
     ApiEnvelope,
     CreateOrderPayload,
@@ -28,9 +29,11 @@ export const useMobileOrderApi = () => {
     });
     const whatsAppSuggestionRequest = useHttp<EmptyRequest, ApiEnvelope<WhatsAppSuggestion>>({});
 
-    const loadOrders = async (organizationSlug: string): Promise<MobileOrder[]> => {
+    const loadOrders = async (organizationSlug?: string): Promise<MobileOrder[]> => {
         ordersRequest.cancel();
-        const response = await ordersRequest.get(orderIndexRoute(organizationSlug).url);
+        const response = await ordersRequest.get(
+            organizationSlug ? orderIndexRoute(organizationSlug).url : customerOrderIndexRoute().url,
+        );
 
         if (!response) {
             throw new Error('Daftar pesanan tidak dapat dimuat.');

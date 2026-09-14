@@ -10,11 +10,12 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 
 ## Customer workspace
 
-- Create a laundry order from the selected organization, branch, service package, weight, and optional pickup location.
+- Create a laundry order from the selected branch, service package, weight, and optional pickup location without choosing an organization.
 - See the server-backed estimate before submitting, including decimal weights and package excess pricing.
 - Track active and historical orders through an expandable status timeline.
-- Select a pickup point from OpenStreetMap using device geolocation, click-to-place, or a draggable pin, then view nearest-branch pickup/delivery fee estimates.
-- Switch between available organizations and branches when the customer is not tenant-bound.
+- Select a pickup point from OpenStreetMap using device geolocation, click-to-place, or a draggable pin, then view globally discovered branches ordered nearest first.
+- Keep the branch dropdown available with `Gratis jemput & antar` or `Di luar radius gratis` surcharge guidance for every ranked option.
+- Select a branch from either its map marker or list card; the map shows each outlet's configured free-delivery radius and a distinct selected marker.
 
 ## Branch-admin workspace
 
@@ -26,8 +27,9 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 ## Authorization and API surface
 
 - `GET /app` is available only to the `customer` and `branch_admin` roles. Operational roles are redirected there from `/dashboard`; owner and superadmin accounts remain in the CMS.
-- `GET /api/v1/mobile/context` resolves the authorized role, organization options, and active branch options.
-- `GET /api/v1/organizations/{organization}/orders` returns only the authenticated customer's orders or orders from branches assigned to the branch administrator.
+- `GET /api/v1/mobile/context` resolves the authorized role. Customers receive active branches across active organizations, while branch administrators remain assignment-scoped.
+- `GET /api/v1/mobile/branches/nearest` returns all coordinate-enabled active branches for customers, ordered nearest first with coverage and fee calculations.
+- `GET /api/v1/mobile/orders` returns the authenticated customer's orders across organizations. Branch administrators continue using the organization-scoped order index for assigned branches.
 - `GET /api/v1/organizations/{organization}/customers` is branch-admin-only and returns organization customers plus neutral customers with an existing order in that organization.
 - Existing catalog, quote, order creation, status transition, tracking, and nearest-branch endpoints remain the canonical mutation and calculation surfaces.
 - Browser requests use Laravel Sanctum's stateful session authentication. Form Requests, Actions, DTOs, API Resources, policies, and tenant filters remain authoritative.
@@ -45,12 +47,13 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 - Branch status changes update the visible ticket and timeline immediately.
 - Successful responses replace optimistic records with canonical API resources.
 - Validation, authorization, or network failures restore the previous state and display the server error.
-- Superseded organization, branch, quote, and location requests are cancelled or ignored so stale responses cannot replace the active tenant state.
+- Superseded context, branch, quote, and location requests are cancelled or ignored so stale responses cannot replace active state.
+- Catalog, order mutation, payment, receipt, and WhatsApp routes derive their organization slug from the selected branch or canonical order instead of customer input.
 
 ## Verification
 
-- Pest feature tests cover mobile-route role access, session-authenticated APIs, role-specific context, order filtering, customer-directory boundaries, and cross-tenant denial.
-- Vitest covers geolocation and map-point selection, optimistic update reconciliation and rollback, mobile navigation, status badges, and order-ticket rendering.
+- Pest feature tests cover mobile-route role access, global customer branch discovery, cross-organization customer order filtering, branch-admin scoping, customer-directory boundaries, and cross-tenant denial.
+- Vitest covers geolocation and map-point selection, nearest-first branch options, coverage labels, marker selection, optimistic update reconciliation and rollback, mobile navigation, status badges, and order-ticket rendering.
 - Pest protects the Android manifest location-permission contract.
 - Browser end-to-end verification is performed once, after Pest, Vitest, static analysis, type checking, and the production build pass.
 - Playwright and raw Chromium CDP are not used.

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { LoaderCircle, LocateFixed, MapPin } from '@lucide/vue';
-import type { Map as LeafletMap, Marker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createLocationMap } from '@/lib/locationMap';
+import type { BranchLocation, LocationMapController, MapCoordinates } from '@/lib/locationMap';
 
 const props = withDefaults(
     defineProps<{
@@ -17,6 +18,7 @@ const props = withDefaults(
         selectedLabel?: string;
         mapLabel?: string;
         inputIdPrefix?: string;
+        branchLocations?: readonly BranchLocation[];
     }>(),
     {
         title: 'Titik lokasi',
@@ -25,6 +27,7 @@ const props = withDefaults(
         selectedLabel: 'Koordinat terpilih',
         mapLabel: 'Peta pemilih lokasi',
         inputIdPrefix: 'location',
+        branchLocations: () => [],
     },
 );
 
@@ -32,6 +35,7 @@ const emit = defineEmits<{
     'update:latitude': [value: string];
     'update:longitude': [value: string];
     located: [latitude: number, longitude: number];
+    branchSelect: [branchId: number];
 }>();
 
 const mapElement = ref<HTMLDivElement | null>(null);
@@ -48,10 +52,9 @@ const longitudeModel = computed({
     get: () => props.longitude,
     set: (value: string | number) => emit('update:longitude', String(value)),
 });
-let map: LeafletMap | null = null;
-let marker: Marker | null = null;
+let mapController: LocationMapController | null = null;
 
-const parsedCoordinates = (): [number, number] | null => {
+const parsedCoordinates = (): MapCoordinates | null => {
     const latitudeValue = props.latitude.trim();
     const longitudeValue = props.longitude.trim();
 
@@ -81,65 +84,18 @@ const updateCoordinates = (latitude: number, longitude: number): void => {
     emit('update:longitude', longitude.toFixed(6));
 };
 
-const setMarkerPosition = (latitude: number, longitude: number, center = false): void => {
-    if (!map || !marker) {
-        return;
-    }
-
-    marker.setLatLng([latitude, longitude]);
-
-    if (center) {
-        map.setView([latitude, longitude], 16);
-    }
-};
-
 const initializeMap = async (): Promise<void> => {
     if (!mapElement.value) {
         return;
     }
 
-    const leaflet = await import('leaflet');
-    const coordinates = parsedCoordinates();
-    const initialCenter: [number, number] = coordinates ?? [-2.5489, 118.0149];
-
-    map = leaflet.map(mapElement.value, {
-        center: initialCenter,
-        zoom: coordinates ? 16 : 5,
+    mapController = await createLocationMap({
+        element: mapElement.value,
+        initialCoordinates: parsedCoordinates(),
+        branchLocations: props.branchLocations,
+        onCoordinatesChanged: updateCoordinates,
+        onBranchSelect: (branchId) => emit('branchSelect', branchId),
     });
-    leaflet
-        .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19,
-        })
-        .addTo(map);
-
-    const markerIcon = leaflet.divIcon({
-        className: 'laundry-location-marker',
-        html: '<span></span>',
-        iconAnchor: [14, 28],
-        iconSize: [28, 28],
-    });
-    marker = leaflet.marker(initialCenter, {
-        draggable: true,
-        icon: markerIcon,
-        opacity: coordinates ? 1 : 0,
-    });
-    marker.addTo(map);
-    marker.on('dragend', () => {
-        if (!marker) {
-            return;
-        }
-
-        const point = marker.getLatLng();
-        updateCoordinates(point.lat, point.lng);
-    });
-    map.on('click', (event) => {
-        marker?.setOpacity(1);
-        setMarkerPosition(event.latlng.lat, event.latlng.lng);
-        updateCoordinates(event.latlng.lat, event.latlng.lng);
-    });
-
-    window.setTimeout(() => map?.invalidateSize(), 0);
 };
 
 const useCurrentLocation = (): void => {
@@ -154,8 +110,7 @@ const useCurrentLocation = (): void => {
     navigator.geolocation.getCurrentPosition(
         ({ coords }) => {
             locating.value = false;
-            marker?.setOpacity(1);
-            setMarkerPosition(coords.latitude, coords.longitude, true);
+            mapController?.setCoordinates([coords.latitude, coords.longitude], true);
             updateCoordinates(coords.latitude, coords.longitude);
             emit('located', coords.latitude, coords.longitude);
         },
@@ -178,12 +133,19 @@ watch(
         const coordinates = parsedCoordinates();
 
         if (coordinates) {
-            marker?.setOpacity(1);
-            setMarkerPosition(coordinates[0], coordinates[1]);
+            mapController?.setCoordinates(coordinates);
         } else {
-            marker?.setOpacity(0);
+            mapController?.setCoordinates(null);
         }
     },
+);
+
+watch(
+    () => props.branchLocations,
+    () => {
+        mapController?.setBranchLocations(props.branchLocations, parsedCoordinates());
+    },
+    { deep: true },
 );
 
 onMounted(() => {
@@ -191,9 +153,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-    map?.remove();
-    map = null;
-    marker = null;
+    mapController?.destroy();
+    mapController = null;
 });
 </script>
 
@@ -288,5 +249,25 @@ onBeforeUnmount(() => {
     background: var(--laundry-brand-600);
     box-shadow: var(--laundry-map-marker-shadow);
     transform: rotate(-45deg);
+}
+
+:global(.laundry-branch-marker) {
+    background: transparent;
+    border: 0;
+}
+
+:global(.laundry-branch-marker span) {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border: 4px solid white;
+    border-radius: 9999px;
+    background: var(--laundry-sky-400);
+    box-shadow: var(--laundry-map-marker-shadow);
+}
+
+:global(.laundry-branch-marker--selected span) {
+    background: var(--laundry-brand-600);
+    outline: 3px solid color-mix(in srgb, var(--laundry-brand-600) 24%, transparent);
 }
 </style>
