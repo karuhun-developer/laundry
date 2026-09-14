@@ -4,6 +4,8 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-09-14
+
 - Added optional Paywuz payment gateway support for direct QRIS and bank virtual-account methods, with provider-signed idempotent webhook reconciliation.
 - Added local QRIS and bank logos to the online payment-method picker, with a generic card fallback for unsupported provider codes.
 - Kept cash and branch-managed QRIS available when the optional Paywuz integration is disabled or incomplete.
