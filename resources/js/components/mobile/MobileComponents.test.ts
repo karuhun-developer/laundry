@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { defineComponent } from 'vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
@@ -44,6 +45,32 @@ const services: MobileService[] = [
         price_options: [packagePriceOption],
     },
 ];
+
+const locationPickerStub = defineComponent({
+    props: {
+        latitude: { type: String, required: true },
+        longitude: { type: String, required: true },
+    },
+    emits: ['update:latitude', 'update:longitude', 'located'],
+    template: `
+        <div data-test="location-picker-stub">
+            <button
+                type="button"
+                data-test="stub-current-location"
+                @click="$emit('located', -6.2607, 106.8136)"
+            >
+                Current location
+            </button>
+            <button
+                type="button"
+                data-test="stub-map-point"
+                @click="$emit('update:latitude', '-6.917500'); $emit('update:longitude', '107.619100')"
+            >
+                Map point
+            </button>
+        </div>
+    `,
+});
 
 const quote: MobilePriceQuote = {
     price_option: packagePriceOption,
@@ -218,12 +245,28 @@ describe('mobile role-aware components', () => {
         );
     });
 
-    it('keeps manual coordinates available when automatic location is unavailable', () => {
+    it('uses the current device location from the map picker', async () => {
         const wrapper = mount(BranchExplorer, {
             props: { branches: [branch], nearestBranches: [], selectedBranchId: branch.id },
+            global: { stubs: { LocationPicker: locationPickerStub } },
         });
 
-        expect(wrapper.find('[data-test="manual-location"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Masukkan koordinat manual');
+        expect(wrapper.find('[data-test="map-location"]').exists()).toBe(true);
+
+        await wrapper.get('[data-test="stub-current-location"]').trigger('click');
+
+        expect(wrapper.emitted('locate')?.at(-1)).toEqual([-6.2607, 106.8136]);
+    });
+
+    it('calculates the nearest branch from a selected map point', async () => {
+        const wrapper = mount(BranchExplorer, {
+            props: { branches: [branch], nearestBranches: [], selectedBranchId: branch.id },
+            global: { stubs: { LocationPicker: locationPickerStub } },
+        });
+
+        await wrapper.get('[data-test="stub-map-point"]').trigger('click');
+        await wrapper.get('[data-test="submit-map-location"]').trigger('submit');
+
+        expect(wrapper.emitted('locate')?.at(-1)).toEqual([-6.9175, 107.6191]);
     });
 });

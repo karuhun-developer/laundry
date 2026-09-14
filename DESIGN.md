@@ -99,10 +99,12 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Location and branch discovery
 
-- Ask for device location only when the customer chooses automatic branch discovery; manual address/coordinate entry remains available.
+- Customers select their pickup point on an OpenStreetMap surface before calculating nearby branches.
+- Ask for device location only when the customer chooses `Gunakan lokasi saya`; the returned point centers the map pin and immediately calculates nearby branches.
+- Clicking the map or dragging its pin adjusts the pickup point before the customer chooses `Hitung dari titik ini`; labeled latitude and longitude fields remain the keyboard-accessible fallback.
 - Nearest-branch cards show branch name, locality, distance, free-delivery coverage, and any extra fee before selection.
 - Never imply GPS precision beyond the returned meter distance. Use Indonesian labels such as `Gratis antar-jemput` or `Biaya jarak Rp6.000`.
-- Location denial and empty coverage states provide a clear manual path instead of blocking order creation.
+- Location denial and empty coverage states keep map placement and coordinate entry available instead of blocking order creation.
 - Machine availability is not shown until capacity scheduling and slot-locking semantics are implemented.
 
 ### Outlet location editor
@@ -199,6 +201,13 @@ Every primitive must be demonstrated in a development showcase before product sc
 
 - Keyboard navigable with a persistent selected state.
 - Segmented controls are used only for 2 to 5 peer options.
+
+### `LocationPicker`
+
+- Shared by the CMS outlet editor and customer pickup-point flow.
+- Uses OpenStreetMap tiles with click-to-place and a draggable pin, while keeping labeled latitude and longitude fields available for keyboard entry.
+- Device geolocation is requested only after an explicit action and moves the pin to the returned point.
+- Permission errors remain inline and do not disable manual map placement.
 
 ### `StatusBadge`
 

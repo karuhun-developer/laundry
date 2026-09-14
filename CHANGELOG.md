@@ -5,6 +5,8 @@ All notable changes to LaundryHub are documented here. The project follows phase
 ## [Unreleased]
 
 - Changed GitHub Release titles to exactly match their Git tags while continuing to source descriptions from the matching changelog section.
+- Changed customer pickup coordinates to a shared OpenStreetMap picker with current-location centering, click-to-place, and a draggable pin.
+- Fixed Android current-location discovery by declaring coarse and fine location permissions in the application manifest.
 
 ## [1.0.4] - 2026-09-14
 

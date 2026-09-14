@@ -13,7 +13,7 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 - Create a laundry order from the selected organization, branch, service package, weight, and optional pickup location.
 - See the server-backed estimate before submitting, including decimal weights and package excess pricing.
 - Track active and historical orders through an expandable status timeline.
-- Find the nearest active branch with device geolocation and view pickup/delivery fee estimates.
+- Select a pickup point from OpenStreetMap using device geolocation, click-to-place, or a draggable pin, then view nearest-branch pickup/delivery fee estimates.
 - Switch between available organizations and branches when the customer is not tenant-bound.
 
 ## Branch-admin workspace
@@ -36,6 +36,7 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 
 - The demo package includes 12 kg for Rp12.000 and charges Rp5.000 for each excess kilogram on a proportional gram basis. A 12,5 kg order therefore estimates to Rp14.500.
 - Geolocation uses the existing Haversine nearest-branch service and the branch's free-delivery radius plus configured excess fee per started kilometer.
+- The Android manifest grants coarse and fine location access; Capacitor requests runtime permission only after the customer taps the current-location action.
 - The server calculates and snapshots final pricing; client estimates are guidance only.
 
 ## Optimistic behavior
@@ -49,10 +50,11 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 ## Verification
 
 - Pest feature tests cover mobile-route role access, session-authenticated APIs, role-specific context, order filtering, customer-directory boundaries, and cross-tenant denial.
-- Vitest covers geolocation behavior, optimistic update reconciliation and rollback, mobile navigation, status badges, and order-ticket rendering.
+- Vitest covers geolocation and map-point selection, optimistic update reconciliation and rollback, mobile navigation, status badges, and order-ticket rendering.
+- Pest protects the Android manifest location-permission contract.
 - Browser end-to-end verification is performed once, after Pest, Vitest, static analysis, type checking, and the production build pass.
 - Playwright and raw Chromium CDP are not used.
 
 ## Deferred scope
 
-Dynamic QRIS, thermal/Bluetooth printing, configurable WhatsApp templates, and the packaged Capacitor Android shell remain scheduled for later phases. The Phase 1 web workspace is API-connected and structured for those integrations.
+Machine-capacity scheduling and slot locking remain scheduled for a later phase. Dynamic QRIS, thermal/Bluetooth printing, configurable WhatsApp templates, and the packaged Capacitor Android shell are delivered in subsequent phases.

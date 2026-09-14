@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { LocateFixed, MapPin, Navigation, Store } from '@lucide/vue';
-import { ref } from 'vue';
-import { useGeolocation } from '@/composables/useGeolocation';
+import { MapPin, Navigation, Store } from '@lucide/vue';
+import { ref, watch } from 'vue';
+import LocationPicker from '@/components/LocationPicker.vue';
+import type { Coordinates } from '@/composables/useGeolocation';
 import { formatDistance, formatRupiah } from '@/lib/mobileOrders';
 import type { MobileBranch, NearestMobileBranch } from '@/types/mobile';
 
 type BranchResult = MobileBranch | NearestMobileBranch;
 
-defineProps<{
+const props = defineProps<{
     branches: readonly MobileBranch[];
     nearestBranches: readonly NearestMobileBranch[];
     selectedBranchId: number | null;
+    selectedCoordinates?: Coordinates | null;
 }>();
 
 const emit = defineEmits<{
@@ -18,10 +20,9 @@ const emit = defineEmits<{
     select: [branchId: number];
 }>();
 
-const geolocation = useGeolocation();
-const manualLatitude = ref<number | string>('');
-const manualLongitude = ref<number | string>('');
-const manualError = ref<string | null>(null);
+const selectedLatitude = ref(props.selectedCoordinates?.latitude.toString() ?? '');
+const selectedLongitude = ref(props.selectedCoordinates?.longitude.toString() ?? '');
+const locationError = ref<string | null>(null);
 
 const branchDistance = (branch: BranchResult): number | null =>
     'distance_meters' in branch.delivery ? branch.delivery.distance_meters : null;
@@ -29,19 +30,24 @@ const branchDistance = (branch: BranchResult): number | null =>
 const branchFee = (branch: BranchResult): number | null =>
     'fee_rupiah' in branch.delivery ? branch.delivery.fee_rupiah : null;
 
-const locate = async (): Promise<void> => {
-    const coordinates = await geolocation.locate();
+watch(
+    () => props.selectedCoordinates,
+    (coordinates) => {
+        selectedLatitude.value = coordinates?.latitude.toString() ?? '';
+        selectedLongitude.value = coordinates?.longitude.toString() ?? '';
+    },
+);
 
-    if (coordinates) {
-        manualLatitude.value = coordinates.latitude;
-        manualLongitude.value = coordinates.longitude;
-        emit('locate', coordinates.latitude, coordinates.longitude);
-    }
+const locateCoordinates = (latitude: number, longitude: number): void => {
+    selectedLatitude.value = latitude.toFixed(6);
+    selectedLongitude.value = longitude.toFixed(6);
+    locationError.value = null;
+    emit('locate', latitude, longitude);
 };
 
-const locateManually = (): void => {
-    const latitude = Number(manualLatitude.value);
-    const longitude = Number(manualLongitude.value);
+const locateSelectedPoint = (): void => {
+    const latitude = Number(selectedLatitude.value);
+    const longitude = Number(selectedLongitude.value);
 
     if (
         !Number.isFinite(latitude) ||
@@ -51,11 +57,11 @@ const locateManually = (): void => {
         longitude < -180 ||
         longitude > 180
     ) {
-        manualError.value = 'Latitude harus -90 sampai 90 dan longitude -180 sampai 180.';
+        locationError.value = 'Latitude harus -90 sampai 90 dan longitude -180 sampai 180.';
         return;
     }
 
-    manualError.value = null;
+    locationError.value = null;
     emit('locate', latitude, longitude);
 };
 </script>
@@ -72,64 +78,35 @@ const locateManually = (): void => {
             <p class="mt-2 max-w-xl text-sm leading-6 text-white/75">
                 Lokasi hanya dipakai untuk menghitung jarak, gratis antar-jemput, dan biaya kelebihan kilometer.
             </p>
-            <button
-                type="button"
-                class="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-brand-700 transition motion-safe:active:scale-[0.98] disabled:opacity-60"
-                :disabled="geolocation.locating.value"
-                data-test="find-nearest-branch"
-                @click="locate"
-            >
-                <LocateFixed class="size-4" aria-hidden="true" />
-                {{ geolocation.locating.value ? 'Membaca lokasi…' : 'Gunakan lokasi saya' }}
-            </button>
-            <p v-if="geolocation.error.value" class="mt-3 text-sm text-white" role="status">
-                {{ geolocation.error.value }}
-            </p>
-
-            <form
-                class="mt-5 rounded-2xl bg-white/10 p-4"
-                data-test="manual-location"
-                @submit.prevent="locateManually"
-            >
-                <p class="text-sm font-semibold">Masukkan koordinat manual</p>
-                <p class="mt-1 text-xs leading-5 text-white/75">Tetap bisa dipakai jika izin lokasi ditolak.</p>
-                <div class="mt-3 grid grid-cols-2 gap-3">
-                    <label class="block">
-                        <span class="text-xs font-medium text-white/85">Latitude</span>
-                        <input
-                            v-model="manualLatitude"
-                            type="number"
-                            min="-90"
-                            max="90"
-                            step="any"
-                            inputmode="decimal"
-                            required
-                            class="mt-1 min-h-11 w-full rounded-xl border border-white/30 bg-white px-3 text-sm text-ink-950 outline-none"
-                        />
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-medium text-white/85">Longitude</span>
-                        <input
-                            v-model="manualLongitude"
-                            type="number"
-                            min="-180"
-                            max="180"
-                            step="any"
-                            inputmode="decimal"
-                            required
-                            class="mt-1 min-h-11 w-full rounded-xl border border-white/30 bg-white px-3 text-sm text-ink-950 outline-none"
-                        />
-                    </label>
-                </div>
-                <p v-if="manualError" class="mt-2 text-sm text-white" role="status">{{ manualError }}</p>
-                <button
-                    type="submit"
-                    class="mt-3 min-h-11 w-full rounded-xl border border-white/40 px-4 text-sm font-semibold text-white transition hover:bg-white/10 motion-safe:active:scale-[0.98]"
-                >
-                    Hitung dari koordinat ini
-                </button>
-            </form>
         </div>
+
+        <form
+            class="mt-5 space-y-4 rounded-3xl border border-line bg-surface p-5 shadow-low"
+            data-test="map-location"
+            @submit.prevent="locateSelectedPoint"
+        >
+            <LocationPicker
+                v-model:latitude="selectedLatitude"
+                v-model:longitude="selectedLongitude"
+                title="Titik antar-jemput"
+                description="Gunakan lokasi perangkat, klik peta, atau geser pin sampai titiknya sesuai."
+                current-location-label="Gunakan lokasi saya"
+                selected-label="Titik antar-jemput"
+                map-label="Peta pemilih titik antar-jemput"
+                input-id-prefix="delivery"
+                @located="locateCoordinates"
+            />
+            <p v-if="locationError" class="text-sm text-red-600" role="status">
+                {{ locationError }}
+            </p>
+            <button
+                type="submit"
+                class="min-h-11 w-full rounded-xl border border-brand-600 px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 motion-safe:active:scale-[0.98]"
+                data-test="submit-map-location"
+            >
+                Hitung dari titik ini
+            </button>
+        </form>
 
         <div class="mt-5 space-y-3">
             <article

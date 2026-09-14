@@ -189,6 +189,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         :branches="workspace.context.value.branches"
                         :nearest-branches="workspace.nearestBranches.value"
                         :selected-branch-id="workspace.selectedBranchId.value"
+                        :selected-coordinates="deliveryCoordinates"
                         @locate="onLocationFound"
                         @select="onBranchSelected"
                     />
