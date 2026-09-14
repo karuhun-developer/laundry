@@ -26,7 +26,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 ### Customer
 
-- Registers and signs in from the mobile surface.
+- Registers and signs in from the mobile surface with a normalized WhatsApp phone number and six-digit PIN.
 - Sets a pickup point, chooses from globally discovered branches ordered nearest first, then selects one service option.
 - Does not select or need to understand an organization; tenant routing is derived internally from the selected branch and existing order.
 - Submits a pickup request without entering weight or accepting an estimated laundry total.
@@ -36,6 +36,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ### Branch admin
 
 - Works only within assigned branches.
+- Manages the current organization's customer directory by creating or linking global customer identities, updating eligible single-organization profiles, resetting temporary PINs, and detaching memberships when order history permits.
 - Creates customer orders and records measured weight.
 - Advances an order through the configured laundry workflow.
 - Sends the rendered price message through an explicit WhatsApp action and presents dynamic QRIS after pricing is confirmed.
@@ -58,7 +59,8 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Organization: tenant boundary and owner scope.
 - City: globally shared geographic master data for branch discovery and reporting, unique by name and province.
 - Branch: operational unit with contact details, coordinates, free-delivery radius, and excess-distance tariff.
-- User: authenticated actor with global or organization/branch-scoped roles.
+- User: authenticated actor. Customer identity is global by normalized phone number, while customer access to an organization is represented by an explicit membership rather than an organization selector at registration.
+- Customer organization membership: link between a global customer identity and an organization, used to scope branch-admin customer management without duplicating the customer's account.
 - Service: laundry service category, for example wash-and-fold or dry cleaning.
 - Price option: fixed package or per-kilogram price attached to a service and branch.
 - Order: branch-owned customer transaction with immutable calculated pricing snapshots.
@@ -66,6 +68,16 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Order status event: append-only status history with actor and timestamp.
 - Payment: QRIS or cash payment record introduced in Phase 2.
 - Message template: WhatsApp template with validated variables introduced in Phase 3.
+
+## Identity and entry flow
+
+- `/login` separates customer and staff authentication modes. Customers use a normalized WhatsApp phone number and six-digit PIN; staff use email and password, with passkeys restricted to staff accounts.
+- Public customer registration collects name, WhatsApp phone number, PIN, and PIN confirmation. It creates a global customer identity without choosing or attaching an organization.
+- Phone inputs in `08...`, `+62...`, and `62...` forms normalize to the stored Indonesian `62...` form before uniqueness and credential checks.
+- A branch admin may issue a one-time temporary PIN when creating a new customer or resetting an eligible customer's PIN. The PIN expires after 24 hours and the account is marked to change it.
+- Changing or resetting a customer PIN advances the account's session version so stale customer web and API sessions are invalidated.
+- Customers and branch admins enter `/app`; owners and superadmins enter `/cms`. `/` and `/dashboard` only redirect according to the authenticated role.
+- The branch-admin mobile shell keeps Queue, New order, Customers, and More as isolated work areas. WhatsApp order actions stay with Queue, while identity, organization, printer/device settings, and logout stay in More.
 
 ## Pricing rules
 
@@ -81,6 +93,9 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 - Each branch may store latitude and longitude coordinates. Branches without coordinates are excluded from automatic routing.
 - Customers receive nearest-branch recommendations across active branches in every active organization. Branches without coordinates are listed after ranked branches and are excluded from distance calculation.
+- After customer workspace, organization context, and catalog loading are ready, the mobile surface automatically attempts location discovery. Branch-admin sessions never trigger this automatic request.
+- Native Android uses Capacitor geolocation while browsers use the platform geolocation API. Permission denial, disabled GPS, timeout, or unavailable coordinates remain non-blocking because map placement, coordinate entry, branch cards, and the branch selector remain available.
+- The nearest ranked branch is selected automatically and its catalog is loaded. Request generations prevent late workspace, location, nearest-branch, or catalog responses from replacing newer state, and a manual branch selection cannot be overwritten by a late automatic result.
 - Distance uses the Haversine formula in application code for identical SQLite and MySQL behavior. A spatial database optimization may be introduced later without changing the API contract.
 - Pickup and delivery are free up to the branch's configured radius. The initial default radius is 10,000 meters.
 - Distance beyond the free radius is charged per started kilometer: `ceil(excess meters / 1,000) × configured rupiah per km`.
@@ -146,6 +161,9 @@ Deliverables:
 - LaundryHub Demo seed data includes Jakarta Selatan and Bandung in the global city catalog.
 - Deterministic demo credentials and role shortcuts on the local login screen.
 - Responsive split authentication shell with product context on wide screens and a focused single-column form on compact screens.
+- Role-separated customer phone/PIN and staff email/password entry with role-aware destinations and customer session invalidation.
+- Branch-scoped customer management backed by global customer identities and organization memberships.
+- Isolated Queue, New order, Customers, and More tabs for branch-admin work.
 
 Exit criteria:
 

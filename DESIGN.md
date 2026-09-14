@@ -90,6 +90,15 @@ Components respond to their container where possible; viewport breakpoints own o
 - Audit activity
 - Settings
 
+### Authentication and role entry
+
+- `/login` presents separate customer and staff modes inside the same responsive authentication shell. Customer mode accepts a WhatsApp phone number and six-digit PIN; staff mode accepts email and password and may expose staff-only passkey authentication.
+- Public registration collects customer name, WhatsApp phone number, PIN, and PIN confirmation. Registration creates a global customer identity without an organization selector or automatic organization membership.
+- Customer and branch-admin sessions enter `/app`. Owner and superadmin sessions enter `/cms`. `/` and `/dashboard` resolve through role-aware redirects, and logout returns to `/login`.
+- A temporary customer PIN is displayed only in the authorized branch-admin result flow, expires after 24 hours, and marks the customer account for a PIN change. PIN changes and administrative resets invalidate stale customer sessions through the account session version.
+- The `/login` title, description, canonical URL, robots directives, Open Graph data, Twitter data, and WebApplication JSON-LD are emitted by the Blade application shell. The login screen remains an Inertia page; the metadata contract does not depend on SSR.
+- Inertia SSR is disabled in both Laravel and Vite configuration. Non-login application pages use a noindex/nofollow head contract.
+
 ### Customer mobile navigation
 
 - Home
@@ -101,13 +110,18 @@ Components respond to their container where possible; viewport breakpoints own o
 
 - Customers select their pickup point on an OpenStreetMap surface before calculating nearby branches.
 - Customers never select an organization. The selected branch and each existing order carry the internal organization identity needed for tenant-safe API routing.
-- Ask for device location only when the customer chooses `Gunakan lokasi saya`; the returned point centers the map pin and immediately calculates nearby branches.
+- After customer workspace, context, organization, and catalog loading settle, the application automatically attempts current-location discovery. Branch-admin workspaces never start this automatic flow.
+- Native Android uses Capacitor permission checks and location retrieval; browsers use `navigator.geolocation`. Precise or coarse native permission is sufficient. Location requests use high accuracy, a 10-second timeout, and a 60-second maximum age.
+- `Gunakan lokasi saya` remains an explicit retry path in the location picker and exposes a recoverable inline error when the request fails. An automatic denial, disabled GPS, timeout, unavailable API, or invalid coordinate is non-blocking and falls back to manual controls.
 - Clicking the map or dragging its pin adjusts the pickup point before the customer chooses `Hitung dari titik ini`; labeled latitude and longitude fields remain the keyboard-accessible fallback.
-- The branch dropdown and branch cards use the same nearest-to-farthest ordering after distance calculation. Branches without calculable coordinates remain available after ranked options.
+- Ranked results are restricted to branches in the current workspace context and ordered by integer `distance_meters`. The nearest result is selected automatically and its catalog is reloaded; branches without calculable coordinates remain available after ranked options.
+- Workspace, nearest-branch, branch-selection, and catalog generations reject stale responses. Manual branch selection advances its generation so a late automatic result cannot replace the customer's choice.
 - The map shows outlet markers and translucent free-delivery radius overlays. The selected branch uses the stronger brand marker, and tapping an outlet marker selects that branch.
-- Nearest-branch cards show branch name, locality, distance, free-delivery coverage, and any extra fee before selection.
-- Never imply GPS precision beyond the returned meter distance. Use `Gratis jemput & antar` inside coverage and `Di luar radius gratis · tambahan Rp6.000` outside coverage.
+- Nearest-branch cards show branch name, locality, distance, free-delivery radius, per-kilometer tariff, coverage state, and estimated excess fee before selection.
+- Delivery distance uses Haversine calculation rounded to integer meters. The charge is zero inside the free radius; outside it, chargeable kilometers are `ceil(max(0, distance - free radius) / 1,000)` multiplied by the configured rupiah-per-kilometer tariff.
+- Never imply GPS precision beyond the returned meter distance. Use `Gratis jemput & antar` inside coverage and a dynamic outside-radius label and fee outside coverage.
 - Location denial and empty coverage states keep map placement and coordinate entry available instead of blocking order creation.
+- The Home shortcut `Lihat daftar cabang` opens the Branches tab without starting a separate navigation contract.
 - Machine availability is not shown until capacity scheduling and slot-locking semantics are implemented.
 
 ### Outlet location editor
@@ -152,6 +166,16 @@ Components respond to their container where possible; viewport breakpoints own o
 - Empty tenant and location states explain the prerequisite action instead of presenting a disabled control without context.
 - Desktop comparison tables become record cards before they would require horizontal page scrolling. Long names, email addresses, slugs, and addresses truncate or wrap inside their own surface.
 
+### Branch-admin customer directory
+
+- The Customers tab lists only customer memberships in the branch admin's current organization. Customer identity remains global, so creating with an existing customer-only phone links that identity without replacing its profile or PIN.
+- Creating a new phone displays a one-time temporary PIN and expiry after the canonical response. Linking an existing identity returns no credential. The credential dialog supports copying and states that the PIN will not be shown again.
+- Edit controls are available only for customers with exactly one organization membership and change only name and normalized WhatsApp phone. Shared customer profiles are hidden or denied as not found to prevent cross-tenant profile edits.
+- Reset PIN is limited to the same single-membership boundary, uses a confirmation dialog, returns a new one-time 24-hour temporary PIN, and invalidates existing customer sessions.
+- Detach uses typed-name confirmation and removes only the current organization membership. It never deletes the global customer account and is denied when the customer has order history in that organization.
+- Create and link show a pending directory record while the mutation is active. Success reconciles it by temporary optimistic identifier, while validation, authorization, or network failure removes that pending record. Operation generations protect update, reset, and detach responses, not create or link.
+- Frontend requests use Wayfinder-generated route functions with Inertia's HTTP client. Policies, Form Requests, Actions, API Resources, tenant scoping, and activity logging remain authoritative.
+
 ### Reporting dashboard
 
 - Filters appear in one bordered surface above the metrics. Date fields lead, superadmins receive an organization selector, and the shared global city selector never depends on an organization selection.
@@ -173,12 +197,12 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Branch admin mobile navigation
 
-- Queue
-- New order
-- Customers
-- More
+- Queue owns the assigned order list, status/pricing work, and the latest complete WhatsApp destination/message preview shortcut.
+- New order owns the counter-order composer.
+- Customers owns the current-organization customer directory and its create, edit, reset, credential, and detach dialogs.
+- More owns the signed-in identity, WhatsApp phone, organization, printer/device settings, and logout.
 
-The role switch changes available navigation; it never hides authorization failures behind client-only logic.
+Content does not leak between these tabs: Queue and New order do not render account controls, Customers does not render order or device controls, and More does not render queue/customer-management work. The role switch changes available navigation; it never hides authorization failures behind client-only logic.
 
 ## 4. Content and Voice
 
@@ -213,8 +237,8 @@ Every primitive must be demonstrated in a development showcase before product sc
 
 - Shared by the CMS outlet editor and customer pickup-point flow.
 - Uses OpenStreetMap tiles with click-to-place and a draggable pin, while keeping labeled latitude and longitude fields available for keyboard entry.
-- Device geolocation is requested only after an explicit action and moves the pin to the returned point.
-- Permission errors remain inline and do not disable manual map placement.
+- Its explicit current-location action moves the pin to a valid returned point and exposes permission or availability errors inline without disabling manual map placement.
+- Customer workspace automation calls the same native/browser location seam only after workspace readiness; outlet editing remains explicit-action only.
 
 ### `StatusBadge`
 
@@ -253,15 +277,15 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Focus is trapped and restored. Escape closes non-destructive dialogs.
 - Destructive confirmation names the affected record and requires an exact typed value; native JavaScript confirmation dialogs are not used.
 
-### Demo login selector
+### Authentication selector
 
 - Authentication uses the split layout on large screens and collapses to a focused single-column form on compact screens.
 - Authentication surfaces use the `brand-*`, `surface-*`, and `ink-*` tokens with Poppins headings and Inter controls.
 - Authentication is intentionally scoped to the light LaundryHub palette so system dark-mode preferences cannot reduce contrast on the white form surface.
 - Default auth inputs, buttons, links, and password visibility controls expose a minimum 44 px interaction target and retain natural DOM tab order.
-- Local development shows four compact role buttons above the login form.
-- Selecting a role only fills the email and shared demo password; the user still submits the normal Fortify form.
-- Production hides demo credentials through environment configuration.
+- Customer mode uses normalized WhatsApp phone and six-digit PIN fields and links to public customer registration. Staff mode uses the Fortify email/password form and may offer a passkey action only to staff accounts.
+- Demo shortcuts, when enabled by environment configuration, must respect the selected customer or staff credential mode. Production hides demo credentials.
+- The branded favicon uses a blue background with the washing-machine mark.
 
 ### QRIS payment surface
 

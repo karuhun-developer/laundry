@@ -4,6 +4,17 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-09-14
+
+- Added normalized customer WhatsApp-phone and six-digit-PIN identity, nullable staff credentials for customer accounts, and global customer organization memberships with legacy membership backfill.
+- Added separate customer and staff login paths, role-aware `/app` and `/cms` destinations, customer PIN change/reset flows, and session-version invalidation.
+- Added a Blade-emitted `/login` SEO head contract, a blue-background branded favicon, and disabled Inertia SSR.
+- Added branch-scoped customer directory creation/linking, eligible profile updates and PIN resets, membership-only detach, and one-time 24-hour temporary PIN disclosure.
+- Isolated Queue, New order, Customers, and More content while keeping complete WhatsApp suggestion and destination behavior in Queue.
+- Added customer-only automatic nearest-branch discovery with Capacitor Geolocation 8.2.2, native/browser fallbacks, stale-response and manual-selection protection, nearest sorting, automatic selection and catalog reload, delivery-fee guidance, and the Home branch-list shortcut.
+- Added regression coverage for customer authentication, session invalidation, customer management, mobile tab isolation, geolocation, and nearest-branch ranking.
+- Integrated Capacitor Geolocation 8.2.2 into the customer-only automatic location flow while reusing the existing Android coarse and fine location declarations; signed Android APK/AAB compilation remains in semantic-version-tag-triggered CI/CD and was not required locally for this documentation release.
+
 ## [1.0.6] - 2026-09-14
 
 - Fixed the Android release quality gate by applying the Biome-required import ordering and formatting that blocked `v1.0.5` before artifact publication.
