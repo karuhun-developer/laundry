@@ -1,5 +1,6 @@
 import { computed, onMounted, readonly, ref } from 'vue';
 import { useMobileCatalogApi } from '@/composables/useMobileCatalogApi';
+import { useMobileCustomerWorkspace } from '@/composables/useMobileCustomerWorkspace';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
 import { useMobilePrinter } from '@/composables/useMobilePrinter';
 import { toLaundryReceiptData } from '@/lib/mobilePayments';
@@ -26,6 +27,7 @@ export const useMobileWorkspace = () => {
     const requestError = ref<string | null>(null);
     const catalogApi = useMobileCatalogApi();
     const printer = useMobilePrinter();
+    const customerWorkspace = useMobileCustomerWorkspace(customers);
     let loadGeneration = 0;
     let catalogGeneration = 0;
     let nearestGeneration = 0;
@@ -95,7 +97,7 @@ export const useMobileWorkspace = () => {
         }
 
         orderWorkspace.setOrders(orders);
-        customers.value = organizationCustomers;
+        customerWorkspace.setCustomers(organizationCustomers);
         await loadCatalog();
     };
 
@@ -118,7 +120,7 @@ export const useMobileWorkspace = () => {
                 ? selectedBranchId.value
                 : (response.branches[0]?.id ?? null);
             services.value = [];
-            customers.value = [];
+            customerWorkspace.setCustomers([]);
             nearestBranches.value = [];
             orderWorkspace.setOrders([]);
             nearestGeneration += 1;
@@ -226,6 +228,7 @@ export const useMobileWorkspace = () => {
         context: readonly(context),
         services: readonly(services),
         customers: readonly(customers),
+        selectedCustomerId: customerWorkspace.selectedCustomerId,
         nearestBranches: readonly(nearestBranches),
         selectedBranch,
         selectedBranchId: readonly(selectedBranchId),
@@ -245,9 +248,14 @@ export const useMobileWorkspace = () => {
         findNearestBranches,
         quoteOrder,
         confirmOrderPricing: orderWorkspace.confirmOrderPricing,
+        createCustomer: customerWorkspace.createCustomer,
         createOrder: orderWorkspace.createOrder,
+        detachCustomer: customerWorkspace.detachCustomer,
         load,
+        resetCustomerPin: customerWorkspace.resetCustomerPin,
         selectBranch,
+        selectCustomer: customerWorkspace.selectCustomer,
         transitionOrder: orderWorkspace.transitionOrder,
+        updateCustomer: customerWorkspace.updateCustomer,
     };
 };

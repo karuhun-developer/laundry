@@ -3,9 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\RoleName;
+use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -65,7 +69,7 @@ class User extends Authenticatable implements PasskeyUser
             ->withTimestamps();
     }
 
-    public function setCustomerPin(string $pin, ?Carbon $expiresAt = null, bool $mustChange = false): void
+    public function setCustomerPin(string $pin, ?CarbonInterface $expiresAt = null, bool $mustChange = false): void
     {
         $this->forceFill([
             'pin_hash' => Hash::make($pin),
@@ -93,6 +97,20 @@ class User extends Authenticatable implements PasskeyUser
     public function createdOrders(): HasMany
     {
         return $this->hasMany(Order::class, 'created_by_id');
+    }
+
+    /**
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    #[Scope]
+    protected function customerOnly(Builder $query): Builder
+    {
+        return $query
+            ->whereHas('roles', fn (Builder $roleQuery): Builder => $roleQuery
+                ->where('name', RoleName::Customer->value))
+            ->whereDoesntHave('roles', fn (Builder $roleQuery): Builder => $roleQuery
+                ->where('name', '!=', RoleName::Customer->value));
     }
 
     /**

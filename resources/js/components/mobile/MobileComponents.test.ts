@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
+import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import type {
@@ -48,7 +49,14 @@ const services: MobileService[] = [
 ];
 
 const customers: MobileCustomer[] = [
-    { id: 9, name: 'Customer Demo', email: 'customer@laundryhub.test' },
+    {
+        id: 9,
+        name: 'Customer Demo',
+        email: 'customer@laundryhub.test',
+        whatsapp_phone: '6281234567890',
+        must_change_pin: false,
+        pin_expires_at: null,
+    },
 ];
 
 const quote: MobilePriceQuote = {
@@ -124,6 +132,32 @@ const makeOrder = (): MobileOrder => ({
 });
 
 describe('mobile role-aware components', () => {
+    it('lists organization customers in the branch-admin order selector', () => {
+        const wrapper = mount(OrderComposer, {
+            props: {
+                role: 'branch_admin',
+                branch,
+                services,
+                customers,
+                deliveryCoordinates: null,
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+
+        const customerSelect = wrapper.get<HTMLSelectElement>('select');
+
+        expect(customerSelect.text()).toContain('Pilih pelanggan');
+        expect(customerSelect.text()).toContain('Customer Demo · customer@laundryhub.test');
+    });
+
+    it('renders the existing customer directory details', () => {
+        const wrapper = mount(CustomerDirectory, { props: { customers } });
+
+        expect(wrapper.text()).toContain('Direktori pelanggan');
+        expect(wrapper.text()).toContain('Customer Demo');
+        expect(wrapper.text()).toContain('customer@laundryhub.test');
+    });
+
     it('shows customer navigation without branch-admin actions', () => {
         const wrapper = mount(MobileBottomNav, {
             props: { role: 'customer', modelValue: 'home' },

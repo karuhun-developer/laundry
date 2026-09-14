@@ -21,18 +21,25 @@ type Props = {
     quoteOrder: (priceOptionId: number, weightGrams: number) => Promise<MobilePriceQuote>;
     deliveryFeeRupiah?: number;
     processing?: boolean;
+    selectedCustomerId?: number | null;
 };
 
 const props = withDefaults(defineProps<Props>(), {
     deliveryFeeRupiah: 0,
     processing: false,
+    selectedCustomerId: null,
 });
 
 const emit = defineEmits<{
     submit: [payload: CreateOrderPayload, quote: MobilePriceQuote | null];
+    'create-customer': [];
+    'update:selectedCustomerId': [customerId: number | null];
 }>();
 
-const customerId = ref<number | null>(null);
+const customerId = computed({
+    get: () => props.selectedCustomerId,
+    set: (customerId: number | null) => emit('update:selectedCustomerId', customerId),
+});
 const priceOptionId = ref<number | null>(null);
 const weightKilograms = ref<number | string>(1);
 const includeDelivery = ref(false);
@@ -227,19 +234,39 @@ const submit = (): void => {
         </div>
 
         <form class="space-y-5 p-5" @submit.prevent="submit">
-            <label v-if="role === 'branch_admin'" class="block">
-                <span class="text-sm font-semibold text-ink-950">Pelanggan</span>
+            <div v-if="role === 'branch_admin'" class="block">
+                <div class="flex items-center justify-between gap-3">
+                    <label for="order-customer" class="text-sm font-semibold text-ink-950">
+                        Pelanggan
+                    </label>
+                    <button
+                        type="button"
+                        class="inline-flex min-h-11 items-center rounded-xl px-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 motion-safe:active:scale-[0.98]"
+                        data-test="create-customer-from-order"
+                        @click="emit('create-customer')"
+                    >
+                        + Pelanggan baru
+                    </button>
+                </div>
                 <select
+                    id="order-customer"
                     v-model="customerId"
                     required
                     class="mt-2 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
+                    data-test="customer-select"
                 >
                     <option :value="null">Pilih pelanggan</option>
-                    <option v-for="customer in customers" :key="customer.id" :value="customer.id">
-                        {{ customer.name }} · {{ customer.email ?? 'Tanpa email' }}
+                    <option
+                        v-for="customer in customers"
+                        :key="customer.id"
+                        :value="customer.id"
+                        :disabled="customer.pending"
+                    >
+                        {{ customer.name }} ·
+                        {{ customer.pending ? 'Menyimpan…' : (customer.email ?? 'Tanpa email') }}
                     </option>
                 </select>
-            </label>
+            </div>
 
             <label class="block">
                 <span class="text-sm font-semibold text-ink-950">Layanan laundry</span>

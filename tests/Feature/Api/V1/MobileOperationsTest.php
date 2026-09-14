@@ -190,39 +190,50 @@ it('denies cross-tenant and unsupported role order lists', function (): void {
         ->assertForbidden();
 });
 
-it('returns tenant customers and neutral customers with tenant orders to branch staff', function (): void {
+it('returns only customers linked through the organization membership pivot', function (): void {
     $organization = Organization::factory()->create();
     $otherOrganization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();
     $branchAdmin = User::factory()->for($organization)->create();
     $branchAdmin->assignRole(RoleName::BranchAdmin->value);
     $branchAdmin->branches()->attach($branch);
-    $tenantCustomer = User::factory()->for($organization)->create(['name' => 'Tenant Customer']);
-    $tenantCustomer->assignRole(RoleName::Customer->value);
-    $neutralCustomer = User::factory()->create([
+    $linkedCustomer = User::factory()->create([
         'organization_id' => null,
-        'name' => 'Neutral Customer',
+        'name' => 'Linked Customer',
     ]);
-    $neutralCustomer->assignRole(RoleName::Customer->value);
+    $linkedCustomer->assignRole(RoleName::Customer->value);
+    $linkedCustomer->customerOrganizations()->attach($organization);
+    $mixedRoleCustomer = User::factory()->create([
+        'organization_id' => null,
+        'name' => 'Mixed Role Customer',
+    ]);
+    $mixedRoleCustomer->assignRole([RoleName::Customer->value, RoleName::Owner->value]);
+    $mixedRoleCustomer->customerOrganizations()->attach($organization);
+    $legacyTenantCustomer = User::factory()->for($organization)->create([
+        'name' => 'Legacy Tenant Customer',
+    ]);
+    $legacyTenantCustomer->assignRole(RoleName::Customer->value);
+    $orderOnlyCustomer = User::factory()->create([
+        'organization_id' => null,
+        'name' => 'Order Only Customer',
+    ]);
+    $orderOnlyCustomer->assignRole(RoleName::Customer->value);
     Order::factory()->for($organization)->for($branch)->create([
-        'customer_id' => $neutralCustomer->id,
-        'created_by_id' => $neutralCustomer->id,
+        'customer_id' => $orderOnlyCustomer->id,
+        'created_by_id' => $orderOnlyCustomer->id,
     ]);
-    $unrelatedNeutralCustomer = User::factory()->create([
-        'organization_id' => null,
-        'name' => 'Unrelated Neutral Customer',
-    ]);
-    $unrelatedNeutralCustomer->assignRole(RoleName::Customer->value);
     $otherCustomer = User::factory()->for($otherOrganization)->create();
     $otherCustomer->assignRole(RoleName::Customer->value);
+    $otherCustomer->customerOrganizations()->attach($otherOrganization);
     Sanctum::actingAs($branchAdmin);
 
     $this->getJson(route('api.v1.organizations.customers.index', $organization))
         ->assertOk()
-        ->assertJsonCount(2, 'data')
-        ->assertJsonFragment(['id' => $tenantCustomer->id, 'name' => 'Tenant Customer'])
-        ->assertJsonFragment(['id' => $neutralCustomer->id, 'name' => 'Neutral Customer'])
-        ->assertJsonMissing(['id' => $unrelatedNeutralCustomer->id])
+        ->assertJsonCount(1, 'data')
+        ->assertJsonFragment(['id' => $linkedCustomer->id, 'name' => 'Linked Customer'])
+        ->assertJsonMissing(['id' => $mixedRoleCustomer->id])
+        ->assertJsonMissing(['id' => $legacyTenantCustomer->id])
+        ->assertJsonMissing(['id' => $orderOnlyCustomer->id])
         ->assertJsonMissing(['id' => $otherCustomer->id]);
 });
 

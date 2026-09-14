@@ -95,6 +95,30 @@ export type MobileCustomer = {
     id: number;
     name: string;
     email: string | null;
+    whatsapp_phone: string | null;
+    must_change_pin: boolean;
+    pin_expires_at: string | null;
+    pending?: boolean;
+};
+
+export type MobileCustomerProfilePayload = {
+    name: string;
+    whatsapp_phone: string;
+};
+
+export type MobileCustomerCredential = {
+    temporary_pin: string;
+    expires_at: string;
+};
+
+export type MobileCustomerMutationResult = {
+    customer: MobileCustomer;
+    credential: MobileCustomerCredential | null;
+};
+
+export type MobileCustomerCredentialResult = {
+    customer: MobileCustomer;
+    credential: MobileCustomerCredential;
 };
 
 export type MobilePriceOption = {

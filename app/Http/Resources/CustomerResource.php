@@ -20,6 +20,9 @@ class CustomerResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'whatsapp_phone' => $this->whatsapp_phone,
+            'must_change_pin' => $this->must_change_pin,
+            'pin_expires_at' => $this->pin_expires_at?->toIso8601String(),
         ];
     }
 }

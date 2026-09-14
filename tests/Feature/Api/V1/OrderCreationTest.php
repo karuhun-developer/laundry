@@ -93,6 +93,11 @@ it('lets a customer request pickup for one service without entering weight or se
         'actor_id' => $customer->id,
         'status' => OrderStatus::PickupRequested->value,
     ]);
+    $this->assertDatabaseHas('customer_organization', [
+        'customer_id' => $customer->id,
+        'organization_id' => $organization->id,
+    ]);
+    expect($customer->customerOrganizations()->whereKey($organization->id)->count())->toBe(1);
     $this->assertDatabaseHas('activity_log', [
         'log_name' => 'orders',
         'description' => 'order created',
@@ -107,6 +112,7 @@ it('lets an assigned branch admin create a fixed-package order for a customer', 
     $priceOption = PriceOption::factory()->fixedPackage()->for($service)->for($branch)->create();
     $customer = User::factory()->for($organization)->create();
     $customer->assignRole(RoleName::Customer->value);
+    $customer->customerOrganizations()->attach($organization);
     $branchAdmin = User::factory()->for($organization)->create();
     $branchAdmin->assignRole(RoleName::BranchAdmin->value);
     $branchAdmin->branches()->attach($branch);
@@ -159,6 +165,7 @@ it('preserves catalog and delivery snapshots for staff-created orders after conf
     ]);
     $customer = User::factory()->for($organization)->create();
     $customer->assignRole(RoleName::Customer->value);
+    $customer->customerOrganizations()->attach($organization);
     $branchAdmin = User::factory()->for($organization)->create();
     $branchAdmin->assignRole(RoleName::BranchAdmin->value);
     $branchAdmin->branches()->attach($branch);
@@ -235,8 +242,10 @@ it('hides cross-tenant branches, prices, and customers', function (): void {
     $otherPriceOption = PriceOption::factory()->for($otherService)->for($otherBranch)->create();
     $customer = User::factory()->for($organization)->create();
     $customer->assignRole(RoleName::Customer->value);
+    $customer->customerOrganizations()->attach($organization);
     $otherCustomer = User::factory()->for($otherOrganization)->create();
     $otherCustomer->assignRole(RoleName::Customer->value);
+    $otherCustomer->customerOrganizations()->attach($otherOrganization);
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
     Sanctum::actingAs($owner);
@@ -265,6 +274,60 @@ it('hides cross-tenant branches, prices, and customers', function (): void {
     ])->assertNotFound();
 
     $this->assertDatabaseCount('orders', 0);
+});
+
+it('rejects staff order creation for a mixed-role customer account', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
+    $mixedRoleCustomer = User::factory()->create();
+    $mixedRoleCustomer->assignRole([RoleName::Customer->value, RoleName::Owner->value]);
+    $mixedRoleCustomer->customerOrganizations()->attach($organization);
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+    Sanctum::actingAs($branchAdmin);
+
+    $this->postJson(route('api.v1.organizations.branches.orders.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+    ]), [
+        'customer_id' => $mixedRoleCustomer->id,
+        'items' => [['price_option_id' => $priceOption->id, 'weight_grams' => 1000]],
+    ])->assertNotFound();
+
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('creates an order only while the locked customer membership still exists', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $customer->customerOrganizations()->attach($organization);
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+    Sanctum::actingAs($branchAdmin);
+
+    $customer->customerOrganizations()->detach($organization);
+
+    $this->postJson(route('api.v1.organizations.branches.orders.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+    ]), [
+        'customer_id' => $customer->id,
+        'items' => [['price_option_id' => $priceOption->id, 'weight_grams' => 1000]],
+    ])->assertNotFound();
+
+    $this->assertDatabaseCount('orders', 0);
+    $this->assertDatabaseMissing('customer_organization', [
+        'customer_id' => $customer->id,
+        'organization_id' => $organization->id,
+    ]);
 });
 
 it('does not create orders from inactive tenant or catalog records', function (): void {

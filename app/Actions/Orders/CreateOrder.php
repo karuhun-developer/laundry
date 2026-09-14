@@ -43,13 +43,15 @@ final readonly class CreateOrder
             }
 
             $customer = User::query()
+                ->customerOnly()
                 ->whereKey($data->customerId)
-                ->whereHas('roles', fn (Builder $query): Builder => $query
-                    ->where('name', RoleName::Customer->value))
-                ->where(fn (Builder $query): Builder => $query
-                    ->whereNull('organization_id')
-                    ->orWhere('organization_id', $organization->id))
+                ->when(! $isCustomer, fn (Builder $query): Builder => $query
+                    ->whereHas('customerOrganizations', fn (Builder $organizationQuery): Builder => $organizationQuery
+                        ->whereKey($organization->id)))
+                ->lockForUpdate()
                 ->firstOrFail();
+
+            $customer->customerOrganizations()->syncWithoutDetaching([$organization->id]);
 
             /** @var list<PriceQuoteData> $quotedItems */
             $quotedItems = [];

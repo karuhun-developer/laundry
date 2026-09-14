@@ -2,6 +2,10 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import { AlertTriangle, MessageCircle, RefreshCw, Shirt } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import CustomerCredentialDialog from '@/components/mobile/molecules/CustomerCredentialDialog.vue';
+import CustomerDetachDialog from '@/components/mobile/molecules/CustomerDetachDialog.vue';
+import CustomerFormDialog from '@/components/mobile/molecules/CustomerFormDialog.vue';
+import CustomerResetPinDialog from '@/components/mobile/molecules/CustomerResetPinDialog.vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import MobileWorkspaceSwitcher from '@/components/mobile/molecules/MobileWorkspaceSwitcher.vue';
 import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSuggestionDialog.vue';
@@ -16,6 +20,11 @@ import { orderStatusLabels } from '@/lib/mobileOrders';
 import type {
     ConfirmOrderPricingPayload,
     CreateOrderPayload,
+    MobileCustomer,
+    MobileCustomerCredential,
+    MobileCustomerCredentialResult,
+    MobileCustomerMutationResult,
+    MobileCustomerProfilePayload,
     MobileOrderStatus,
     MobilePriceQuote,
     MobileTab,
@@ -26,6 +35,17 @@ const workspace = useMobileWorkspace();
 const activeTab = ref<MobileTab>('home');
 const deliveryCoordinates = ref<Coordinates | null>(null);
 const whatsAppDialogOpen = ref(false);
+const customerFormOpen = ref(false);
+const customerFormMode = ref<'create' | 'edit'>('create');
+const activeCustomer = ref<MobileCustomer | null>(null);
+const resetPinDialogOpen = ref(false);
+const detachDialogOpen = ref(false);
+const credentialDialogOpen = ref(false);
+const revealedCredential = ref<{
+    customerName: string;
+    credential: MobileCustomerCredential;
+} | null>(null);
+const customerStatusMessage = ref('');
 
 const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
 
@@ -35,6 +55,80 @@ watch(
         activeTab.value = role === 'branch_admin' ? 'queue' : 'home';
     },
 );
+
+watch(credentialDialogOpen, (isOpen) => {
+    if (!isOpen) {
+        revealedCredential.value = null;
+    }
+});
+
+const openCreateCustomer = (): void => {
+    activeCustomer.value = null;
+    customerFormMode.value = 'create';
+    customerFormOpen.value = true;
+};
+
+const openEditCustomer = (customer: MobileCustomer): void => {
+    activeCustomer.value = customer;
+    customerFormMode.value = 'edit';
+    customerFormOpen.value = true;
+};
+
+const openResetCustomerPin = (customer: MobileCustomer): void => {
+    activeCustomer.value = customer;
+    resetPinDialogOpen.value = true;
+};
+
+const openDetachCustomer = (customer: MobileCustomer): void => {
+    activeCustomer.value = customer;
+    detachDialogOpen.value = true;
+};
+
+const saveCustomer = (
+    payload: MobileCustomerProfilePayload,
+): Promise<MobileCustomerMutationResult> => {
+    if (customerFormMode.value === 'edit' && activeCustomer.value) {
+        return workspace.updateCustomer(activeCustomer.value.id, payload);
+    }
+
+    return workspace.createCustomer(payload);
+};
+
+const onCustomerSaved = (result: MobileCustomerMutationResult): void => {
+    customerStatusMessage.value =
+        customerFormMode.value === 'edit'
+            ? `Pelanggan ${result.customer.name} berhasil diperbarui.`
+            : result.credential
+              ? `Pelanggan ${result.customer.name} berhasil dibuat.`
+              : `Pelanggan ${result.customer.name} berhasil dihubungkan.`;
+    revealTemporaryPin(result);
+};
+
+const onCustomerPinReset = (result: MobileCustomerCredentialResult): void => {
+    customerStatusMessage.value = `PIN pelanggan ${result.customer.name} berhasil direset.`;
+    revealTemporaryPin(result);
+};
+
+const onCustomerDetached = (customerId: number): void => {
+    const customerName = activeCustomer.value?.id === customerId ? activeCustomer.value.name : '';
+    customerStatusMessage.value = customerName
+        ? `Pelanggan ${customerName} berhasil dilepas dari organisasi.`
+        : 'Pelanggan berhasil dilepas dari organisasi.';
+};
+
+const revealTemporaryPin = (
+    result: MobileCustomerMutationResult | MobileCustomerCredentialResult,
+): void => {
+    if (!result.credential) {
+        return;
+    }
+
+    revealedCredential.value = {
+        customerName: result.customer.name,
+        credential: result.credential,
+    };
+    credentialDialogOpen.value = true;
+};
 
 const onBranchSelected = (branchId: number): void => {
     void workspace.selectBranch(branchId);
@@ -146,6 +240,15 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                 >
                     {{ workspace.rollbackMessage.value ?? workspace.requestError.value }}
                 </p>
+                <p
+                    class="sr-only"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    data-test="customer-status"
+                >
+                    {{ customerStatusMessage }}
+                </p>
 
                 <template v-if="workspace.context.value.role === 'customer'">
                     <div v-if="activeTab === 'home'" class="space-y-8">
@@ -251,12 +354,19 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
                         :quote-order="workspace.quoteOrder"
                         :processing="workspace.createProcessing.value"
+                        :selected-customer-id="workspace.selectedCustomerId.value"
+                        @create-customer="openCreateCustomer"
                         @submit="onCreateOrder"
+                        @update:selected-customer-id="workspace.selectCustomer"
                     />
 
                     <CustomerDirectory
                         v-else-if="activeTab === 'customers'"
                         :customers="workspace.customers.value"
+                        @create="openCreateCustomer"
+                        @detach="openDetachCustomer"
+                        @edit="openEditCustomer"
+                        @reset-pin="openResetCustomerPin"
                     />
 
                     <MobileAccount
@@ -292,5 +402,33 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
             :suggestion="workspace.whatsAppSuggestion.value"
             :load-error="workspace.whatsAppSuggestionError.value"
         />
+
+        <template v-if="workspace.context.value?.role === 'branch_admin'">
+            <CustomerFormDialog
+                v-model:open="customerFormOpen"
+                :mode="customerFormMode"
+                :customer="activeCustomer"
+                :submit="saveCustomer"
+                @saved="onCustomerSaved"
+            />
+            <CustomerResetPinDialog
+                v-model:open="resetPinDialogOpen"
+                :customer="activeCustomer"
+                :reset="workspace.resetCustomerPin"
+                @reset="onCustomerPinReset"
+            />
+            <CustomerDetachDialog
+                v-model:open="detachDialogOpen"
+                :customer="activeCustomer"
+                :detach="workspace.detachCustomer"
+                @detached="onCustomerDetached"
+            />
+            <CustomerCredentialDialog
+                v-model:open="credentialDialogOpen"
+                :customer-name="revealedCredential?.customerName ?? ''"
+                :credential="revealedCredential?.credential ?? null"
+                @dismiss="revealedCredential = null"
+            />
+        </template>
     </div>
 </template>
