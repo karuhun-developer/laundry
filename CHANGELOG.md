@@ -4,6 +4,28 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-09-14
+
+- Fixed the Android release quality gate by applying the Biome-required import ordering and formatting that blocked `v1.0.5` before artifact publication.
+- Added optional Paywuz payment gateway support for direct QRIS and bank virtual-account methods, with provider-signed idempotent webhook reconciliation.
+- Added local QRIS and bank logos to the online payment-method picker, with a generic card fallback for unsupported provider codes.
+- Kept cash and branch-managed QRIS available when the optional Paywuz integration is disabled or incomplete.
+- Added owner and superadmin CMS management for services, fixed-weight packages, and per-kilogram pricing with tenant-safe modal CRUD, optimistic updates, and typed deletion confirmation.
+- Changed customer checkout into a pickup request: customers choose one service and pickup location without entering weight or seeing an unconfirmed laundry total.
+- Added branch-admin actual-weight confirmation with atomic server pricing, a `weighed` timeline event, optimistic reconciliation, conflict refresh, and audit logging.
+- Locked totals, cash/QRIS payment controls, and receipt pricing until a pickup request has been priced.
+- Added `{weight}` and `{total}` WhatsApp variables and a price-message suggestion after successful pricing confirmation.
+- Added default organization-level WhatsApp templates for every order status, including pickup-request and weighed notifications.
+- Changed the customer mobile workspace to hide organization selection and discover active branches across organizations, while preserving branch- and order-derived tenant routing for API mutations.
+- Added nearest-first customer branch options with explicit free pickup/delivery coverage or estimated excess-distance fees.
+- Added selectable outlet markers and free-delivery radius overlays to the customer pickup map, including a distinct selected-branch marker.
+- Changed GitHub Release titles to exactly match their Git tags while continuing to source descriptions from the matching changelog section.
+- Changed customer pickup coordinates to a shared OpenStreetMap picker with current-location centering, click-to-place, and a draggable pin.
+- Fixed Android current-location discovery by declaring coarse and fine location permissions in the application manifest.
+- Fixed Android Bluetooth printer discovery by requesting scan and connect access at runtime.
+- Added legacy storage permissions for file downloads on older Android versions while retaining scoped-storage compatibility.
+- Added USB printer enumeration and per-device access permission through Android USB host APIs.
+
 ## [1.0.5] - 2026-09-14
 
 - Added optional Paywuz payment gateway support for direct QRIS and bank virtual-account methods, with provider-signed idempotent webhook reconciliation.
