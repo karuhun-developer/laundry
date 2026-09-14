@@ -20,6 +20,7 @@ import type {
     MobileOrderReceipt,
     MobilePayment,
     MobilePaymentActions,
+    MobilePaymentGatewayMethod,
     MobilePaymentMethod,
 } from '@/types/mobile';
 
@@ -38,12 +39,15 @@ const props = withDefaults(
 
 const open = ref(false);
 const method = ref<MobilePaymentMethod>('cash');
+const gatewayMethods = ref<readonly MobilePaymentGatewayMethod[]>([]);
+const selectedGatewayMethod = ref('');
 const amountInput = ref('');
 const note = ref('');
 const actionProcessing = ref(false);
 const receipt = ref<MobileOrderReceipt | null>(null);
 const message = ref<string | null>(null);
 const error = ref<string | null>(null);
+let gatewayLoadGeneration = 0;
 
 const latestPendingPayment = computed<MobilePayment | null>(() => {
     const payments = [...props.order.payments].reverse();
@@ -52,6 +56,12 @@ const latestPendingPayment = computed<MobilePayment | null>(() => {
 });
 const amountRupiah = computed(() => Number(amountInput.value));
 const isBusy = computed(() => props.processing || actionProcessing.value);
+const selectedGateway = computed(
+    () =>
+        gatewayMethods.value.find(
+            (gatewayMethod) => gatewayMethod.code === selectedGatewayMethod.value,
+        ) ?? null,
+);
 const canCreatePayment = computed(() => {
     const amount = amountRupiah.value;
 
@@ -62,15 +72,52 @@ const canCreatePayment = computed(() => {
         Number.isInteger(amount) &&
         amount > 0 &&
         amount <= props.order.payment_summary.outstanding_rupiah &&
-        (method.value !== 'qris' || props.order.branch.qris_enabled)
+        (method.value !== 'qris' || props.order.branch.qris_enabled) &&
+        (method.value !== 'gateway' ||
+            (selectedGateway.value !== null &&
+                amount >= selectedGateway.value.minimum_rupiah &&
+                amount <= selectedGateway.value.maximum_rupiah))
     );
 });
+
+const loadGatewayMethods = async (): Promise<void> => {
+    const requestGeneration = ++gatewayLoadGeneration;
+
+    try {
+        const methods = await props.actions.loadPaymentGatewayMethods();
+
+        if (requestGeneration !== gatewayLoadGeneration || !open.value) {
+            return;
+        }
+
+        gatewayMethods.value = methods;
+        selectedGatewayMethod.value =
+            methods.find((gatewayMethod) => gatewayMethod.is_default)?.code ??
+            methods[0]?.code ??
+            '';
+    } catch {
+        if (requestGeneration === gatewayLoadGeneration) {
+            gatewayMethods.value = [];
+            selectedGatewayMethod.value = '';
+
+            if (method.value === 'gateway') {
+                method.value = 'cash';
+            }
+        }
+    }
+};
 
 watch(
     [open, () => props.order.payment_summary.outstanding_rupiah],
     ([isOpen, outstandingRupiah]) => {
         if (isOpen) {
             amountInput.value = String(outstandingRupiah);
+            void loadGatewayMethods();
+        } else {
+            gatewayLoadGeneration += 1;
+            method.value = 'cash';
+            gatewayMethods.value = [];
+            selectedGatewayMethod.value = '';
         }
     },
     { immediate: true },
@@ -90,17 +137,26 @@ const submitPayment = async (): Promise<void> => {
     resetAnnouncements();
 
     try {
-        const saved = await props.actions.createPayment(props.order.id, {
+        const payload = {
             method: method.value,
             amount_rupiah: amountRupiah.value,
             note: note.value.trim() || undefined,
-        });
+            ...(method.value === 'gateway' && selectedGateway.value
+                ? {
+                      gateway_driver: selectedGateway.value.driver,
+                      gateway_method: selectedGateway.value.code,
+                  }
+                : {}),
+        };
+        const saved = await props.actions.createPayment(props.order.id, payload);
 
         if (saved) {
             message.value =
                 method.value === 'qris'
                     ? 'QRIS dinamis siap dipindai.'
-                    : 'Pembayaran tunai berhasil dicatat.';
+                    : method.value === 'gateway'
+                      ? 'Instruksi pembayaran online berhasil dibuat.'
+                      : 'Pembayaran tunai berhasil dicatat.';
             note.value = '';
         } else {
             error.value = 'Pembayaran belum tersimpan. Perubahan sementara sudah dibatalkan.';
@@ -232,9 +288,11 @@ const printReceipt = async (): Promise<void> => {
                 v-model:method="method"
                 v-model:amount-input="amountInput"
                 v-model:note="note"
+                v-model:selected-gateway-method="selectedGatewayMethod"
                 :order="order"
                 :busy="isBusy"
                 :can-submit="canCreatePayment"
+                :gateway-methods="gatewayMethods"
                 @submit="submitPayment"
             />
             <section

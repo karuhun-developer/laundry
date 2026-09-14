@@ -37,6 +37,9 @@ const statusClasses = (status: MobilePaymentStatus): string => {
                     <p class="mt-0.5 text-xs text-ink-500">
                         {{ formatOrderDate(payment.created_at) }}
                     </p>
+                    <p v-if="payment.gateway" class="mt-0.5 text-xs text-ink-500">
+                        {{ payment.gateway.driver_label }} · {{ payment.gateway.method }}
+                    </p>
                 </div>
                 <div class="shrink-0 text-right">
                     <p class="text-sm font-semibold text-ink-950">

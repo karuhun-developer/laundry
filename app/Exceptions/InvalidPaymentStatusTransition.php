@@ -15,6 +15,11 @@ final class InvalidPaymentStatusTransition extends RuntimeException
         return new self("Status pembayaran tidak dapat diubah dari {$from->value} ke {$to->value}.");
     }
 
+    public static function providerManaged(): self
+    {
+        return new self('Status pembayaran payment gateway hanya dapat diperbarui oleh penyedia.');
+    }
+
     public function render(Request $request): JsonResponse
     {
         return response()->json([

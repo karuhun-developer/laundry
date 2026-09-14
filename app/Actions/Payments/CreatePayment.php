@@ -15,7 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class CreatePayment
 {
-    public function __construct(private QrisPayloadGenerator $qrisPayloadGenerator) {}
+    public function __construct(
+        private QrisPayloadGenerator $qrisPayloadGenerator,
+        private CreateGatewayPayment $createGatewayPayment,
+    ) {}
 
     public function handle(
         Order $order,
@@ -84,10 +87,23 @@ final readonly class CreatePayment
                 ),
             ])->save();
 
+            if ($data->method === PaymentMethod::Gateway) {
+                if ($data->gatewayDriver === null || $data->gatewayMethod === null) {
+                    throw new \LogicException('Gateway payment details are required.');
+                }
+
+                $payment = $this->createGatewayPayment->handle(
+                    payment: $payment,
+                    driver: $data->gatewayDriver,
+                    gatewayMethod: $data->gatewayMethod,
+                );
+                $status = $payment->status;
+            }
+
             $payment->statusEvents()->create([
                 'actor_id' => $actor->id,
                 'actor_name_snapshot' => $actor->name,
-                'status' => $status,
+                'status' => $payment->status,
                 'note' => $data->note,
             ]);
 
@@ -98,7 +114,7 @@ final readonly class CreatePayment
                     'payment_number' => $payment->payment_number,
                     'order_id' => $lockedOrder->id,
                     'method' => $data->method->value,
-                    'status' => $status->value,
+                    'status' => $payment->status->value,
                     'amount_rupiah' => $data->amountRupiah,
                 ])
                 ->log('payment created');

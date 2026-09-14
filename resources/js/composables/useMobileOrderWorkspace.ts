@@ -222,6 +222,7 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         createPayment,
         createProcessing: api.createProcessing,
         loadReceipt,
+        loadPaymentGatewayMethods: paymentApi.loadPaymentGatewayMethods,
         loadOrders: api.loadOrders,
         orders: optimistic.orders,
         pricingProcessing: api.pricingProcessing,

@@ -14,12 +14,19 @@ use App\Http\Controllers\Api\V1\OrderStatusEventController;
 use App\Http\Controllers\Api\V1\OrderTrackingController;
 use App\Http\Controllers\Api\V1\OrderWhatsAppSuggestionController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PaymentGatewayMethodController;
+use App\Http\Controllers\Api\V1\PaymentGatewayWebhookController;
 use App\Http\Controllers\Api\V1\PaymentStatusEventController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
+    Route::post('payment-gateways/paywuz/webhook', PaymentGatewayWebhookController::class)
+        ->name('payment-gateways.paywuz.webhook');
+    Route::get('payment-gateway-methods', PaymentGatewayMethodController::class)
+        ->middleware('auth:sanctum')
+        ->name('payment-gateway-methods.index');
     Route::get('mobile/context', MobileContextController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.context');

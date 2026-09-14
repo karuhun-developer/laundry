@@ -4,6 +4,9 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+- Added optional Paywuz payment gateway support for direct QRIS and bank virtual-account methods, with provider-signed idempotent webhook reconciliation.
+- Added local QRIS and bank logos to the online payment-method picker, with a generic card fallback for unsupported provider codes.
+- Kept cash and branch-managed QRIS available when the optional Paywuz integration is disabled or incomplete.
 - Added owner and superadmin CMS management for services, fixed-weight packages, and per-kilogram pricing with tenant-safe modal CRUD, optimistic updates, and typed deletion confirmation.
 - Changed customer checkout into a pickup request: customers choose one service and pickup location without entering weight or seeing an unconfirmed laundry total.
 - Added branch-admin actual-weight confirmation with atomic server pricing, a `weighed` timeline event, optimistic reconciliation, conflict refresh, and audit logging.

@@ -1,7 +1,37 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
-import type { MobileOrder, MobileOrderReceipt, MobilePaymentActions } from '@/types/mobile';
+import type {
+    MobileOrder,
+    MobileOrderReceipt,
+    MobilePaymentActions,
+    MobilePaymentGatewayMethod,
+} from '@/types/mobile';
+
+const gatewayMethods: readonly MobilePaymentGatewayMethod[] = [
+    {
+        driver: 'paywuz',
+        driver_label: 'Paywuz',
+        code: 'BNIVA',
+        name: 'BNI Virtual Account',
+        type: 'virtual_account',
+        fee_rupiah: 4000,
+        minimum_rupiah: 10000,
+        maximum_rupiah: 10000000,
+        is_default: false,
+    },
+    {
+        driver: 'paywuz',
+        driver_label: 'Paywuz',
+        code: 'QRIS',
+        name: 'QRIS',
+        type: 'qris',
+        fee_rupiah: 0,
+        minimum_rupiah: 1000,
+        maximum_rupiah: 10000000,
+        is_default: true,
+    },
+];
 
 const receipt: MobileOrderReceipt = {
     receipt_number: 'LDR-20260913-00000021',
@@ -60,6 +90,7 @@ const makeOrder = (): MobileOrder => ({
             amount_rupiah: 30000,
             qris_payload: '000201010212',
             qris_image_data_uri: 'data:image/svg+xml;base64,PHN2Zy8+',
+            gateway: null,
             note: null,
             settled_at: null,
             status_history: [],
@@ -72,6 +103,7 @@ const makeOrder = (): MobileOrder => ({
 
 const makeActions = (): MobilePaymentActions => ({
     createPayment: vi.fn(async () => true),
+    loadPaymentGatewayMethods: vi.fn(async () => []),
     transitionPaymentStatus: vi.fn(async () => true),
     loadReceipt: vi.fn(async () => receipt),
     printReceipt: vi.fn(async () => true),
@@ -128,6 +160,153 @@ describe('mobile payment dialog', () => {
         document.body.querySelector<HTMLButtonElement>('[data-test="print-receipt"]')?.click();
         await vi.waitFor(() => expect(actions.printReceipt).toHaveBeenCalledWith(21));
 
+        wrapper.unmount();
+    });
+
+    it('hides payment gateway controls when no provider methods are available', async () => {
+        const actions = makeActions();
+        const order = makeOrder();
+        order.payments = [];
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+        await vi.waitFor(() => expect(actions.loadPaymentGatewayMethods).toHaveBeenCalled());
+
+        expect(document.body.querySelector('[data-test="payment-method-gateway"]')).toBeNull();
+        wrapper.unmount();
+    });
+
+    it('selects Paywuz QRIS by default and submits a direct VA method', async () => {
+        const actions = makeActions();
+        vi.mocked(actions.loadPaymentGatewayMethods).mockResolvedValue(gatewayMethods);
+        const order = makeOrder();
+        order.payments = [];
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+        await vi.waitFor(() =>
+            expect(
+                document.body.querySelector('[data-test="payment-method-gateway"]'),
+            ).not.toBeNull(),
+        );
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="payment-method-gateway"]')
+            ?.click();
+
+        await vi.waitFor(() =>
+            expect(
+                document.body.querySelector('[data-test="gateway-method-QRIS"]')?.className,
+            ).toContain('border-brand-600'),
+        );
+        expect(
+            document.body
+                .querySelector<HTMLImageElement>('[data-test="gateway-method-logo-QRIS"]')
+                ?.getAttribute('src'),
+        ).toBe('/images/payment-methods/qris.svg');
+        expect(
+            document.body
+                .querySelector<HTMLImageElement>('[data-test="gateway-method-logo-BNIVA"]')
+                ?.getAttribute('src'),
+        ).toBe('/images/payment-methods/bni.svg');
+
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="gateway-method-BNIVA"]')
+            ?.click();
+        document.body.querySelector<HTMLFormElement>('[data-test="payment-form"]')?.requestSubmit();
+
+        await vi.waitFor(() =>
+            expect(actions.createPayment).toHaveBeenCalledWith(21, {
+                method: 'gateway',
+                amount_rupiah: 30000,
+                note: undefined,
+                gateway_driver: 'paywuz',
+                gateway_method: 'BNIVA',
+            }),
+        );
+
+        wrapper.unmount();
+    });
+
+    it('shows downloadable gateway QRIS without manual reconciliation', async () => {
+        const actions = makeActions();
+        const order = makeOrder();
+        const payment = order.payments[0];
+
+        if (!payment) {
+            throw new Error('Payment fixture is missing.');
+        }
+
+        payment.method = 'gateway';
+        payment.method_label = 'Payment gateway';
+        payment.gateway = {
+            driver: 'paywuz',
+            driver_label: 'Paywuz',
+            payment_id: 'trx-55',
+            order_id: payment.payment_number,
+            method: 'QRIS',
+            status: 'pending',
+            payment_number: payment.qris_payload,
+            payment_url: null,
+            expires_at: '2026-09-14T16:00:00.000Z',
+        };
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        expect(document.body.querySelector('[data-test="download-gateway-qris"]')).not.toBeNull();
+        expect(document.body.querySelector('[data-test="mark-payment-paid"]')).toBeNull();
+        expect(document.body.querySelector('[data-test="mark-payment-failed"]')).toBeNull();
+        wrapper.unmount();
+    });
+
+    it('shows and copies a direct VA payment number', async () => {
+        const writeText = vi.fn(async () => undefined);
+        Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: { writeText },
+        });
+        const actions = makeActions();
+        const order = makeOrder();
+        const payment = order.payments[0];
+
+        if (!payment) {
+            throw new Error('Payment fixture is missing.');
+        }
+
+        payment.method = 'gateway';
+        payment.method_label = 'Payment gateway';
+        payment.qris_payload = null;
+        payment.qris_image_data_uri = null;
+        payment.gateway = {
+            driver: 'paywuz',
+            driver_label: 'Paywuz',
+            payment_id: 'trx-55',
+            order_id: payment.payment_number,
+            method: 'BNIVA',
+            status: 'pending',
+            payment_number: '1234567890',
+            payment_url: null,
+            expires_at: '2026-09-14T16:00:00.000Z',
+        };
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+        document.body.querySelector<HTMLButtonElement>('[data-test="copy-gateway-va"]')?.click();
+
+        await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith('1234567890'));
+        expect(document.body.querySelector('[data-test="mark-payment-paid"]')).toBeNull();
         wrapper.unmount();
     });
 });

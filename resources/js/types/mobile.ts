@@ -1,5 +1,7 @@
 import type {
     MobilePayment,
+    MobilePaymentGatewayDriver,
+    MobilePaymentGatewayMethod,
     MobilePaymentMethod,
     MobilePaymentStatus,
     MobilePaymentSummary,
@@ -7,6 +9,9 @@ import type {
 
 export type {
     MobilePayment,
+    MobilePaymentGateway,
+    MobilePaymentGatewayDriver,
+    MobilePaymentGatewayMethod,
     MobilePaymentMethod,
     MobilePaymentStatus,
     MobilePaymentStatusEvent,
@@ -238,6 +243,8 @@ export type CreatePaymentPayload = {
     method: MobilePaymentMethod;
     amount_rupiah: number;
     note?: string;
+    gateway_driver?: MobilePaymentGatewayDriver;
+    gateway_method?: string;
 };
 
 export type TransitionPaymentStatusPayload = {
@@ -271,6 +278,7 @@ export type MobileOrderReceipt = {
 
 export type MobilePaymentActions = {
     createPayment: (orderId: number, payload: CreatePaymentPayload) => Promise<boolean>;
+    loadPaymentGatewayMethods: () => Promise<readonly MobilePaymentGatewayMethod[]>;
     transitionPaymentStatus: (
         orderId: number,
         paymentId: number,

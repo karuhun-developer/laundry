@@ -11,6 +11,7 @@ import type {
 export const paymentMethodLabels: Record<MobilePaymentMethod, string> = {
     cash: 'Tunai',
     qris: 'QRIS',
+    gateway: 'Payment gateway',
 };
 
 export const paymentStatusLabels: Record<MobilePaymentStatus, string> = {
@@ -20,6 +21,27 @@ export const paymentStatusLabels: Record<MobilePaymentStatus, string> = {
     cancelled: 'Dibatalkan',
     refunded: 'Dikembalikan',
 };
+
+const paymentGatewayMethodLogos: Readonly<Record<string, string>> = {
+    QRIS: '/images/payment-methods/qris.svg',
+    MANDIRI: '/images/payment-methods/mandiri.svg',
+    MANDIRIVA: '/images/payment-methods/mandiri.svg',
+    BCA: '/images/payment-methods/bca.svg',
+    BCAVA: '/images/payment-methods/bca.svg',
+    BNI: '/images/payment-methods/bni.svg',
+    BNIVA: '/images/payment-methods/bni.svg',
+    CIMB: '/images/payment-methods/cimb-niaga.svg',
+    CIMBVA: '/images/payment-methods/cimb-niaga.svg',
+    CIMBNIAGA: '/images/payment-methods/cimb-niaga.svg',
+    CIMBNIAGAVA: '/images/payment-methods/cimb-niaga.svg',
+    PERMATA: '/images/payment-methods/permata.svg',
+    PERMATAVA: '/images/payment-methods/permata.svg',
+    BSI: '/images/payment-methods/bsi.svg',
+    BSIVA: '/images/payment-methods/bsi.svg',
+};
+
+export const paymentGatewayMethodLogo = (code: string): string | null =>
+    paymentGatewayMethodLogos[code.toUpperCase().replace(/[^A-Z0-9]/g, '')] ?? null;
 
 let nextDraftPaymentId = -1;
 
@@ -39,6 +61,20 @@ export const buildDraftPayment = (payload: CreatePaymentPayload): MobilePayment 
         amount_rupiah: payload.amount_rupiah,
         qris_payload: null,
         qris_image_data_uri: null,
+        gateway:
+            payload.method === 'gateway' && payload.gateway_driver && payload.gateway_method
+                ? {
+                      driver: payload.gateway_driver,
+                      driver_label: payload.gateway_driver === 'paywuz' ? 'Paywuz' : 'Gateway',
+                      payment_id: '',
+                      order_id: '',
+                      method: payload.gateway_method,
+                      status: 'pending',
+                      payment_number: null,
+                      payment_url: null,
+                      expires_at: null,
+                  }
+                : null,
         note: payload.note ?? null,
         settled_at: status === 'paid' ? timestamp : null,
         status_history: [

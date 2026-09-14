@@ -203,6 +203,7 @@ export const useMobileWorkspace = () => {
 
     const paymentActions: MobilePaymentActions = {
         createPayment: orderWorkspace.createPayment,
+        loadPaymentGatewayMethods: orderWorkspace.loadPaymentGatewayMethods,
         transitionPaymentStatus: orderWorkspace.transitionPaymentStatus,
         loadReceipt: orderWorkspace.loadReceipt,
         printReceipt: async (orderId) => {

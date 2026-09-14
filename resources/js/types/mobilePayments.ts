@@ -1,4 +1,30 @@
-export type MobilePaymentMethod = 'cash' | 'qris';
+export type MobilePaymentMethod = 'cash' | 'qris' | 'gateway';
+
+export type MobilePaymentGatewayDriver = 'paywuz';
+
+export type MobilePaymentGatewayMethod = {
+    driver: MobilePaymentGatewayDriver;
+    driver_label: string;
+    code: string;
+    name: string;
+    type: string;
+    fee_rupiah: number;
+    minimum_rupiah: number;
+    maximum_rupiah: number;
+    is_default: boolean;
+};
+
+export type MobilePaymentGateway = {
+    driver: MobilePaymentGatewayDriver;
+    driver_label: string;
+    payment_id: string;
+    order_id: string;
+    method: string;
+    status: string;
+    payment_number: string | null;
+    payment_url: string | null;
+    expires_at: string | null;
+};
 
 export type MobilePaymentStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
 
@@ -24,6 +50,7 @@ export type MobilePayment = {
     amount_rupiah: number;
     qris_payload: string | null;
     qris_image_data_uri: string | null;
+    gateway: MobilePaymentGateway | null;
     note: string | null;
     settled_at: string | null;
     status_history: readonly MobilePaymentStatusEvent[];

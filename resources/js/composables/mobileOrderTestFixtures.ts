@@ -58,6 +58,7 @@ export const makePayment = (
     amount_rupiah: 30000,
     qris_payload: method === 'qris' ? '000201010212' : null,
     qris_image_data_uri: method === 'qris' ? 'data:image/svg+xml;base64,PHN2Zy8+' : null,
+    gateway: null,
     note: null,
     settled_at: status === 'paid' ? '2026-09-13T09:00:00.000Z' : null,
     status_history: [],

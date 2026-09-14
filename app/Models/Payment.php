@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentGatewayDriver;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use Database\Factories\PaymentFactory;
@@ -23,6 +24,15 @@ use Illuminate\Support\Carbon;
  * @property PaymentStatus $status
  * @property int $amount_rupiah
  * @property string|null $qris_payload
+ * @property PaymentGatewayDriver|null $gateway_driver
+ * @property string|null $gateway_payment_id
+ * @property string|null $gateway_order_id
+ * @property string|null $gateway_method
+ * @property string|null $gateway_status
+ * @property string|null $gateway_payment_number
+ * @property string|null $gateway_payment_url
+ * @property Carbon|null $gateway_expires_at
+ * @property array<string, mixed>|null $gateway_payload
  * @property string|null $note
  * @property Carbon|null $settled_at
  * @property Carbon $created_at
@@ -39,6 +49,15 @@ use Illuminate\Support\Carbon;
     'status',
     'amount_rupiah',
     'qris_payload',
+    'gateway_driver',
+    'gateway_payment_id',
+    'gateway_order_id',
+    'gateway_method',
+    'gateway_status',
+    'gateway_payment_number',
+    'gateway_payment_url',
+    'gateway_expires_at',
+    'gateway_payload',
     'note',
     'settled_at',
 ])]
@@ -77,13 +96,22 @@ class Payment extends Model
         return $this->hasMany(PaymentStatusEvent::class)->oldest('id');
     }
 
+    /** @return HasMany<PaymentGatewayDelivery, $this> */
+    public function gatewayDeliveries(): HasMany
+    {
+        return $this->hasMany(PaymentGatewayDelivery::class);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'method' => PaymentMethod::class,
             'status' => PaymentStatus::class,
+            'gateway_driver' => PaymentGatewayDriver::class,
             'amount_rupiah' => 'integer',
+            'gateway_expires_at' => 'datetime',
+            'gateway_payload' => 'array',
             'settled_at' => 'datetime',
         ];
     }

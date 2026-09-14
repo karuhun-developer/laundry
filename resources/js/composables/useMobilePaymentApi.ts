@@ -4,12 +4,14 @@ import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/l
 import { store as storePaymentRoute } from '@/routes/api/v1/organizations/branches/orders/payments';
 import { store as storePaymentStatusRoute } from '@/routes/api/v1/organizations/branches/orders/payments/status-events';
 import { show as showReceiptRoute } from '@/routes/api/v1/organizations/branches/orders/receipt';
+import { index as paymentGatewayMethodsRoute } from '@/routes/api/v1/payment-gateway-methods';
 import type {
     ApiEnvelope,
     CreatePaymentPayload,
     MobileOrder,
     MobileOrderReceipt,
     MobilePayment,
+    MobilePaymentGatewayMethod,
     TransitionPaymentStatusPayload,
 } from '@/types/mobile';
 
@@ -26,6 +28,10 @@ export const useMobilePaymentApi = () => {
         note: '',
     });
     const receiptRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrderReceipt>>({});
+    const gatewayMethodsRequest = useHttp<
+        EmptyRequest,
+        ApiEnvelope<readonly MobilePaymentGatewayMethod[]>
+    >({});
 
     const createPayment = async (
         organizationSlug: string,
@@ -35,6 +41,8 @@ export const useMobilePaymentApi = () => {
         createRequest.method = payload.method;
         createRequest.amount_rupiah = payload.amount_rupiah;
         createRequest.note = payload.note;
+        createRequest.gateway_driver = payload.gateway_driver;
+        createRequest.gateway_method = payload.gateway_method;
         const httpException = { value: null as MobileHttpError | null };
         let response: ApiEnvelope<MobilePayment> | undefined;
 
@@ -148,11 +156,27 @@ export const useMobilePaymentApi = () => {
         return response.data;
     };
 
+    const loadPaymentGatewayMethods = async (): Promise<readonly MobilePaymentGatewayMethod[]> => {
+        gatewayMethodsRequest.cancel();
+        const response = await gatewayMethodsRequest.get(paymentGatewayMethodsRoute().url);
+
+        if (!response) {
+            throw new Error('Metode pembayaran online tidak dapat dimuat.');
+        }
+
+        return response.data;
+    };
+
     return {
         createPayment,
+        loadPaymentGatewayMethods,
         loadReceipt,
         processing: computed(
-            () => createRequest.processing || statusRequest.processing || receiptRequest.processing,
+            () =>
+                createRequest.processing ||
+                statusRequest.processing ||
+                receiptRequest.processing ||
+                gatewayMethodsRequest.processing,
         ),
         transitionPaymentStatus,
     };

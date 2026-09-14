@@ -24,6 +24,10 @@ final readonly class TransitionPaymentStatus
             $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
             $currentStatus = $lockedPayment->status;
 
+            if ($lockedPayment->gateway_driver !== null) {
+                throw InvalidPaymentStatusTransition::providerManaged();
+            }
+
             if (! $currentStatus->canTransitionTo($data->status)) {
                 throw InvalidPaymentStatusTransition::between($currentStatus, $data->status);
             }
