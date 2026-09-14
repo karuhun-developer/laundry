@@ -102,12 +102,6 @@ jobs:
       - name: Generate Wayfinder types
         run: php artisan wayfinder:generate --with-form --no-interaction
 
-      - name: Run PHP quality gates
-        run: composer ci:check
-
-      - name: Run frontend unit tests
-        run: bun run test
-
       - name: Build and sync Capacitor application
         env:
           APP_URL: ${{ steps.android_config.outputs.app_url }}
@@ -115,6 +109,12 @@ jobs:
         run: |
           bun run build
           bun run android:sync
+
+      - name: Run PHP quality gates
+        run: composer ci:check
+
+      - name: Run frontend unit tests
+        run: bun run test
 
       - name: Decode Android upload keystore
         env:

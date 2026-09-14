@@ -4,6 +4,10 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-14
+
+- Fixed Android release quality gates by building the production frontend manifest before running Pest.
+
 ## [1.0.2] - 2026-09-14
 
 - Fixed clean Android release builds by generating Wayfinder route and action types before frontend quality checks.
