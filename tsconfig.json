@@ -104,6 +104,8 @@
         "useUnknownInCatchVariables": true,                 /* Default catch clause variables as 'unknown' instead of 'any'. */
         // "alwaysStrict": true,                             /* Ensure 'use strict' is always emitted. */
         "noFallthroughCasesInSwitch": true,                /* Enable error reporting for fallthrough cases in switch statements. */
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
         // "allowUnusedLabels": true,                        /* Disable error reporting for unused labels. */
         // "allowUnreachableCode": true,                     /* Disable error reporting for unreachable code. */
 

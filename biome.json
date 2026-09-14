@@ -24,5 +24,21 @@
             "semicolons": "always",
             "trailingCommas": "all"
         }
-    }
+    },
+    "overrides": [
+        {
+            "includes": ["resources/js/**/*.vue"],
+            "linter": {
+                "rules": {
+                    "correctness": {
+                        "noUnusedImports": "off",
+                        "noUnusedVariables": "off"
+                    },
+                    "style": {
+                        "useVueMultiWordComponentNames": "off"
+                    }
+                }
+            }
+        }
+    ]
 }

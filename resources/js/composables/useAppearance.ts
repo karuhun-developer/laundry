@@ -32,6 +32,7 @@ const setCookie = (name: string, value: string, days = 365) => {
 
     const maxAge = days * 24 * 60 * 60;
 
+    // biome-ignore lint/suspicious/noDocumentCookie: This SSR preference must also support browsers without the Cookie Store API.
     document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
 };
 

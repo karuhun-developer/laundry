@@ -13,9 +13,11 @@ export default defineConfig({
             refresh: true,
             fonts: [
                 bunny('Inter', {
+                    optimizedFallbacks: false,
                     weights: [400, 500, 600],
                 }),
                 bunny('Poppins', {
+                    optimizedFallbacks: false,
                     weights: [500, 600],
                 }),
             ],
