@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\RoleName;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -28,12 +31,50 @@ class RegistrationTest extends TestCase
     {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'whatsapp_phone' => '0812-3456-7890',
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::query()->where('whatsapp_phone', '6281234567890')->firstOrFail();
+
+        $this->assertNull($user->email);
+        $this->assertNull($user->password);
+        $this->assertNull($user->organization_id);
+        $this->assertTrue(Hash::check('123456', $user->pin_hash));
+        $this->assertTrue($user->hasRole(RoleName::Customer->value));
+        $this->assertFalse($user->must_change_pin);
+        $this->assertSame(1, $user->session_version);
+        $this->assertCount(0, $user->customerOrganizations);
+    }
+
+    public function test_phone_variants_are_normalized_before_uniqueness_validation(): void
+    {
+        User::factory()->create(['whatsapp_phone' => '6281234567890']);
+
+        $this->post(route('register.store'), [
+            'name' => 'Duplicate Customer',
+            'whatsapp_phone' => '+62 812-3456-7890',
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ])->assertSessionHasErrors('whatsapp_phone');
+
+        $this->assertGuest();
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_registration_requires_a_confirmed_six_digit_pin(): void
+    {
+        $this->post(route('register.store'), [
+            'name' => 'Test Customer',
+            'whatsapp_phone' => '081234567890',
+            'pin' => '12345',
+            'pin_confirmation' => '999999',
+        ])->assertSessionHasErrors('pin');
+
+        $this->assertGuest();
     }
 }

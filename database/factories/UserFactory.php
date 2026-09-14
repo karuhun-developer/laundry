@@ -31,6 +31,10 @@ class UserFactory extends Factory
             'whatsapp_phone' => null,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'pin_hash' => null,
+            'pin_expires_at' => null,
+            'must_change_pin' => false,
+            'session_version' => 1,
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -51,6 +55,14 @@ class UserFactory extends Factory
     public function forOrganization(?Organization $organization = null): static
     {
         return $this->for($organization ?? Organization::factory(), 'organization');
+    }
+
+    public function withCustomerPin(string $pin = '123456'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'whatsapp_phone' => '628'.fake()->unique()->numerify('##########'),
+            'pin_hash' => Hash::make($pin),
+        ]);
     }
 
     /**

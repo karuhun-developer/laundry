@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -23,10 +24,14 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int $id
  * @property int|null $organization_id
  * @property string $name
- * @property string $email
+ * @property string|null $email
  * @property string|null $whatsapp_phone
  * @property Carbon|null $email_verified_at
- * @property string $password
+ * @property string|null $password
+ * @property string|null $pin_hash
+ * @property Carbon|null $pin_expires_at
+ * @property bool $must_change_pin
+ * @property int $session_version
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -34,8 +39,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'email', 'whatsapp_phone', 'password'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+#[Fillable(['organization_id', 'name', 'email', 'whatsapp_phone', 'password', 'pin_hash', 'pin_expires_at', 'must_change_pin', 'session_version'])]
+#[Hidden(['password', 'pin_hash', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
@@ -51,6 +56,31 @@ class User extends Authenticatable implements PasskeyUser
     public function branches(): BelongsToMany
     {
         return $this->belongsToMany(Branch::class)->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Organization, $this> */
+    public function customerOrganizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'customer_organization', 'customer_id')
+            ->withTimestamps();
+    }
+
+    public function setCustomerPin(string $pin, ?Carbon $expiresAt = null, bool $mustChange = false): void
+    {
+        $this->forceFill([
+            'pin_hash' => Hash::make($pin),
+            'pin_expires_at' => $expiresAt,
+            'must_change_pin' => $mustChange,
+        ]);
+    }
+
+    public function customerPinMatches(string $pin): bool
+    {
+        if ($this->pin_hash === null || ! Hash::check($pin, $this->pin_hash)) {
+            return false;
+        }
+
+        return $this->pin_expires_at === null || $this->pin_expires_at->isFuture();
     }
 
     /** @return HasMany<Order, $this> */
@@ -75,6 +105,9 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'pin_expires_at' => 'datetime',
+            'must_change_pin' => 'boolean',
+            'session_version' => 'integer',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
