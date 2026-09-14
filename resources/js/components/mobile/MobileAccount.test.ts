@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { defineComponent } from 'vue';
 import CustomerPinSettings from '@/components/mobile/organisms/CustomerPinSettings.vue';
+import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import { update as updateCustomerPin } from '@/routes/api/v1/mobile/account/pin';
 
 type PinField = 'current_pin' | 'pin' | 'pin_confirmation';
@@ -144,5 +146,34 @@ describe('customer PIN settings', () => {
 
         expect(wrapper.text()).toContain('PIN saat ini tidak valid.');
         expect(wrapper.find('[data-test="pin-success"]').exists()).toBe(false);
+    });
+});
+
+describe('branch-admin account', () => {
+    it('renders identity, organization, thermal printer, and logout content together', () => {
+        const wrapper = mount(MobileAccount, {
+            props: {
+                name: 'Admin Cabang',
+                email: 'admin@example.test',
+                phone: '628111222333',
+                role: 'branch_admin',
+                organization: { id: 1, name: 'LaundryHub Demo', slug: 'laundryhub-demo' },
+                printerAvailable: true,
+            },
+            global: {
+                stubs: {
+                    MobilePrinterSettings: defineComponent({
+                        template: '<section data-test="thermal-printer">Printer termal</section>',
+                    }),
+                },
+            },
+        });
+
+        expect(wrapper.get('#mobile-account-title').text()).toBe('Admin Cabang');
+        expect(wrapper.text()).toContain('admin@example.test');
+        expect(wrapper.text()).toContain('628111222333');
+        expect(wrapper.text()).toContain('LaundryHub Demo');
+        expect(wrapper.get('[data-test="thermal-printer"]').text()).toBe('Printer termal');
+        expect(wrapper.text()).toContain('Keluar');
     });
 });

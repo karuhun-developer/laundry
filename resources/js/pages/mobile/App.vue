@@ -300,6 +300,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         v-else
                         :name="page.props.auth.user.name"
                         :email="page.props.auth.user.email ?? undefined"
+                        :phone="page.props.auth.user.whatsapp_phone"
                         role="customer"
                         :must-change-pin="page.props.auth.user.must_change_pin"
                         :pin-expires-at="page.props.auth.user.pin_expires_at"
@@ -314,35 +315,35 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                 </template>
 
                 <template v-else>
-                    <OrderListPanel
-                        v-if="activeTab === 'queue'"
-                        :orders="workspace.orders.value"
-                        role="branch_admin"
-                        :processing="workspace.transitionProcessing.value"
-                        title="Antrean cabang"
-                        description="Lanjutkan status satu tahap atau batalkan pesanan yang masih aktif."
-                        :payment-actions="workspace.paymentActions"
-                        :payment-processing="workspace.paymentProcessing.value"
-                        :pricing-processing="workspace.pricingProcessing.value"
-                        :printer-configured="workspace.printer.profile.value !== null"
-                        @confirm-pricing="onConfirmPricing"
-                        @transition="onTransition"
-                    />
+                    <template v-if="activeTab === 'queue'">
+                        <OrderListPanel
+                            :orders="workspace.orders.value"
+                            role="branch_admin"
+                            :processing="workspace.transitionProcessing.value"
+                            title="Antrean cabang"
+                            description="Lanjutkan status satu tahap atau batalkan pesanan yang masih aktif."
+                            :payment-actions="workspace.paymentActions"
+                            :payment-processing="workspace.paymentProcessing.value"
+                            :pricing-processing="workspace.pricingProcessing.value"
+                            :printer-configured="workspace.printer.profile.value !== null"
+                            @confirm-pricing="onConfirmPricing"
+                            @transition="onTransition"
+                        />
 
-                    <button
-                        v-if="
-                            activeTab === 'queue' &&
-                            (workspace.whatsAppSuggestion.value ||
-                                workspace.whatsAppSuggestionError.value)
-                        "
-                        type="button"
-                        class="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-mint-500/30 bg-mint-500/10 px-4 text-sm font-semibold text-mint-500"
-                        data-test="reopen-whatsapp-suggestion"
-                        @click="whatsAppDialogOpen = true"
-                    >
-                        <MessageCircle class="size-4" aria-hidden="true" />
-                        Buka preview WhatsApp terakhir
-                    </button>
+                        <button
+                            v-if="
+                                workspace.whatsAppSuggestion.value ||
+                                workspace.whatsAppSuggestionError.value
+                            "
+                            type="button"
+                            class="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-mint-500/30 bg-mint-500/10 px-4 text-sm font-semibold text-mint-500"
+                            data-test="reopen-whatsapp-suggestion"
+                            @click="whatsAppDialogOpen = true"
+                        >
+                            <MessageCircle class="size-4" aria-hidden="true" />
+                            Buka preview WhatsApp terakhir
+                        </button>
+                    </template>
 
                     <OrderComposer
                         v-else-if="activeTab === 'new-order'"
@@ -370,9 +371,10 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                     />
 
                     <MobileAccount
-                        v-else
+                        v-else-if="activeTab === 'more'"
                         :name="page.props.auth.user.name"
                         :email="page.props.auth.user.email ?? undefined"
+                        :phone="page.props.auth.user.whatsapp_phone"
                         role="branch_admin"
                         :organization="workspace.context.value.organization"
                         :printer-available="workspace.printer.available"

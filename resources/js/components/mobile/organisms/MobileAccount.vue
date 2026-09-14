@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Building2, LogOut, Mail, ShieldCheck, UserRound } from '@lucide/vue';
+import { Building2, LogOut, Mail, Phone, ShieldCheck, UserRound } from '@lucide/vue';
 import CustomerPinSettings from '@/components/mobile/organisms/CustomerPinSettings.vue';
 import MobilePrinterSettings from '@/components/mobile/organisms/MobilePrinterSettings.vue';
 import type { PrinterConnection, PrinterDevice, PrinterProfile } from '@/lib/printer/types';
@@ -11,6 +11,7 @@ withDefaults(
     defineProps<{
         name: string;
         email?: string | null;
+        phone?: string | null;
         role: MobileRole;
         organization?: MobileOrganization | null;
         mustChangePin?: boolean;
@@ -25,6 +26,7 @@ withDefaults(
     }>(),
     {
         email: null,
+        phone: null,
         mustChangePin: false,
         pinExpiresAt: null,
         printerAvailable: false,
@@ -63,6 +65,15 @@ defineEmits<{
                     <dt class="text-xs text-ink-500">Email</dt>
                     <dd class="mt-0.5 [overflow-wrap:anywhere] text-sm font-semibold text-ink-950">
                         {{ email ?? 'Tidak digunakan untuk akun ini' }}
+                    </dd>
+                </div>
+            </div>
+            <div class="flex items-start gap-3 border-b border-line p-4">
+                <Phone class="mt-0.5 size-5 text-brand-700" aria-hidden="true" />
+                <div>
+                    <dt class="text-xs text-ink-500">Nomor WhatsApp</dt>
+                    <dd class="mt-0.5 [overflow-wrap:anywhere] text-sm font-semibold text-ink-950">
+                        {{ phone ?? 'Tidak digunakan untuk akun ini' }}
                     </dd>
                 </div>
             </div>
