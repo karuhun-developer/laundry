@@ -99,6 +99,9 @@ jobs:
           php artisan migrate --force --no-interaction
           bun install --frozen-lockfile
 
+      - name: Generate Wayfinder types
+        run: php artisan wayfinder:generate --with-form --no-interaction
+
       - name: Run PHP quality gates
         run: composer ci:check
 

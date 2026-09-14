@@ -4,6 +4,10 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-14
+
+- Fixed clean Android release builds by generating Wayfinder route and action types before frontend quality checks.
+
 ## [1.0.1] - 2026-09-14
 
 - Fixed the Android release workflow by installing and configuring the Android SDK before invoking `sdkmanager`.
