@@ -12,38 +12,50 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('updates an organization and ignores its own normalized slug', function (): void {
+it('regenerates an organization slug when its name changes', function (): void {
     $organization = Organization::factory()->create(['slug' => 'karuhun-laundry']);
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($superadmin)->patch(route('cms.organizations.update', $organization), [
         'name' => 'Karuhun Laundry Utama',
-        'slug' => 'Karuhun Laundry',
         'is_active' => false,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
     $this->assertDatabaseHas('organizations', [
         'id' => $organization->id,
         'name' => 'Karuhun Laundry Utama',
-        'slug' => 'karuhun-laundry',
+        'slug' => 'karuhun-laundry-utama',
         'is_active' => false,
     ]);
 });
 
-it('rejects another organization slug after normalization during update', function (): void {
+it('generates a unique slug when an organization is renamed to a duplicate name', function (): void {
     Organization::factory()->create(['slug' => 'existing-laundry']);
     $organization = Organization::factory()->create(['slug' => 'target-laundry']);
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($superadmin)->patch(route('cms.organizations.update', $organization), [
-        'name' => 'Target Laundry',
-        'slug' => 'Existing Laundry',
+        'name' => 'Existing Laundry',
         'is_active' => true,
-    ])->assertSessionHasErrors('slug');
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    expect($organization->refresh()->slug)->toBe('target-laundry');
+    expect($organization->refresh()->slug)->toBe('existing-laundry-1');
+});
+
+it('ignores a supplied organization slug during update', function (): void {
+    $organization = Organization::factory()->create(['slug' => 'karuhun-laundry']);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->patch(route('cms.organizations.update', $organization), [
+        'name' => 'Karuhun Laundry Utama',
+        'slug' => 'slug-yang-tidak-boleh-dipakai',
+        'is_active' => true,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($organization->refresh()->slug)->toBe('karuhun-laundry-utama');
 });
 
 it('requires exact confirmation and no operational data before deleting an organization', function (): void {

@@ -11,7 +11,6 @@ final class UpdateOrganization
     {
         $organization->update([
             'name' => $data->name,
-            'slug' => $data->slug,
             'is_active' => $data->isActive,
         ]);
 

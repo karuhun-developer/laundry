@@ -11,7 +11,6 @@ final class CreateOrganization
     {
         return Organization::query()->create([
             'name' => $data->name,
-            'slug' => $data->slug,
             'is_active' => $data->isActive,
         ]);
     }

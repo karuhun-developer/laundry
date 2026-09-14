@@ -32,6 +32,22 @@ type MapClickEvent = {
     };
 };
 
+const inertiaHarness = vi.hoisted(() => {
+    let submittedData: Record<string, unknown> | undefined;
+
+    return {
+        record(data: Record<string, unknown>): void {
+            submittedData = data;
+        },
+        reset(): void {
+            submittedData = undefined;
+        },
+        submittedData(): Record<string, unknown> | undefined {
+            return submittedData;
+        },
+    };
+});
+
 const leafletHarness = vi.hoisted(() => {
     let mapClickHandler: ((event: MapClickEvent) => void) | undefined;
     let markerDragHandler: (() => void) | undefined;
@@ -78,6 +94,7 @@ vi.mock('@inertiajs/vue3', async () => {
     return {
         useForm: (values: Record<string, unknown>): MockForm => {
             const defaults = structuredClone(values);
+            const fieldNames = Object.keys(values);
             const form: MockForm = {
                 ...structuredClone(values),
                 errors: {},
@@ -93,6 +110,9 @@ vi.mock('@inertiajs/vue3', async () => {
                     form.errors[field] = message;
                 },
                 submit: (_route, options) => {
+                    inertiaHarness.record(
+                        Object.fromEntries(fieldNames.map((field) => [field, form[field]])),
+                    );
                     options?.onSuccess?.();
                 },
             };
@@ -159,6 +179,7 @@ const dialogStubs = {
 
 afterEach(() => {
     document.body.innerHTML = '';
+    inertiaHarness.reset();
     leafletHarness.reset();
     vi.restoreAllMocks();
 });
@@ -191,7 +212,7 @@ describe('CMS dialogs', () => {
         expect(submit.element.disabled).toBe(false);
     });
 
-    it('prefills organization values when editing', () => {
+    it('prefills organization values without exposing or submitting its slug', async () => {
         const organization: OrganizationSummary = {
             id: 1,
             name: 'Kirei Wash Jakarta',
@@ -208,9 +229,14 @@ describe('CMS dialogs', () => {
         expect(wrapper.get<HTMLInputElement>('#organization-name').element.value).toBe(
             organization.name,
         );
-        expect(wrapper.get<HTMLInputElement>('#organization-slug').element.value).toBe(
-            organization.slug,
-        );
+        expect(wrapper.find('#organization-slug').exists()).toBe(false);
+
+        await wrapper.get('[data-test="organization-form"]').trigger('submit');
+
+        expect(inertiaHarness.submittedData()).toEqual({
+            name: organization.name,
+            is_active: organization.is_active,
+        });
     });
 
     it('prefills user edit values and keeps password optional', () => {

@@ -22,7 +22,7 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Fixed blank map coordinates being interpreted as a selected point at latitude/longitude zero.
 - Added Vue component tests for CMS dialogs, validation announcements, optional edit passwords, and location selection.
 - Added branch delivery configuration for coordinates, free pickup/delivery radius, and per-kilometer excess fees.
-- Fixed organization slug and branch code uniqueness validation so normalized duplicates return field errors instead of database constraint failures.
+- Changed organization slugs to be generated automatically from names with collision-safe suffixes, while keeping branch-code duplicate validation as a field error.
 - Added idempotent demo accounts for customer, branch-admin, owner, and superadmin roles with one-tap local login selection.
 - Changed authentication pages to use the responsive split layout.
 - Added the authenticated mobile workspace for customer order entry, tracking, nearest-branch discovery, and account access.

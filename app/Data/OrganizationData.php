@@ -9,7 +9,6 @@ final readonly class OrganizationData
 {
     public function __construct(
         public string $name,
-        public string $slug,
         public bool $isActive,
     ) {}
 
@@ -17,7 +16,6 @@ final readonly class OrganizationData
     {
         return new self(
             name: $request->string('name')->toString(),
-            slug: $request->string('slug')->toString(),
             isActive: $request->boolean('is_active', true),
         );
     }

@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Sluggable\Attributes\Sluggable;
 
 /**
  * @property int $id
@@ -16,7 +17,8 @@ use Spatie\Activitylog\LogOptions;
  * @property string $slug
  * @property bool $is_active
  */
-#[Fillable(['name', 'slug', 'is_active'])]
+#[Fillable(['name', 'is_active'])]
+#[Sluggable(from: 'name', to: 'slug', maxLength: 120)]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */

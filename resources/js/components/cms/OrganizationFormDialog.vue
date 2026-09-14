@@ -19,11 +19,10 @@ const open = ref(false);
 const isEditing = computed(() => props.organization !== undefined);
 const form = useForm({
     name: props.organization?.name ?? '',
-    slug: props.organization?.slug ?? '',
     is_active: props.organization?.is_active ?? true,
 });
 
-const slugify = (value: string): string =>
+const predictSlug = (value: string): string =>
     value
         .toLowerCase()
         .trim()
@@ -32,7 +31,6 @@ const slugify = (value: string): string =>
 
 const restoreValues = (): void => {
     form.name = props.organization?.name ?? '';
-    form.slug = props.organization?.slug ?? '';
     form.is_active = props.organization?.is_active ?? true;
     form.clearErrors();
 };
@@ -44,13 +42,13 @@ watch(open, (isOpen) => {
 });
 
 const submit = (): void => {
-    const normalizedSlug = form.slug === '' ? slugify(form.name) : slugify(form.slug);
+    const pendingSlug = predictSlug(form.name);
 
     if (props.organization) {
         const pending = {
             ...props.organization,
             name: form.name,
-            slug: normalizedSlug,
+            slug: pendingSlug,
             is_active: form.is_active,
             pending: true,
         };
@@ -72,7 +70,7 @@ const submit = (): void => {
     const pending: OrganizationSummary = {
         id: -Date.now(),
         name: form.name,
-        slug: normalizedSlug,
+        slug: pendingSlug,
         is_active: form.is_active,
         branches_count: 0,
         users_count: 0,
@@ -124,40 +122,23 @@ const submit = (): void => {
         </template>
         <template #icon><Building2 class="size-5" /></template>
 
-                <div class="space-y-2">
-                    <Label for="organization-name">Nama organisasi</Label>
-                    <Input
-                        id="organization-name"
-                        v-model="form.name"
-                        autocomplete="organization"
-                        placeholder="Contoh: Kirei Wash Jakarta"
-                        required
-                        :aria-invalid="Boolean(form.errors.name)"
-                        aria-describedby="organization-name-error"
-                    />
-                    <InputError id="organization-name-error" :message="form.errors.name" />
-                </div>
+        <div class="space-y-2">
+            <Label for="organization-name">Nama organisasi</Label>
+            <Input
+                id="organization-name"
+                v-model="form.name"
+                autocomplete="organization"
+                placeholder="Contoh: Kirei Wash Jakarta"
+                required
+                :aria-invalid="Boolean(form.errors.name)"
+                aria-describedby="organization-name-error"
+            />
+            <InputError id="organization-name-error" :message="form.errors.name" />
+        </div>
 
-                <div class="space-y-2">
-                    <Label for="organization-slug">Slug</Label>
-                    <Input
-                        id="organization-slug"
-                        v-model="form.slug"
-                        autocomplete="off"
-                        placeholder="Otomatis dari nama"
-                        :aria-invalid="Boolean(form.errors.slug)"
-                        aria-describedby="organization-slug-hint organization-slug-error"
-                    />
-                    <p id="organization-slug-hint" class="text-ink-500 text-xs">
-                        Digunakan sebagai identitas stabil tenant.
-                    </p>
-                    <InputError id="organization-slug-error" :message="form.errors.slug" />
-                </div>
-
-                <label class="border-line flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2">
-                    <Checkbox v-model="form.is_active" />
-                    <span class="text-sm font-medium">Organisasi aktif</span>
-                </label>
-
+        <label class="border-line flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2">
+            <Checkbox v-model="form.is_active" />
+            <span class="text-sm font-medium">Organisasi aktif</span>
+        </label>
     </CmsFormDialog>
 </template>

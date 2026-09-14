@@ -12,15 +12,14 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('allows a superadmin to create an organization', function (): void {
+it('generates an organization slug from its name', function (): void {
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
-        'slug' => 'karuhun-laundry',
         'is_active' => true,
-    ])->assertRedirect();
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
     $this->assertDatabaseHas('organizations', [
         'name' => 'Karuhun Laundry',
@@ -28,47 +27,40 @@ it('allows a superadmin to create an organization', function (): void {
     ]);
 });
 
-it('rejects an organization slug that duplicates after normalization', function (): void {
-    Organization::factory()->create(['slug' => 'karuhun-laundry']);
-
-    $superadmin = User::factory()->create();
-    $superadmin->assignRole(RoleName::Superadmin->value);
-
-    $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
-        'name' => 'Karuhun Laundry Baru',
-        'slug' => 'Karuhun Laundry',
-        'is_active' => true,
-    ])->assertSessionHasErrors('slug');
-
-    expect(Organization::query()->count())->toBe(1);
-});
-
-it('rejects a generated organization slug that already exists', function (): void {
-    Organization::factory()->create(['slug' => 'karuhun-laundry']);
-
+it('allows duplicate organization names with unique generated slugs', function (): void {
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
-        'slug' => '',
         'is_active' => true,
-    ])->assertSessionHasErrors('slug');
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    expect(Organization::query()->count())->toBe(1);
+    $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
+        'name' => 'Karuhun Laundry',
+        'is_active' => true,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect(Organization::query()->orderBy('id')->pluck('slug')->all())->toBe([
+        'karuhun-laundry',
+        'karuhun-laundry-1',
+    ]);
 });
 
-it('rejects a supplied organization slug that normalizes to an empty value', function (): void {
+it('ignores a supplied organization slug', function (): void {
     $superadmin = User::factory()->create();
     $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
-        'slug' => '---',
+        'slug' => 'slug-yang-tidak-boleh-dipakai',
         'is_active' => true,
-    ])->assertSessionHasErrors('slug');
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    $this->assertDatabaseCount('organizations', 0);
+    $this->assertDatabaseHas('organizations', [
+        'name' => 'Karuhun Laundry',
+        'slug' => 'karuhun-laundry',
+    ]);
 });
 
 it('renders organization management only for superadmins', function (): void {
