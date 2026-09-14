@@ -157,9 +157,7 @@ describe('mobile branch discovery', () => {
                 selected: true,
             },
         ]);
-        expect(wrapper.get('[data-test="branch-coverage-8"]').text()).toBe(
-            'Gratis jemput & antar',
-        );
+        expect(wrapper.get('[data-test="branch-coverage-8"]').text()).toBe('Gratis jemput & antar');
         expect(wrapper.get('[data-test="branch-coverage-7"]').text()).toBe(
             'Di luar radius gratis · tambahan Rp 9.000',
         );

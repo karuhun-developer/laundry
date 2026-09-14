@@ -5,8 +5,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createLocationMap } from '@/lib/locationMap';
 import type { BranchLocation, LocationMapController, MapCoordinates } from '@/lib/locationMap';
+import { createLocationMap } from '@/lib/locationMap';
 
 const props = withDefaults(
     defineProps<{

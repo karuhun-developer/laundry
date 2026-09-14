@@ -2,9 +2,7 @@ import { useHttp } from '@inertiajs/vue3';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
 import { context as contextRoute } from '@/routes/api/v1/mobile';
 import { nearest as customerNearestRoute } from '@/routes/api/v1/mobile/branches';
-import {
-    catalog as catalogRoute,
-} from '@/routes/api/v1/organizations/branches';
+import { catalog as catalogRoute } from '@/routes/api/v1/organizations/branches';
 import { quote as quoteRoute } from '@/routes/api/v1/organizations/branches/catalog';
 import { index as customerIndexRoute } from '@/routes/api/v1/organizations/customers';
 import type {
