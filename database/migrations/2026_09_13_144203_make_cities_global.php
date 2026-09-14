@@ -37,11 +37,15 @@ return new class extends Migration
         });
 
         Schema::table('cities', function (Blueprint $table) {
+            $table->dropForeign(['organization_id']);
+        });
+
+        Schema::table('cities', function (Blueprint $table) {
             $table->dropUnique('cities_organization_id_name_province_unique');
         });
 
         Schema::table('cities', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('organization_id');
+            $table->dropColumn('organization_id');
         });
 
         Schema::table('cities', function (Blueprint $table) {
