@@ -23,8 +23,15 @@ Owners can create services and branch prices only for their organization. Supera
 
 Management routes require authenticated, verified web sessions:
 
+- `GET /cms/services`
 - `POST /cms/services`
+- `PATCH /cms/services/{service}`
+- `DELETE /cms/services/{service}`
 - `POST /cms/services/{service}/price-options`
+- `PATCH /cms/price-options/{price-option}`
+- `DELETE /cms/price-options/{price-option}`
+
+The CMS exposes modal create/edit flows and typed deletion confirmation. Owners only see their own organization, while superadmins can filter and manage every organization. Package branch choices are restricted to the service organization. Weight inputs are shown in kilograms and converted to integer grams before persistence. Services or packages referenced by order history cannot be deleted; they can be deactivated instead.
 
 Public API routes:
 
@@ -40,8 +47,5 @@ The quote body contains `weight_grams`. Its canonical response includes requeste
 - Per-kilogram proportional calculation, half-up rounding, and minimum chargeable weight.
 - Type-specific management validation.
 - Owner/superadmin permissions, branch admin/customer denial, and tenant isolation.
+- Modal package input conversion from kilograms to grams and organization-safe branch filtering.
 - Public active-state filtering and quote boundary validation.
-
-## Deferred
-
-Editing, archival UI, optimistic CMS reconciliation, and immutable order snapshots are delivered with the catalog UI and order features. Existing prices remain directly mutable only through future authorized actions; no update endpoint is exposed in this increment.

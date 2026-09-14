@@ -31,9 +31,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
         Route::patch('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+        Route::get('services', [ServiceController::class, 'index'])->name('services.index');
         Route::post('services', [ServiceController::class, 'store'])->name('services.store');
+        Route::patch('services/{service}', [ServiceController::class, 'update'])->name('services.update');
+        Route::delete('services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
         Route::post('services/{service}/price-options', [PriceOptionController::class, 'store'])
             ->name('services.price-options.store');
+        Route::patch('price-options/{priceOption}', [PriceOptionController::class, 'update'])
+            ->name('price-options.update');
+        Route::delete('price-options/{priceOption}', [PriceOptionController::class, 'destroy'])
+            ->name('price-options.destroy');
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');

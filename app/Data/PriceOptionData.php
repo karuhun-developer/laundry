@@ -4,6 +4,7 @@ namespace App\Data;
 
 use App\Enums\PriceType;
 use App\Http\Requests\Cms\StorePriceOptionRequest;
+use App\Http\Requests\Cms\UpdatePriceOptionRequest;
 
 final readonly class PriceOptionData
 {
@@ -18,7 +19,7 @@ final readonly class PriceOptionData
         public bool $isActive,
     ) {}
 
-    public static function fromRequest(StorePriceOptionRequest $request): self
+    public static function fromRequest(StorePriceOptionRequest|UpdatePriceOptionRequest $request): self
     {
         return new self(
             branchId: $request->integer('branch_id'),

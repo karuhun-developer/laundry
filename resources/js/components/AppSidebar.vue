@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutGrid, MapPinned, MessageSquareText, UsersRound } from '@lucide/vue';
+import {
+    Building2,
+    LayoutGrid,
+    MapPinned,
+    MessageSquareText,
+    PackageOpen,
+    UsersRound,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -18,6 +25,7 @@ import { dashboard } from '@/routes';
 import { index as branchesIndex } from '@/routes/cms/branches';
 import { index as messageTemplatesIndex } from '@/routes/cms/message-templates';
 import { index as organizationsIndex } from '@/routes/cms/organizations';
+import { index as servicesIndex } from '@/routes/cms/services';
 import { index as usersIndex } from '@/routes/cms/users';
 import type { NavItem } from '@/types';
 
@@ -50,6 +58,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Kota & cabang',
                 href: branchesIndex(),
                 icon: MapPinned,
+            },
+            {
+                title: 'Layanan & paket',
+                href: servicesIndex(),
+                icon: PackageOpen,
             },
             {
                 title: 'Pengguna & akses',

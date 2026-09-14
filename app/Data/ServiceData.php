@@ -3,6 +3,7 @@
 namespace App\Data;
 
 use App\Http\Requests\Cms\StoreServiceRequest;
+use App\Http\Requests\Cms\UpdateServiceRequest;
 
 final readonly class ServiceData
 {
@@ -14,7 +15,7 @@ final readonly class ServiceData
         public bool $isActive,
     ) {}
 
-    public static function fromRequest(StoreServiceRequest $request): self
+    public static function fromRequest(StoreServiceRequest|UpdateServiceRequest $request): self
     {
         return new self(
             organizationId: $request->organizationId(),

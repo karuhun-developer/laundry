@@ -4,6 +4,7 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+- Added owner and superadmin CMS management for services, fixed-weight packages, and per-kilogram pricing with tenant-safe modal CRUD, optimistic updates, and typed deletion confirmation.
 - Changed customer checkout into a pickup request: customers choose one service and pickup location without entering weight or seeing an unconfirmed laundry total.
 - Added branch-admin actual-weight confirmation with atomic server pricing, a `weighed` timeline event, optimistic reconciliation, conflict refresh, and audit logging.
 - Locked totals, cash/QRIS payment controls, and receipt pricing until a pickup request has been priced.

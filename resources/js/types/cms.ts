@@ -96,3 +96,47 @@ export type MessageTemplatesPageProps = {
     orderStatuses: OrderStatusOption[];
     supportedVariables: string[];
 };
+
+export type PriceTypeValue = 'fixed_package' | 'per_kilogram';
+
+export type CatalogBranchSummary = {
+    id: number;
+    organization_id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+    organization: OrganizationOption;
+};
+
+export type PriceOptionSummary = {
+    id: number;
+    service_id: number;
+    branch_id: number;
+    type: PriceTypeValue;
+    name: string;
+    package_weight_grams: number | null;
+    base_price_rupiah: number | null;
+    price_per_kilogram_rupiah: number | null;
+    minimum_chargeable_grams: number | null;
+    is_active: boolean;
+    branch: Pick<CatalogBranchSummary, 'id' | 'organization_id' | 'name' | 'code'>;
+    pending?: boolean;
+};
+
+export type ServiceSummary = {
+    id: number;
+    organization_id: number;
+    name: string;
+    code: string;
+    description: string | null;
+    is_active: boolean;
+    organization: OrganizationOption;
+    price_options: PriceOptionSummary[];
+    pending?: boolean;
+};
+
+export type ServicesPageProps = {
+    services: ServiceSummary[];
+    branches: CatalogBranchSummary[];
+    organizations: OrganizationOption[];
+};
