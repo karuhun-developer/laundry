@@ -8,7 +8,7 @@ Configure these values in **GitHub repository settings > Secrets and variables >
 
 Repository variable:
 
-- `PRODUCTION_APP_URL`: the hosted Laravel base URL over HTTPS without a trailing `/app`, for example `https://laundry.example.com`. The workflow uses `${PRODUCTION_APP_URL}/app` as the Android server URL, and the application uses same-origin API routes, so a separate API base URL is not required.
+- `PRODUCTION_APP_URL`: the hosted Laravel base URL over HTTPS without a trailing `/app`. The production repository uses `https://laundry.karuhundeveloper.com`. The workflow uses `${PRODUCTION_APP_URL}/app` as the Android server URL, and the application uses same-origin API routes, so a separate API base URL is not required.
 
 Repository secrets:
 
@@ -30,8 +30,8 @@ On macOS, use `base64 < /secure/path/laundryhub-upload.jks | tr -d '\n'`. Keep t
 For local development, set the application URL before syncing Capacitor:
 
 ```bash
-APP_URL=https://laundry.example.com CAPACITOR_SERVER_URL=https://laundry.example.com/app bun run build
-CAPACITOR_SERVER_URL=https://laundry.example.com/app bun run android:sync
+APP_URL=https://laundry.karuhundeveloper.com CAPACITOR_SERVER_URL=https://laundry.karuhundeveloper.com/app bun run build
+CAPACITOR_SERVER_URL=https://laundry.karuhundeveloper.com/app bun run android:sync
 ```
 
 For a hosted web build instead of bundled assets, set `CAPACITOR_SERVER_URL` to the production HTTPS origin during sync. Cleartext HTTP is intended only for controlled local development.

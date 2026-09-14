@@ -4,6 +4,8 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-14
+
 ### Phase 1: Core operations
 
 - Added the initial product requirements, delivery roadmap, and design-system contract.
