@@ -47,6 +47,7 @@ class CreateNewUser implements CreatesNewUsers
             'email' => null,
             'whatsapp_phone' => $normalizedPhone,
             'password' => null,
+            'session_version' => 1,
         ]);
         $user->setCustomerPin($input['pin']);
         $user->save();

@@ -8,7 +8,7 @@ import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import MessageTemplateFormDialog from '@/components/cms/MessageTemplateFormDialog.vue';
 import { Badge } from '@/components/ui/badge';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/cms';
 import { destroy, index } from '@/routes/cms/message-templates';
 import type { MessageTemplateSummary, MessageTemplatesPageProps } from '@/types';
 

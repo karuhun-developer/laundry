@@ -23,7 +23,7 @@ class MobileAppController extends Controller
         }
 
         if (! $user->hasAnyRole([RoleName::Customer->value, RoleName::BranchAdmin->value])) {
-            return to_route('dashboard');
+            return to_route('cms.dashboard');
         }
 
         return Inertia::render('mobile/App');

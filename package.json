@@ -7,7 +7,6 @@
         "android:open": "cap open android",
         "android:sync": "cap sync android",
         "build": "vp build",
-        "build:ssr": "vp build && vp build --ssr",
         "dev": "vp dev",
         "check": "biome check resources/js/app.ts resources/js/components resources/js/composables resources/js/layouts resources/js/lib resources/js/pages resources/js/types vite.config.ts",
         "check:fix": "biome check --write resources/js/app.ts resources/js/components resources/js/composables resources/js/layouts resources/js/lib resources/js/pages resources/js/types vite.config.ts",

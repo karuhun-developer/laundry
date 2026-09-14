@@ -16,8 +16,8 @@ import {
     filterReportServices,
     formatReportDuration,
 } from '@/lib/reporting';
-import { dashboard } from '@/routes';
-import dashboardRoutes from '@/routes/dashboard';
+import { dashboard } from '@/routes/cms';
+import dashboardRoutes from '@/routes/cms/dashboard';
 import type { OperationsReportPageProps, ReportFilterForm } from '@/types';
 
 defineOptions({

@@ -94,7 +94,7 @@ export type MobileContext = {
 export type MobileCustomer = {
     id: number;
     name: string;
-    email: string;
+    email: string | null;
 };
 
 export type MobilePriceOption = {

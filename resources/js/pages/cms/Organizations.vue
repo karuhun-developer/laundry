@@ -8,7 +8,7 @@ import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import OrganizationFormDialog from '@/components/cms/OrganizationFormDialog.vue';
 import { Badge } from '@/components/ui/badge';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/cms';
 import { destroy, index } from '@/routes/cms/organizations';
 import type { OrganizationsPageProps } from '@/types';
 

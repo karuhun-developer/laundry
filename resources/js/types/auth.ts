@@ -1,8 +1,13 @@
+export type AuthMode = 'customer' | 'staff';
+
 export type User = {
     id: number;
     organization_id: number | null;
     name: string;
-    email: string;
+    email: string | null;
+    whatsapp_phone: string | null;
+    must_change_pin: boolean;
+    pin_expires_at: string | null;
     roles: string[];
     avatar?: string;
     email_verified_at: string | null;

@@ -64,7 +64,7 @@ const user = computed(() => page.props.auth.user);
                     type="email"
                     class="mt-1 block w-full"
                     name="email"
-                    :default-value="user.email"
+                    :default-value="user.email ?? ''"
                     required
                     autocomplete="username"
                     placeholder="Email address"

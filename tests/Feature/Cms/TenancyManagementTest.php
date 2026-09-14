@@ -416,7 +416,7 @@ it('shares authenticated roles for role-aware navigation', function (): void {
     $owner->assignRole(RoleName::Owner->value);
 
     $this->actingAs($owner)
-        ->get(route('dashboard'))
+        ->get(route('cms.dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.user.roles', [RoleName::Owner->value]));
@@ -426,16 +426,20 @@ it('forbids customers from tenant management', function (): void {
     $customer = User::factory()->create();
     $customer->assignRole(RoleName::Customer->value);
 
-    $this->actingAs($customer)->post(route('cms.cities.store'), [
-        'name' => 'Jakarta',
-        'province' => 'DKI Jakarta',
-    ])->assertForbidden();
+    $this->actingAs($customer)
+        ->withSession(['customer_session_version' => $customer->session_version])
+        ->post(route('cms.cities.store'), [
+            'name' => 'Jakarta',
+            'province' => 'DKI Jakarta',
+        ])->assertForbidden();
 
     $this->actingAs($customer)
+        ->withSession(['customer_session_version' => $customer->session_version])
         ->get(route('cms.branches.index'))
         ->assertForbidden();
 
     $this->actingAs($customer)
+        ->withSession(['customer_session_version' => $customer->session_version])
         ->get(route('cms.users.index'))
         ->assertForbidden();
 });

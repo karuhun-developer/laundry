@@ -21,7 +21,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/cms';
 import { index as branchesIndex } from '@/routes/cms/branches';
 import { index as messageTemplatesIndex } from '@/routes/cms/message-templates';
 import { index as organizationsIndex } from '@/routes/cms/organizations';

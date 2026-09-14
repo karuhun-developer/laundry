@@ -37,7 +37,9 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response
+            ->assertRedirect(route('mobile.app', absolute: false))
+            ->assertSessionHas('customer_session_version', 1);
 
         $user = User::query()->where('whatsapp_phone', '6281234567890')->firstOrFail();
 

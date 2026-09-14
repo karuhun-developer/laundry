@@ -11,7 +11,7 @@ import ServiceFormDialog from '@/components/cms/ServiceFormDialog.vue';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { formatRupiah } from '@/lib/formatters';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/cms';
 import { destroy as destroyPriceOption } from '@/routes/cms/price-options';
 import { destroy as destroyService, index } from '@/routes/cms/services';
 import type { PriceOptionSummary, ServicesPageProps } from '@/types';

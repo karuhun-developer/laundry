@@ -8,6 +8,7 @@ use App\Models\City;
 use App\Models\PriceOption;
 use App\Models\User;
 use App\Services\PriceCalculator;
+use App\Support\DemoAccounts;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -85,27 +86,45 @@ class DemoAccountSeederTest extends TestCase
         $this->assertSame(14500, $quote->totalRupiah);
     }
 
-    public function test_every_demo_account_can_log_in(): void
+    public function test_every_demo_staff_account_can_log_in(): void
     {
         $this->seed(DatabaseSeeder::class);
 
         foreach ([
-            'superadmin@laundryhub.test',
-            'owner@laundryhub.test',
-            'branch@laundryhub.test',
-            'customer@laundryhub.test',
-        ] as $email) {
+            'superadmin@laundryhub.test' => 'cms.dashboard',
+            'owner@laundryhub.test' => 'cms.dashboard',
+            'branch@laundryhub.test' => 'mobile.app',
+        ] as $email => $routeName) {
             $response = $this->post(route('login.store'), [
                 'email' => $email,
-                'password' => 'password',
+                'password' => DemoAccounts::PASSWORD,
             ]);
 
-            $response->assertRedirect(route('dashboard', absolute: false));
+            $response->assertRedirect(route($routeName, absolute: false));
             $this->assertAuthenticatedAs(
                 User::query()->where('email', $email)->firstOrFail(),
             );
 
-            $this->post(route('logout'))->assertRedirect(route('home'));
+            $this->post(route('logout'))->assertRedirect(route('login'));
         }
+    }
+
+    public function test_demo_customer_can_log_in_with_whatsapp_and_pin(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $customer = User::query()
+            ->where('email', 'customer@laundryhub.test')
+            ->firstOrFail();
+
+        $response = $this->post(route('customer-login.store'), [
+            'whatsapp_phone' => $customer->whatsapp_phone,
+            'pin' => DemoAccounts::CUSTOMER_PIN,
+        ]);
+
+        $response->assertRedirect(route('mobile.app', absolute: false));
+        $this->assertAuthenticatedAs($customer);
+
+        $this->post(route('logout'))->assertRedirect(route('login'));
     }
 }

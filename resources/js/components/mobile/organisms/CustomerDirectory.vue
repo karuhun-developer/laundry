@@ -26,7 +26,7 @@ defineProps<{ customers: readonly MobileCustomer[] }>();
                     <h3 class="truncate font-semibold text-ink-950">{{ customer.name }}</h3>
                     <p class="mt-1 flex items-center gap-1.5 truncate text-sm text-ink-500">
                         <Mail class="size-3.5 shrink-0" aria-hidden="true" />
-                        {{ customer.email }}
+                        {{ customer.email ?? 'Tanpa email' }}
                     </p>
                 </div>
             </article>

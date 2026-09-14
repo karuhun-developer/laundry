@@ -115,7 +115,7 @@ it('builds tenant isolated owner metrics and branch comparisons', function (): v
     $owner->assignRole(RoleName::Owner->value);
 
     $this->actingAs($owner)
-        ->get(route('dashboard', [
+        ->get(route('cms.dashboard', [
             'date_from' => '2026-09-01',
             'date_to' => '2026-09-30',
         ]))
@@ -186,7 +186,7 @@ it('lets superadmins combine organization service and status filters', function 
     $superadmin->assignRole(RoleName::Superadmin->value);
 
     $this->actingAs($superadmin)
-        ->get(route('dashboard', [
+        ->get(route('cms.dashboard', [
             'date_from' => '2026-09-01',
             'date_to' => '2026-09-30',
             'organization_id' => $organization->id,
@@ -211,12 +211,12 @@ it('rejects owner filters that point to another tenant', function (): void {
     $owner->assignRole(RoleName::Owner->value);
 
     $this->actingAs($owner)
-        ->from(route('dashboard'))
-        ->get(route('dashboard', [
+        ->from(route('cms.dashboard'))
+        ->get(route('cms.dashboard', [
             'branch_id' => $otherBranch->id,
             'service_id' => $otherService->id,
         ]))
-        ->assertRedirect(route('dashboard'))
+        ->assertRedirect(route('cms.dashboard'))
         ->assertSessionHasErrors(['branch_id', 'service_id']);
 });
 
@@ -261,7 +261,7 @@ it('exports the same tenant isolated report as csv', function (): void {
     $owner = User::factory()->create(['organization_id' => $organization->id]);
     $owner->assignRole(RoleName::Owner->value);
 
-    $response = $this->actingAs($owner)->get(route('dashboard.export', [
+    $response = $this->actingAs($owner)->get(route('cms.dashboard.export', [
         'date_from' => '2026-09-01',
         'date_to' => '2026-09-30',
     ]));

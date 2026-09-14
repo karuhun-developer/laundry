@@ -7,7 +7,7 @@ use App\Data\Reports\ReportFiltersData;
 use App\Enums\RoleName;
 use App\Http\Requests\Reports\ReportFiltersRequest;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Support\RoleDestination;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,6 +21,7 @@ class DashboardController extends Controller
     public function __invoke(
         ReportFiltersRequest $request,
         BuildOperationsReport $buildOperationsReport,
+        RoleDestination $roleDestination,
     ): Response|RedirectResponse {
         $user = $request->user();
 
@@ -28,12 +29,8 @@ class DashboardController extends Controller
             throw new LogicException('An authenticated user is required.');
         }
 
-        if ($user->hasAnyRole([RoleName::Customer->value, RoleName::BranchAdmin->value])) {
-            return to_route('mobile.app');
-        }
-
         if (! $user->hasAnyRole([RoleName::Owner->value, RoleName::Superadmin->value])) {
-            throw new AuthorizationException;
+            return redirect($roleDestination->pathFor($user));
         }
 
         $report = $buildOperationsReport->handle(

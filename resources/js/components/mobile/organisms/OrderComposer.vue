@@ -236,7 +236,7 @@ const submit = (): void => {
                 >
                     <option :value="null">Pilih pelanggan</option>
                     <option v-for="customer in customers" :key="customer.id" :value="customer.id">
-                        {{ customer.name }} · {{ customer.email }}
+                        {{ customer.name }} · {{ customer.email ?? 'Tanpa email' }}
                     </option>
                 </select>
             </label>

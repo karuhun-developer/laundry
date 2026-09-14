@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Building2, LogOut, Mail, ShieldCheck, UserRound } from '@lucide/vue';
+import CustomerPinSettings from '@/components/mobile/organisms/CustomerPinSettings.vue';
 import MobilePrinterSettings from '@/components/mobile/organisms/MobilePrinterSettings.vue';
 import type { PrinterConnection, PrinterDevice, PrinterProfile } from '@/lib/printer/types';
 import { logout } from '@/routes';
@@ -9,9 +10,11 @@ import type { MobileOrganization, MobileRole } from '@/types/mobile';
 withDefaults(
     defineProps<{
         name: string;
-        email: string;
+        email?: string | null;
         role: MobileRole;
         organization?: MobileOrganization | null;
+        mustChangePin?: boolean;
+        pinExpiresAt?: string | null;
         printerAvailable?: boolean;
         printerProfile?: PrinterProfile | null;
         printerDevices?: readonly PrinterDevice[];
@@ -21,6 +24,9 @@ withDefaults(
         printerError?: string | null;
     }>(),
     {
+        email: null,
+        mustChangePin: false,
+        pinExpiresAt: null,
         printerAvailable: false,
         organization: null,
         printerProfile: null,
@@ -55,7 +61,9 @@ defineEmits<{
                 <Mail class="mt-0.5 size-5 text-brand-700" aria-hidden="true" />
                 <div>
                     <dt class="text-xs text-ink-500">Email</dt>
-                    <dd class="mt-0.5 [overflow-wrap:anywhere] text-sm font-semibold text-ink-950">{{ email }}</dd>
+                    <dd class="mt-0.5 [overflow-wrap:anywhere] text-sm font-semibold text-ink-950">
+                        {{ email ?? 'Tidak digunakan untuk akun ini' }}
+                    </dd>
                 </div>
             </div>
             <div
@@ -78,6 +86,12 @@ defineEmits<{
                 </div>
             </div>
         </dl>
+
+        <CustomerPinSettings
+            v-if="role === 'customer'"
+            :must-change-pin="mustChangePin"
+            :pin-expires-at="pinExpiresAt"
+        />
 
         <MobilePrinterSettings
             v-if="role === 'branch_admin'"

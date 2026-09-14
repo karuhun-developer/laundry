@@ -10,7 +10,7 @@ import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { formatKilometers, formatRupiah } from '@/lib/formatters';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/cms';
 import { destroy as destroyBranch, index } from '@/routes/cms/branches';
 import { destroy as destroyCity } from '@/routes/cms/cities';
 import type { BranchesPageProps } from '@/types';

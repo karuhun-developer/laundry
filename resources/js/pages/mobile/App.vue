@@ -196,8 +196,10 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                     <MobileAccount
                         v-else
                         :name="page.props.auth.user.name"
-                        :email="page.props.auth.user.email"
+                        :email="page.props.auth.user.email ?? undefined"
                         role="customer"
+                        :must-change-pin="page.props.auth.user.must_change_pin"
+                        :pin-expires-at="page.props.auth.user.pin_expires_at"
                         :printer-available="workspace.printer.available"
                         :printer-profile="workspace.printer.profile.value"
                         :printer-devices="workspace.printer.devices.value"
@@ -260,7 +262,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                     <MobileAccount
                         v-else
                         :name="page.props.auth.user.name"
-                        :email="page.props.auth.user.email"
+                        :email="page.props.auth.user.email ?? undefined"
                         role="branch_admin"
                         :organization="workspace.context.value.organization"
                         :printer-available="workspace.printer.available"

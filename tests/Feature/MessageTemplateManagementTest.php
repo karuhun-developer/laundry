@@ -151,11 +151,16 @@ it('rejects unauthenticated and unauthorized template management', function (): 
     $customer->assignRole(RoleName::Customer->value);
 
     $this->get(route('cms.message-templates.index'))->assertRedirect(route('login'));
-    $this->actingAs($customer)->get(route('cms.message-templates.index'))->assertForbidden();
+    $this->actingAs($customer)
+        ->withSession(['customer_session_version' => $customer->session_version])
+        ->get(route('cms.message-templates.index'))
+        ->assertForbidden();
 
-    $this->actingAs($customer)->post(route('cms.message-templates.store'), [
-        'organization_id' => $organization->id,
-        'order_status' => OrderStatus::Received->value,
-        'body' => 'Halo.',
-    ])->assertForbidden();
+    $this->actingAs($customer)
+        ->withSession(['customer_session_version' => $customer->session_version])
+        ->post(route('cms.message-templates.store'), [
+            'organization_id' => $organization->id,
+            'order_status' => OrderStatus::Received->value,
+            'body' => 'Halo.',
+        ])->assertForbidden();
 });

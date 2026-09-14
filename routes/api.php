@@ -18,10 +18,12 @@ use App\Http\Controllers\Api\V1\PaymentGatewayMethodController;
 use App\Http\Controllers\Api\V1\PaymentGatewayWebhookController;
 use App\Http\Controllers\Api\V1\PaymentStatusEventController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
+use App\Http\Controllers\Api\V1\UpdateCustomerPinController;
+use App\Http\Middleware\EnsureCustomerSessionIsCurrent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->name('api.v1.')->group(function (): void {
+Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent::class)->group(function (): void {
     Route::post('payment-gateways/paywuz/webhook', PaymentGatewayWebhookController::class)
         ->name('payment-gateways.paywuz.webhook');
     Route::get('payment-gateway-methods', PaymentGatewayMethodController::class)
@@ -36,6 +38,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('mobile/orders', CustomerOrderIndexController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.orders.index');
+    Route::put('mobile/account/pin', UpdateCustomerPinController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.account.pin.update');
     Route::get('organizations/{organization:slug}/orders', MobileOrderIndexController::class)
         ->middleware('auth:sanctum')
         ->name('organizations.orders.index');

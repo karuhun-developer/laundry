@@ -1,0 +1,148 @@
+import { flushPromises, mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CustomerPinSettings from '@/components/mobile/organisms/CustomerPinSettings.vue';
+import { update as updateCustomerPin } from '@/routes/api/v1/mobile/account/pin';
+
+type PinField = 'current_pin' | 'pin' | 'pin_confirmation';
+type MockPinForm = Record<PinField, string> & {
+    errors: Partial<Record<PinField, string>>;
+    hasErrors: boolean;
+    processing: boolean;
+};
+
+const httpMocks = vi.hoisted(() => ({
+    form: null as MockPinForm | null,
+    put: vi.fn(),
+}));
+
+vi.mock('@inertiajs/vue3', async () => {
+    const { defineComponent, h, reactive } = await import('vue');
+
+    return {
+        Link: defineComponent({
+            inheritAttrs: false,
+            setup(_, { attrs, slots }) {
+                return () => h('button', attrs, slots.default?.());
+            },
+        }),
+        useHttp: (initial: Record<PinField, string>) => {
+            const form = reactive({
+                ...initial,
+                errors: {} as Partial<Record<PinField, string>>,
+                hasErrors: false,
+                processing: false,
+                clearErrors(...fields: PinField[]) {
+                    if (fields.length === 0) {
+                        this.errors = {};
+                    } else {
+                        for (const field of fields) {
+                            delete this.errors[field];
+                        }
+                    }
+
+                    this.hasErrors = Object.keys(this.errors).length > 0;
+
+                    return this;
+                },
+                setError(field: PinField, message: string) {
+                    this.errors[field] = message;
+                    this.hasErrors = true;
+
+                    return this;
+                },
+                reset() {
+                    Object.assign(this, initial);
+
+                    return this;
+                },
+                put: httpMocks.put,
+            });
+
+            httpMocks.form = form;
+
+            return form;
+        },
+    };
+});
+
+const mountPinSettings = () =>
+    mount(CustomerPinSettings, {
+        props: {
+            mustChangePin: true,
+            pinExpiresAt: '2026-09-15T08:00:00.000Z',
+        },
+    });
+
+const setPinFields = async (
+    wrapper: ReturnType<typeof mountPinSettings>,
+    currentPin: string,
+    pin: string,
+    confirmation: string,
+): Promise<void> => {
+    await wrapper.get<HTMLInputElement>('input[name="current_pin"]').setValue(currentPin);
+    await wrapper.get<HTMLInputElement>('input[name="pin"]').setValue(pin);
+    await wrapper.get<HTMLInputElement>('input[name="pin_confirmation"]').setValue(confirmation);
+};
+
+beforeEach(() => {
+    httpMocks.form = null;
+    httpMocks.put.mockReset();
+});
+
+describe('customer PIN settings', () => {
+    it('explains a mandatory temporary PIN replacement and submits through Wayfinder', async () => {
+        httpMocks.put.mockResolvedValue({
+            message: 'PIN berhasil diperbarui.',
+            data: { must_change_pin: false, pin_expires_at: null },
+        });
+        const wrapper = mountPinSettings();
+
+        expect(wrapper.get('[data-test="mandatory-pin-notice"]').text()).toContain(
+            'PIN sementara wajib diganti',
+        );
+        expect(wrapper.get('[data-test="mandatory-pin-notice"]').text()).toContain(
+            'PIN ini berlaku sampai',
+        );
+
+        await setPinFields(wrapper, '123456', '654321', '654321');
+        await wrapper.get('[data-test="customer-pin-form"]').trigger('submit');
+        await flushPromises();
+
+        expect(httpMocks.put).toHaveBeenCalledWith(updateCustomerPin().url, expect.any(Object));
+        expect(wrapper.get('[data-test="pin-success"]').text()).toBe('PIN berhasil diperbarui.');
+        expect(wrapper.find('[data-test="mandatory-pin-notice"]').exists()).toBe(false);
+        expect(httpMocks.form?.current_pin).toBe('');
+        expect(httpMocks.form?.pin).toBe('');
+        expect(httpMocks.form?.pin_confirmation).toBe('');
+    });
+
+    it('blocks malformed and mismatched PIN values before sending a request', async () => {
+        const wrapper = mountPinSettings();
+
+        await setPinFields(wrapper, '12345', '654321', '654320');
+        await wrapper.get('[data-test="customer-pin-form"]').trigger('submit');
+
+        expect(httpMocks.put).not.toHaveBeenCalled();
+        expect(wrapper.text()).toContain('PIN saat ini harus terdiri dari 6 angka.');
+        expect(wrapper.text()).toContain('Konfirmasi PIN baru tidak cocok.');
+    });
+
+    it('surfaces validation errors returned by the PIN endpoint', async () => {
+        httpMocks.put.mockImplementation(async () => {
+            if (httpMocks.form) {
+                httpMocks.form.errors.current_pin = 'PIN saat ini tidak valid.';
+                httpMocks.form.hasErrors = true;
+            }
+
+            return undefined;
+        });
+        const wrapper = mountPinSettings();
+
+        await setPinFields(wrapper, '123456', '654321', '654321');
+        await wrapper.get('[data-test="customer-pin-form"]').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('PIN saat ini tidak valid.');
+        expect(wrapper.find('[data-test="pin-success"]').exists()).toBe(false);
+    });
+});

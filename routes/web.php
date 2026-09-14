@@ -7,19 +7,25 @@ use App\Http\Controllers\Cms\OrganizationController;
 use App\Http\Controllers\Cms\PriceOptionController;
 use App\Http\Controllers\Cms\ServiceController;
 use App\Http\Controllers\Cms\UserController;
+use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MobileAppController;
 use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\RoleRedirectController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::get('/', RoleRedirectController::class)->name('home');
+Route::post('login/customer', CustomerLoginController::class)
+    ->middleware('guest')
+    ->name('customer-login.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', DashboardController::class)->name('dashboard');
-    Route::get('dashboard/export', ReportExportController::class)->name('dashboard.export');
+    Route::get('dashboard', RoleRedirectController::class)->name('dashboard');
     Route::get('app', MobileAppController::class)->name('mobile.app');
 
     Route::prefix('cms')->name('cms.')->group(function () {
+        Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('export', ReportExportController::class)->name('dashboard.export');
         Route::get('organizations', [OrganizationController::class, 'index'])->name('organizations.index');
         Route::post('organizations', [OrganizationController::class, 'store'])->name('organizations.store');
         Route::patch('organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');

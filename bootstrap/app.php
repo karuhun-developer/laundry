@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsureCustomerSessionIsCurrent;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\User;
+use App\Support\RoleDestination;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,11 +20,20 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        $middleware->redirectGuestsTo(fn (): string => route('login'));
+        $middleware->redirectUsersTo(function (Request $request): string {
+            $user = $request->user();
+
+            return $user instanceof User
+                ? app(RoleDestination::class)->pathFor($user)
+                : route('login');
+        });
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
             HandleAppearance::class,
+            EnsureCustomerSessionIsCurrent::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

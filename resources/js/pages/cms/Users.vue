@@ -9,7 +9,7 @@ import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import UserFormDialog from '@/components/cms/UserFormDialog.vue';
 import { Badge } from '@/components/ui/badge';
 import { roleLabel } from '@/lib/formatters';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/cms';
 import { destroy, index } from '@/routes/cms/users';
 import type { UserSummary, UsersPageProps } from '@/types';
 
@@ -37,6 +37,7 @@ const organizationName = (user: UserSummary): string =>
     user.organization?.name ??
     props.organizations.find((organization) => organization.id === user.organization_id)?.name ??
     'Tanpa organisasi';
+const userIdentity = (user: UserSummary): string => user.email ?? user.whatsapp_phone ?? user.name;
 const canManageUser = (user: UserSummary): boolean =>
     isSuperadmin.value || !user.roles.some((role) => role.name === 'owner');
 </script>
@@ -96,7 +97,7 @@ const canManageUser = (user: UserSummary): boolean =>
                             <tr v-for="user in users" :key="user.id">
                                 <td class="px-5 py-4">
                                     <p class="text-ink-950 font-medium">{{ user.name }}</p>
-                                    <p class="text-ink-500 mt-0.5 text-xs">{{ user.email }}</p>
+                                    <p class="text-ink-500 mt-0.5 text-xs">{{ user.email ?? 'Tanpa email' }}</p>
                                     <p v-if="user.whatsapp_phone" class="text-ink-500 mt-0.5 text-xs">
                                         WhatsApp {{ user.whatsapp_phone }}
                                     </p>
@@ -130,8 +131,8 @@ const canManageUser = (user: UserSummary): boolean =>
                                             v-if="user.id !== currentUserId"
                                             title="Hapus pengguna?"
                                             :description="`Akun ${user.name} akan dihapus permanen beserta seluruh akses cabangnya.`"
-                                            :confirmation="user.email"
-                                            confirmation-label="Email pengguna"
+                                            :confirmation="userIdentity(user)"
+                                            confirmation-label="Email, WhatsApp, atau nama pengguna"
                                             :route="destroy(user.id)"
                                             :disabled="user.pending"
                                         />
@@ -148,7 +149,7 @@ const canManageUser = (user: UserSummary): boolean =>
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <h3 class="text-ink-950 truncate font-semibold">{{ user.name }}</h3>
-                                <p class="text-ink-500 truncate text-xs">{{ user.email }}</p>
+                                <p class="text-ink-500 truncate text-xs">{{ user.email ?? 'Tanpa email' }}</p>
                                 <p v-if="user.whatsapp_phone" class="text-ink-500 truncate text-xs">
                                     WhatsApp {{ user.whatsapp_phone }}
                                 </p>
@@ -178,8 +179,8 @@ const canManageUser = (user: UserSummary): boolean =>
                                 v-if="user.id !== currentUserId"
                                 title="Hapus pengguna?"
                                 :description="`Akun ${user.name} akan dihapus permanen beserta seluruh akses cabangnya.`"
-                                :confirmation="user.email"
-                                confirmation-label="Email pengguna"
+                                :confirmation="userIdentity(user)"
+                                confirmation-label="Email, WhatsApp, atau nama pengguna"
                                 :route="destroy(user.id)"
                                 :disabled="user.pending"
                             />

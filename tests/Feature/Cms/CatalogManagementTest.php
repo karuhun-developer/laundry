@@ -149,7 +149,13 @@ it('forbids branch admins and customers from managing the catalog', function (Ro
     $user = User::factory()->for($organization)->create();
     $user->assignRole($role->value);
 
-    $this->actingAs($user)->post(route('cms.services.store'), [
+    $request = $this->actingAs($user);
+
+    if ($role === RoleName::Customer) {
+        $request = $request->withSession(['customer_session_version' => $user->session_version]);
+    }
+
+    $request->post(route('cms.services.store'), [
         'name' => 'Tidak boleh',
         'code' => 'DENIED',
     ])->assertForbidden();

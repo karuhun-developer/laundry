@@ -47,7 +47,7 @@ export type UserSummary = {
     id: number;
     organization_id: number | null;
     name: string;
-    email: string;
+    email: string | null;
     whatsapp_phone: string | null;
     roles: RoleSummary[];
     branches: Pick<BranchSummary, 'id' | 'name'>[];

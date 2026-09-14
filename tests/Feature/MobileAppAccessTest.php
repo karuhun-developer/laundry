@@ -20,8 +20,13 @@ it('renders the mobile app for customers and branch admins', function (RoleName 
     $user = User::factory()->for($organization)->create();
     $user->assignRole($role->value);
 
-    $this->actingAs($user)
-        ->get(route('mobile.app'))
+    $request = $this->actingAs($user);
+
+    if ($role === RoleName::Customer) {
+        $request = $request->withSession(['customer_session_version' => $user->session_version]);
+    }
+
+    $request->get(route('mobile.app'))
         ->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('mobile/App')
@@ -34,14 +39,19 @@ it('keeps owner and superadmin accounts in the cms', function (RoleName $role): 
 
     $this->actingAs($user)
         ->get(route('mobile.app'))
-        ->assertRedirect(route('dashboard'));
+        ->assertRedirect(route('cms.dashboard'));
 })->with([RoleName::Owner, RoleName::Superadmin]);
 
 it('redirects operational roles from dashboard to the mobile app', function (RoleName $role): void {
     $user = User::factory()->create();
     $user->assignRole($role->value);
 
-    $this->actingAs($user)
-        ->get(route('dashboard'))
+    $request = $this->actingAs($user);
+
+    if ($role === RoleName::Customer) {
+        $request = $request->withSession(['customer_session_version' => $user->session_version]);
+    }
+
+    $request->get(route('dashboard'))
         ->assertRedirect(route('mobile.app'));
 })->with([RoleName::Customer, RoleName::BranchAdmin]);

@@ -69,16 +69,17 @@ it('does not restrict customer branches to their account organization', function
 it('accepts browser session authentication for mobile api requests', function (): void {
     $organization = Organization::factory()->create(['slug' => 'session-laundry']);
     Branch::factory()->for($organization)->create();
-    $customer = User::factory()->create([
+    $customer = User::factory()->withCustomerPin()->create([
         'organization_id' => null,
         'email' => 'session-customer@example.test',
+        'whatsapp_phone' => '6281234567890',
     ]);
     $customer->assignRole(RoleName::Customer->value);
 
-    $this->post(route('login.store'), [
-        'email' => $customer->email,
-        'password' => 'password',
-    ])->assertRedirect(route('dashboard'));
+    $this->post(route('customer-login.store'), [
+        'whatsapp_phone' => '081234567890',
+        'pin' => '123456',
+    ])->assertRedirect(route('mobile.app', absolute: false));
 
     $this->withHeader('Origin', config('app.url'))
         ->getJson(route('api.v1.mobile.context'))
