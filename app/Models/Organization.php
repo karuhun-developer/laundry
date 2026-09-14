@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Sluggable\Attributes\Sluggable;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 /**
  * @property int $id
@@ -18,11 +19,18 @@ use Spatie\Sluggable\Attributes\Sluggable;
  * @property bool $is_active
  */
 #[Fillable(['name', 'is_active'])]
-#[Sluggable(from: 'name', to: 'slug', maxLength: 120)]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */
-    use HasFactory, LogsActivity;
+    use HasFactory, HasSlug, LogsActivity;
+
+    public function getSlugOptions(): SlugOptions
+    {
+        return SlugOptions::create()
+            ->generateSlugsFrom('name')
+            ->saveSlugsTo('slug')
+            ->slugsShouldBeNoLongerThan(120);
+    }
 
     /** @return HasMany<Branch, $this> */
     public function branches(): HasMany
