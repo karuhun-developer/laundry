@@ -36,7 +36,13 @@ import java.util.UUID;
 @CapacitorPlugin(
     name = "ThermalPrinter",
     permissions = {
-        @Permission(alias = "bluetooth", strings = { Manifest.permission.BLUETOOTH_CONNECT })
+        @Permission(
+            alias = "bluetooth",
+            strings = {
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+            }
+        )
     }
 )
 public class ThermalPrinterPlugin extends Plugin {

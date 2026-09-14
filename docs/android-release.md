@@ -91,9 +91,11 @@ Then verify on representative physical Android devices:
 2. Create and transition an order, preview a WhatsApp suggestion, and confirm only `https://wa.me` opens.
 3. Confirm invalid or unavailable WhatsApp destinations remain inside the preview dialog.
 4. Grant Bluetooth permission only when printer discovery is requested.
-5. Test Bluetooth SPP and USB printing on supported 58 mm and 80 mm printers.
-6. Verify QRIS display, safe-area layout, launcher icon, splash screen, app resume, and network error recovery.
-7. Confirm the release build points to the production HTTPS API and contains no demo credentials or development server URL.
+5. Confirm Bluetooth scan/connect permission and USB per-device permission are requested only when printer access is used.
+6. Test Bluetooth SPP and USB printing on supported 58 mm and 80 mm printers.
+7. Verify file downloads on Android 9 or older and scoped-storage downloads on newer Android versions.
+8. Verify QRIS display, safe-area layout, launcher icon, splash screen, app resume, and network error recovery.
+9. Confirm the release build points to the production HTTPS API and contains no demo credentials or development server URL.
 
 ## Artifacts
 

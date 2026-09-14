@@ -7,6 +7,9 @@ All notable changes to LaundryHub are documented here. The project follows phase
 - Changed GitHub Release titles to exactly match their Git tags while continuing to source descriptions from the matching changelog section.
 - Changed customer pickup coordinates to a shared OpenStreetMap picker with current-location centering, click-to-place, and a draggable pin.
 - Fixed Android current-location discovery by declaring coarse and fine location permissions in the application manifest.
+- Fixed Android Bluetooth printer discovery by requesting scan and connect access at runtime.
+- Added legacy storage permissions for file downloads on older Android versions while retaining scoped-storage compatibility.
+- Added USB printer enumeration and per-device access permission through Android USB host APIs.
 
 ## [1.0.4] - 2026-09-14
 
