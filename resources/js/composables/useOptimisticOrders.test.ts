@@ -4,6 +4,8 @@ import { useOptimisticOrders } from '@/composables/useOptimisticOrders';
 import type { MobileOrder } from '@/types/mobile';
 
 describe('useOptimisticOrders', () => {
+    const pricingPayload = { price_option_id: 5, weight_grams: 3500 } as const;
+
     it('inserts a draft immediately and replaces it after create succeeds', async () => {
         const canonical = makeOrder(42);
         let resolveCreate: (order: MobileOrder) => void = () => undefined;
@@ -175,5 +177,102 @@ describe('useOptimisticOrders', () => {
         await expect(request).resolves.toBe(false);
         expect(optimistic.orders.value).toEqual([currentTenantOrder]);
         expect(optimistic.rollbackMessage.value).toBeNull();
+    });
+
+    it('marks pricing as pending and reconciles the server-confirmed price', async () => {
+        const initial: MobileOrder = {
+            ...makeOrder(42, 'pickup_requested'),
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 6000,
+                total_rupiah: 0,
+            },
+        };
+        const canonical: MobileOrder = {
+            ...makeOrder(42, 'weighed'),
+            pricing: {
+                confirmed: true,
+                confirmed_at: '2026-09-14T09:00:00.000Z',
+                items_subtotal_rupiah: 42000,
+                delivery_fee_rupiah: 6000,
+                total_rupiah: 48000,
+            },
+        };
+        let resolvePricing: (order: MobileOrder) => void = () => undefined;
+        const pricingPromise = new Promise<MobileOrder>((resolve) => {
+            resolvePricing = resolve;
+        });
+        const optimistic = useOptimisticOrders(
+            makeApi({ confirmOrderPricing: vi.fn(() => pricingPromise) }),
+        );
+        optimistic.setOrders([initial]);
+
+        const request = optimistic.confirmOrderPricing(42, pricingPayload);
+        expect(optimistic.orders.value[0]).toEqual({ ...initial, pending: true });
+
+        resolvePricing(canonical);
+        await expect(request).resolves.toBe(true);
+        expect(optimistic.orders.value[0]).toEqual(canonical);
+    });
+
+    it('restores the unpriced order when pricing confirmation fails', async () => {
+        const initial: MobileOrder = {
+            ...makeOrder(42, 'pickup_requested'),
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 6000,
+                total_rupiah: 0,
+            },
+        };
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                confirmOrderPricing: vi.fn(async () => {
+                    throw new Error('Berat tidak dapat disimpan.');
+                }),
+            }),
+        );
+        optimistic.setOrders([initial]);
+
+        await expect(optimistic.confirmOrderPricing(42, pricingPayload)).resolves.toBe(false);
+
+        expect(optimistic.orders.value[0]).toEqual(initial);
+        expect(optimistic.rollbackMessage.value).toBe('Berat tidak dapat disimpan.');
+    });
+
+    it('refreshes the canonical order after a conflicting pricing confirmation', async () => {
+        const initial: MobileOrder = {
+            ...makeOrder(42, 'pickup_requested'),
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 6000,
+                total_rupiah: 0,
+            },
+        };
+        const canonical = makeOrder(42, 'weighed');
+        const conflict = Object.assign(new Error('Harga pesanan sudah dikonfirmasi.'), {
+            status: 409,
+        });
+        const fetchOrder = vi.fn(async () => canonical);
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                confirmOrderPricing: vi.fn(async () => {
+                    throw conflict;
+                }),
+                fetchOrder,
+            }),
+        );
+        optimistic.setOrders([initial]);
+
+        await expect(optimistic.confirmOrderPricing(42, pricingPayload)).resolves.toBe(false);
+
+        expect(fetchOrder).toHaveBeenCalledWith(initial);
+        expect(optimistic.orders.value[0]).toEqual(canonical);
+        expect(optimistic.rollbackMessage.value).toContain('data terbaru');
     });
 });

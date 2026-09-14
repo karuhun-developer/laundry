@@ -9,6 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class PaymentCannotBeCreated extends RuntimeException
 {
+    public static function pricingNotConfirmed(): self
+    {
+        return new self('Harga pesanan belum dikonfirmasi oleh petugas.');
+    }
+
     public static function orderAlreadyPaid(): self
     {
         return new self('Pesanan ini sudah lunas.');

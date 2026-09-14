@@ -5,6 +5,7 @@ use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\MessageTemplate;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -98,6 +99,32 @@ it('falls back to the active organization template', function (): void {
         ->assertJsonPath('data.available', true)
         ->assertJsonPath('data.template_id', $template->id)
         ->assertJsonPath('data.message', 'Pesanan LDR-20260913-00000001 sedang Dicuci.');
+});
+
+it('renders the confirmed weight and total in a weighed-order suggestion', function (): void {
+    [$organization, $branch, $order, $branchAdmin] = createWhatsAppSuggestionContext(
+        OrderStatus::Weighed,
+    );
+    $order->update([
+        'items_subtotal_rupiah' => 42000,
+        'delivery_fee_rupiah' => 6000,
+        'total_rupiah' => 48000,
+        'priced_at' => now(),
+    ]);
+    OrderItem::factory()->for($order)->create([
+        'requested_weight_grams' => 3500,
+        'chargeable_weight_grams' => 3500,
+        'subtotal_rupiah' => 42000,
+    ]);
+    MessageTemplate::factory()->for($organization)->create([
+        'order_status' => OrderStatus::Weighed,
+        'body' => 'Berat {weight}. Total {total}.',
+    ]);
+    Sanctum::actingAs($branchAdmin);
+
+    $this->getJson(whatsAppSuggestionRoute($organization, $branch, $order))
+        ->assertOk()
+        ->assertJsonPath('data.message', 'Berat 3,5 kg. Total Rp48.000.');
 });
 
 it('returns an unavailable suggestion without sending when template or phone is missing', function (): void {

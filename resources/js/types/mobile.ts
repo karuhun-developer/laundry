@@ -26,6 +26,7 @@ export type MobileTab =
     | 'more';
 
 export type MobileOrderStatus =
+    | 'pickup_requested'
     | 'received'
     | 'weighed'
     | 'washing'
@@ -172,6 +173,8 @@ export type MobileOrder = {
     customer: Pick<MobileCustomer, 'id' | 'name'>;
     items: readonly MobileOrderItem[];
     pricing: {
+        confirmed: boolean;
+        confirmed_at: string | null;
         items_subtotal_rupiah: number;
         delivery_fee_rupiah: number;
         total_rupiah: number;
@@ -195,12 +198,17 @@ export type CreateOrderPayload = {
     customer_id?: number;
     items: Array<{
         price_option_id: number;
-        weight_grams: number;
+        weight_grams?: number;
     }>;
     delivery?: {
         latitude: number;
         longitude: number;
     };
+};
+
+export type ConfirmOrderPricingPayload = {
+    price_option_id: number;
+    weight_grams: number;
 };
 
 export type TransitionOrderPayload = {

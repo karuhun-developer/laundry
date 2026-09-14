@@ -14,6 +14,7 @@ import type { Coordinates } from '@/composables/useGeolocation';
 import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
 import { orderStatusLabels } from '@/lib/mobileOrders';
 import type {
+    ConfirmOrderPricingPayload,
     CreateOrderPayload,
     MobileOrderStatus,
     MobilePriceQuote,
@@ -49,8 +50,17 @@ const onLocationFound = (latitude: number, longitude: number): void => {
     void updateDeliveryLocation(latitude, longitude);
 };
 
-const onCreateOrder = (payload: CreateOrderPayload, quote: MobilePriceQuote): void => {
+const onCreateOrder = (payload: CreateOrderPayload, quote: MobilePriceQuote | null): void => {
     void workspace.createOrder(payload, quote);
+};
+
+const onConfirmPricing = async (
+    orderId: number,
+    payload: ConfirmOrderPricingPayload,
+): Promise<void> => {
+    if (await workspace.confirmOrderPricing(orderId, payload)) {
+        whatsAppDialogOpen.value = true;
+    }
 };
 
 const onTransition = async (orderId: number, status: MobileOrderStatus): Promise<void> => {
@@ -158,6 +168,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                             description="Pantau dua pesanan terakhir tanpa meninggalkan beranda."
                             :payment-actions="workspace.paymentActions"
                             :payment-processing="workspace.paymentProcessing.value"
+                            :pricing-processing="workspace.pricingProcessing.value"
                             :printer-configured="workspace.printer.profile.value !== null"
                         />
                     </div>
@@ -168,6 +179,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         role="customer"
                         :payment-actions="workspace.paymentActions"
                         :payment-processing="workspace.paymentProcessing.value"
+                        :pricing-processing="workspace.pricingProcessing.value"
                         :printer-configured="workspace.printer.profile.value !== null"
                     />
 
@@ -206,7 +218,9 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         description="Lanjutkan status satu tahap atau batalkan pesanan yang masih aktif."
                         :payment-actions="workspace.paymentActions"
                         :payment-processing="workspace.paymentProcessing.value"
+                        :pricing-processing="workspace.pricingProcessing.value"
                         :printer-configured="workspace.printer.profile.value !== null"
+                        @confirm-pricing="onConfirmPricing"
                         @transition="onTransition"
                     />
 

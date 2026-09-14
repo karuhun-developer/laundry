@@ -4,6 +4,11 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+- Changed customer checkout into a pickup request: customers choose one service and pickup location without entering weight or seeing an unconfirmed laundry total.
+- Added branch-admin actual-weight confirmation with atomic server pricing, a `weighed` timeline event, optimistic reconciliation, conflict refresh, and audit logging.
+- Locked totals, cash/QRIS payment controls, and receipt pricing until a pickup request has been priced.
+- Added `{weight}` and `{total}` WhatsApp variables and a price-message suggestion after successful pricing confirmation.
+- Added default organization-level WhatsApp templates for every order status, including pickup-request and weighed notifications.
 - Changed the customer mobile workspace to hide organization selection and discover active branches across organizations, while preserving branch- and order-derived tenant routing for API mutations.
 - Added nearest-first customer branch options with explicit free pickup/delivery coverage or estimated excess-distance fees.
 - Added selectable outlet markers and free-delivery radius overlays to the customer pickup map, including a distinct selected-branch marker.

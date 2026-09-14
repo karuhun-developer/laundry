@@ -15,8 +15,8 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ## Goals
 
 - Let one organization manage branches across many cities without mixing branch-level data.
-- Let a customer choose a branch, service, package, or per-kilogram price and follow order progress.
-- Recommend the nearest eligible branch and show any pickup/delivery surcharge before checkout.
+- Let a customer choose a pickup point, branch, and one laundry service without estimating the laundry weight.
+- Recommend the nearest eligible branch and show whether pickup/delivery is free or incurs a distance surcharge.
 - Let branch admins create, price, update, and complete orders quickly from an Android-sized screen.
 - Give owners and superadmins a CMS for branches, users, catalogs, and operational visibility.
 - Keep every privileged action auditable.
@@ -27,9 +27,10 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ### Customer
 
 - Registers and signs in from the mobile surface.
-- Sets a pickup point, chooses from globally discovered branches ordered nearest first, then selects a service and pricing option.
+- Sets a pickup point, chooses from globally discovered branches ordered nearest first, then selects one service option.
 - Does not select or need to understand an organization; tenant routing is derived internally from the selected branch and existing order.
-- Views order totals and status history.
+- Submits a pickup request without entering weight or accepting an estimated laundry total.
+- Views the confirmed weight, total, payment options, and status history after branch staff price the order.
 - Receives an actionable WhatsApp link when a configured message is available.
 
 ### Branch admin
@@ -37,7 +38,8 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Works only within assigned branches.
 - Creates customer orders and records measured weight.
 - Advances an order through the configured laundry workflow.
-- Prints receipts and presents dynamic QRIS in later phases.
+- Sends the rendered price message through an explicit WhatsApp action and presents dynamic QRIS after pricing is confirmed.
+- Prints receipts and records QRIS or cash payments.
 
 ### Owner
 
@@ -88,10 +90,10 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 ## Order lifecycle
 
-The Phase 1 default workflow is:
+The default customer pickup workflow is:
 
-1. Received
-2. Weighed
+1. Pickup requested
+2. Weighed and priced
 3. Washing
 4. Drying
 5. Ironing
@@ -100,7 +102,9 @@ The Phase 1 default workflow is:
 
 Cancelled is a terminal exception state. Every transition is authorized, recorded, and shown in the customer timeline.
 
-New orders start at `received`, receive a server-generated `LDR-YYYYMMDD-########` number, and append an initial status event in the same transaction as their item and delivery snapshots. Clients cannot submit authoritative totals, statuses, or snapshot values.
+Customer orders start at `pickup_requested` with one selected service, pickup/delivery snapshots, zero financial totals, and no confirmed weight. Branch-admin counter orders retain immediate server pricing and start at `received`. Every order receives a server-generated `LDR-YYYYMMDD-########` number and an initial status event in the same transaction. Clients cannot submit authoritative totals, statuses, or snapshot values.
+
+After pickup, assigned branch staff submit the actual weight through the pricing-confirmation endpoint. The server locks the order, recalculates the selected price option, replaces the provisional zero-value item snapshot, stores `priced_at`, advances the order to `weighed`, and appends timeline and audit records atomically. Payment and QRIS creation remain unavailable until this confirmation succeeds.
 
 Normal transitions advance exactly one step. Any non-terminal status may transition to `cancelled`; `completed` and `cancelled` cannot transition again. Duplicate, skipped, backward, and terminal transitions are rejected as state conflicts. The server locks the current order row, updates its status, appends the actor-snapshotted event, and writes audit activity atomically.
 
@@ -146,8 +150,8 @@ Deliverables:
 Exit criteria:
 
 - An owner can manage branches and catalogs within their organization.
-- A branch admin can create an order and advance its status.
-- A customer can see the order total and full status timeline.
+- A branch admin can create a counter order, confirm the actual weight of a pickup request, and advance its status.
+- A customer can submit a pickup request without weight and see the confirmed total and full status timeline after pricing.
 - A customer can see nearest eligible branches and a deterministic pickup/delivery quote.
 - Cross-organization access is denied by automated tests.
 - Pest and Vitest tests, PHPStan, TypeScript checks, production build, API smoke checks, and manual UI review pass.
@@ -176,10 +180,10 @@ Exit criteria:
 Deliverables:
 
 - Configurable WhatsApp `wa.me` templates.
-- Validated template variables such as `{customer_name}`, `{order_number}`, and `{status}`.
+- Validated template variables such as `{customer_name}`, `{order_number}`, `{status}`, `{weight}`, and `{total}`.
 - Organization defaults with branch-level overrides for each order status.
 - Customer WhatsApp phone storage and an immutable phone snapshot on every order.
-- Trigger suggestions only after successful status changes without background WhatsApp automation.
+- Trigger suggestions after successful pricing confirmation or status changes without background WhatsApp automation.
 - Explicit destination/message preview with a user-initiated open action.
 - A Capacitor Android bridge restricted to exact `https://wa.me` URLs.
 - LaundryHub launcher/adaptive icons, splash assets, signed build documentation, and device QA checklist.
@@ -188,7 +192,7 @@ Exit criteria:
 
 - Owners and superadmins can manage templates in modal workflows with optimistic reconciliation and typed deletion confirmation.
 - Branch-specific templates take precedence over organization templates without crossing tenant boundaries.
-- Failed order transitions roll back and never request or open a WhatsApp suggestion.
+- Failed pricing confirmations and order transitions roll back and never request or open a WhatsApp suggestion.
 - Native and browser transports open WhatsApp only after explicit confirmation and reject non-allowlisted URLs.
 - Pest, Vitest, PHPStan, strict TypeScript checks, production build, and Capacitor sync pass.
 - Browser end-to-end, emulator, signed Gradle build, and physical-device checks remain the final release gate.
@@ -229,4 +233,3 @@ Remaining deliverables:
 - Final product and company name. `LaundryHub` is a working name.
 - QRIS provider and settlement callback contract.
 - Exact receipt printer models used for device certification.
-- Whether customers self-create orders or submit pickup requests in the first production rollout.

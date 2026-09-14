@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { makeOrder } from '@/composables/mobileOrderTestFixtures';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
 import type {
+    ConfirmOrderPricingPayload,
     MobileBranch,
     MobileContext,
     MobileOrder,
@@ -11,6 +12,7 @@ import type {
 } from '@/types/mobile';
 
 const apiHarness = vi.hoisted(() => ({
+    confirmOrderPricing: vi.fn(),
     fetchWhatsAppSuggestion: vi.fn(),
     transitionOrder: vi.fn(),
 }));
@@ -26,9 +28,11 @@ vi.mock('@/composables/useMobileOrderApi', async () => {
         useMobileOrderApi: () => ({
             createOrder: vi.fn(async (): Promise<MobileOrder> => makeOrder(1)),
             createProcessing: vueComputed(() => false),
+            confirmOrderPricing: apiHarness.confirmOrderPricing,
             fetchOrder: vi.fn(async (order: MobileOrder): Promise<MobileOrder> => order),
             fetchWhatsAppSuggestion: apiHarness.fetchWhatsAppSuggestion,
             loadOrders: vi.fn(async (): Promise<MobileOrder[]> => []),
+            pricingProcessing: vueComputed(() => false),
             transitionOrder: apiHarness.transitionOrder,
             transitionProcessing: vueComputed(() => false),
         }),
@@ -89,11 +93,41 @@ const createWorkspace = () => {
 };
 
 beforeEach(() => {
+    apiHarness.confirmOrderPricing.mockReset();
     apiHarness.fetchWhatsAppSuggestion.mockReset();
     apiHarness.transitionOrder.mockReset();
 });
 
 describe('mobile order WhatsApp suggestions', () => {
+    it('fetches a price message after actual weight confirmation succeeds', async () => {
+        const pickupOrder: MobileOrder = {
+            ...makeOrder(21, 'pickup_requested'),
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 0,
+                total_rupiah: 0,
+            },
+        };
+        const pricingPayload: ConfirmOrderPricingPayload = {
+            price_option_id: 5,
+            weight_grams: 3500,
+        };
+        apiHarness.confirmOrderPricing.mockResolvedValue(makeOrder(21, 'weighed'));
+        apiHarness.fetchWhatsAppSuggestion.mockResolvedValue(suggestion);
+        const workspace = createWorkspace();
+        workspace.setOrders([pickupOrder]);
+
+        await expect(workspace.confirmOrderPricing(21, pricingPayload)).resolves.toBe(true);
+
+        expect(apiHarness.fetchWhatsAppSuggestion).toHaveBeenCalledWith(
+            'laundryhub-demo',
+            pickupOrder,
+        );
+        expect(workspace.whatsAppSuggestion.value).toEqual(suggestion);
+    });
+
     it('fetches a suggestion only after a successful status transition', async () => {
         apiHarness.transitionOrder.mockImplementation(
             async (order: MobileOrder, payload: TransitionOrderPayload): Promise<MobileOrder> => ({

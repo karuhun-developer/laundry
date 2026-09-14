@@ -123,14 +123,18 @@ Components respond to their container where possible; viewport breakpoints own o
 - Catalog content is grouped by service, then by the selected branch's active price options.
 - Fixed packages show the included weight, base price, and excess tariff when configured.
 - Per-kilogram options show the kilogram tariff and minimum chargeable weight when configured.
-- Quote interactions display requested weight, chargeable weight, base/excess breakdown, and total rupiah before order confirmation.
+- Customers choose one service option and do not enter or estimate laundry weight during pickup-request creation.
+- Branch-admin counter entry keeps the weighted quote interaction and displays requested weight, chargeable weight, base/excess breakdown, and total rupiah before confirmation.
+- Pickup-request tickets show a clear pending-price state until branch staff enter the measured weight.
 - An overweight package without an excess tariff presents a blocking configuration message instead of an estimated total.
 
 ### Order creation and optimistic reconciliation
 
-- Checkout shows the latest server quote, selected branch, delivery fee, and final estimate before confirmation.
-- After submission, the client may insert a pending order ticket immediately, but marks it as pending and never treats its local number, total, or status as authoritative.
-- A successful `201 Created` response replaces the pending ticket with the canonical order resource, including the server order number, immutable pricing snapshots, and initial timeline event.
+- Customer checkout shows the pickup point, selected branch, coverage guidance, and selected service without a weight or final laundry total.
+- After submission, the client may insert a pending pickup-request ticket immediately, but marks it as pending and never treats its local number or status as authoritative.
+- A successful `201 Created` response replaces the pending ticket with the canonical `pickup_requested` order, including the server order number, delivery snapshots, provisional service snapshot, and initial timeline event.
+- Assigned branch staff enter the actual weight on the ticket. The optimistic state is pending only; success replaces it with the canonical `weighed` order and failure restores the unpriced order.
+- Pricing conflicts refresh the canonical order before another attempt. Payment controls, totals, and QRIS remain hidden until `pricing.confirmed` is true.
 - A failed mutation rolls the pending ticket back, preserves the user's editable input, and exposes the field error plus a retry action.
 - Duplicate submission controls remain disabled while the same create request is pending.
 
@@ -261,6 +265,7 @@ Every primitive must be demonstrated in a development showcase before product sc
 
 ### QRIS payment surface
 
+- Payment and QRIS actions are unavailable until branch staff confirm actual weight and the server stores final pricing.
 - Dynamic QRIS payments expose a 360 px SVG as a base64 data URI so the same scannable artifact works in the web and Capacitor surfaces.
 - The QR image sits on an opaque white field with the renderer's four-module quiet zone intact.
 - Cash payments and unavailable QRIS states do not render an empty QR placeholder.
@@ -281,7 +286,8 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Template management uses the same focused modal pattern as other CMS records. Branch overrides remain visibly distinct from organization defaults.
 - Variable chips insert at the current text cursor, while a nearby live preview substitutes realistic non-sensitive sample values.
 - Template deletion requires the exact scope/status key and never uses a native JavaScript confirmation dialog.
-- A successful order transition may reveal a WhatsApp preview dialog; a failed or rolled-back transition never reveals one.
+- A successful pricing confirmation may reveal a WhatsApp preview containing the measured `{weight}` and confirmed `{total}`; a successful later status transition may reveal its matching status template.
+- A failed or rolled-back pricing confirmation or status transition never reveals a WhatsApp preview.
 - The dialog shows the destination and complete rendered message before exposing `Buka WhatsApp`. No page load, transition, or suggestion fetch opens an external application automatically.
 - Unavailable templates and invalid customer numbers remain recoverable inline states instead of disabled controls without explanation.
 

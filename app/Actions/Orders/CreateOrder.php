@@ -19,6 +19,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 final readonly class CreateOrder
 {
@@ -35,8 +36,9 @@ final readonly class CreateOrder
     ): Order {
         return DB::transaction(function () use ($organization, $branch, $actor, $data): Order {
             $this->ensureActiveTenant($organization, $branch);
+            $isCustomer = $actor->hasRole(RoleName::Customer->value);
 
-            if ($actor->hasRole(RoleName::Customer->value) && $actor->id !== $data->customerId) {
+            if ($isCustomer && $actor->id !== $data->customerId) {
                 throw new AuthorizationException;
             }
 
@@ -51,9 +53,26 @@ final readonly class CreateOrder
 
             /** @var list<PriceQuoteData> $quotedItems */
             $quotedItems = [];
+            /** @var list<PriceOption> $selectedPriceOptions */
+            $selectedPriceOptions = [];
 
             foreach ($data->items as $item) {
                 $priceOption = PriceOption::query()->findOrFail($item->priceOptionId);
+
+                if ($isCustomer) {
+                    $selectedPriceOptions[] = $this->availablePriceOption(
+                        $organization,
+                        $branch,
+                        $priceOption,
+                    );
+
+                    continue;
+                }
+
+                if ($item->weightGrams === null) {
+                    throw new LogicException('A staff-created order requires an item weight.');
+                }
+
                 $quotedItems[] = $this->quotePriceOption->handle(
                     organization: $organization,
                     branch: $branch,
@@ -68,13 +87,14 @@ final readonly class CreateOrder
                 $quotedItems,
             ));
             $deliveryFeeRupiah = $deliveryQuote === null ? 0 : $deliveryQuote->deliveryFeeRupiah;
+            $initialStatus = $isCustomer ? OrderStatus::PickupRequested : OrderStatus::Received;
 
             $order = Order::query()->create([
                 'organization_id' => $organization->id,
                 'branch_id' => $branch->id,
                 'customer_id' => $customer->id,
                 'created_by_id' => $actor->id,
-                'status' => OrderStatus::Received,
+                'status' => $initialStatus,
                 'customer_name_snapshot' => $customer->name,
                 'customer_whatsapp_phone_snapshot' => $customer->whatsapp_phone,
                 'customer_latitude' => $data->customerLatitude,
@@ -88,7 +108,8 @@ final readonly class CreateOrder
                     : $branch->delivery_fee_per_km_rupiah,
                 'items_subtotal_rupiah' => $itemsSubtotalRupiah,
                 'delivery_fee_rupiah' => $deliveryFeeRupiah,
-                'total_rupiah' => $itemsSubtotalRupiah + $deliveryFeeRupiah,
+                'total_rupiah' => $isCustomer ? 0 : $itemsSubtotalRupiah + $deliveryFeeRupiah,
+                'priced_at' => $isCustomer ? null : now(),
             ]);
 
             $order->forceFill([
@@ -122,10 +143,31 @@ final readonly class CreateOrder
                 ]);
             }
 
+            foreach ($selectedPriceOptions as $priceOption) {
+                $order->items()->create([
+                    'service_id' => $priceOption->service_id,
+                    'price_option_id' => $priceOption->id,
+                    'service_name_snapshot' => $priceOption->service->name,
+                    'service_code_snapshot' => $priceOption->service->code,
+                    'price_option_name_snapshot' => $priceOption->name,
+                    'price_type_snapshot' => $priceOption->type,
+                    'package_weight_grams_snapshot' => $priceOption->package_weight_grams,
+                    'base_price_rupiah_snapshot' => $priceOption->base_price_rupiah,
+                    'price_per_kilogram_rupiah_snapshot' => $priceOption->price_per_kilogram_rupiah,
+                    'minimum_chargeable_grams_snapshot' => $priceOption->minimum_chargeable_grams,
+                    'requested_weight_grams' => 0,
+                    'chargeable_weight_grams' => 0,
+                    'calculated_base_price_rupiah' => 0,
+                    'excess_weight_grams' => 0,
+                    'excess_price_rupiah' => 0,
+                    'subtotal_rupiah' => 0,
+                ]);
+            }
+
             $order->statusEvents()->create([
                 'actor_id' => $actor->id,
                 'actor_name_snapshot' => $actor->name,
-                'status' => OrderStatus::Received,
+                'status' => $initialStatus,
             ]);
 
             activity('orders')
@@ -136,11 +178,28 @@ final readonly class CreateOrder
                     'branch_id' => $branch->id,
                     'customer_id' => $customer->id,
                     'total_rupiah' => $order->total_rupiah,
+                    'pricing_confirmed' => ! $isCustomer,
                 ])
                 ->log('order created');
 
             return $order->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
         });
+    }
+
+    private function availablePriceOption(
+        Organization $organization,
+        Branch $branch,
+        PriceOption $priceOption,
+    ): PriceOption {
+        return PriceOption::query()
+            ->with('service')
+            ->whereKey($priceOption->id)
+            ->where('branch_id', $branch->id)
+            ->where('is_active', true)
+            ->whereHas('service', fn (Builder $query): Builder => $query
+                ->where('organization_id', $organization->id)
+                ->where('is_active', true))
+            ->firstOrFail();
     }
 
     private function ensureActiveTenant(Organization $organization, Branch $branch): void

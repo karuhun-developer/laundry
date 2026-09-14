@@ -2,6 +2,7 @@
 import { Inbox } from '@lucide/vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import type {
+    ConfirmOrderPricingPayload,
     MobileOrder,
     MobileOrderStatus,
     MobilePaymentActions,
@@ -16,6 +17,7 @@ type Props = {
     description?: string;
     paymentActions?: MobilePaymentActions;
     paymentProcessing?: boolean;
+    pricingProcessing?: boolean;
     printerConfigured?: boolean;
 };
 
@@ -25,15 +27,21 @@ withDefaults(defineProps<Props>(), {
     description: 'Status terbaru dan riwayat proses ada di satu tempat.',
     paymentActions: undefined,
     paymentProcessing: false,
+    pricingProcessing: false,
     printerConfigured: false,
 });
 
 const emit = defineEmits<{
+    'confirm-pricing': [orderId: number, payload: ConfirmOrderPricingPayload];
     transition: [orderId: number, status: MobileOrderStatus];
 }>();
 
 const onTransition = (orderId: number, status: MobileOrderStatus): void => {
     emit('transition', orderId, status);
+};
+
+const onConfirmPricing = (orderId: number, payload: ConfirmOrderPricingPayload): void => {
+    emit('confirm-pricing', orderId, payload);
 };
 </script>
 
@@ -58,7 +66,9 @@ const onTransition = (orderId: number, status: MobileOrderStatus): void => {
                 :processing="processing"
                 :payment-actions="paymentActions"
                 :payment-processing="paymentProcessing"
+                :pricing-processing="pricingProcessing"
                 :printer-configured="printerConfigured"
+                @confirm-pricing="onConfirmPricing"
                 @transition="onTransition"
             />
         </div>

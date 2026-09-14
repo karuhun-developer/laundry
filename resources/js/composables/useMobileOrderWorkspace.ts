@@ -6,6 +6,7 @@ import { useMobilePaymentApi } from '@/composables/useMobilePaymentApi';
 import { useOptimisticOrders } from '@/composables/useOptimisticOrders';
 import { buildDraftOrder, findCatalogOption } from '@/lib/mobileOrders';
 import type {
+    ConfirmOrderPricingPayload,
     CreateOrderPayload,
     CreatePaymentPayload,
     MobileBranch,
@@ -47,6 +48,8 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
             return api.createOrder(branch.organization.slug, branch.id, payload);
         },
         fetchOrder: async (order) => api.fetchOrder(order.organization.slug, order),
+        confirmOrderPricing: async (order, payload) =>
+            api.confirmOrderPricing(order.organization.slug, order, payload),
         transitionOrder: async (order, payload) =>
             api.transitionOrder(order.organization.slug, order, payload),
         createPayment: async (order, payload) =>
@@ -63,21 +66,34 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
 
     const createOrder = async (
         payload: CreateOrderPayload,
-        quote: MobilePriceQuote,
+        quote: MobilePriceQuote | null,
     ): Promise<boolean> => {
         state.setRequestError(null);
         const branch = state.selectedBranch.value;
         const item = payload.items[0];
+        const isCustomer = state.context.value?.role === 'customer';
         const catalogEntry = item
             ? findCatalogOption(state.services.value, item.price_option_id)
             : null;
 
+        if (!branch || !item || !catalogEntry) {
+            state.setRequestError('Pilih cabang dan layanan laundry.');
+            return false;
+        }
+
         if (
-            !branch ||
-            !item ||
-            !catalogEntry ||
-            quote.price_option.id !== item.price_option_id ||
-            quote.requested_weight_grams !== item.weight_grams
+            isCustomer &&
+            (!payload.delivery || item.weight_grams !== undefined || quote !== null)
+        ) {
+            state.setRequestError('Pilih lokasi penjemputan. Berat akan diisi petugas.');
+            return false;
+        }
+
+        if (
+            !isCustomer &&
+            (!quote ||
+                quote.price_option.id !== item.price_option_id ||
+                quote.requested_weight_grams !== item.weight_grams)
         ) {
             state.setRequestError('Pilih cabang, layanan, dan berat laundry.');
             return false;
@@ -97,7 +113,8 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         const draft = buildDraftOrder({
             branch,
             customer: { id: customer.id, name: customer.name },
-            quote,
+            option: catalogEntry.option,
+            quote: isCustomer ? null : quote,
             service: catalogEntry.service,
             deliveryFeeRupiah: payload.delivery ? (nearestBranch?.delivery.fee_rupiah ?? 0) : 0,
         });
@@ -151,6 +168,38 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         return true;
     };
 
+    const confirmOrderPricing = async (
+        orderId: number,
+        payload: ConfirmOrderPricingPayload,
+    ): Promise<boolean> => {
+        const order = optimistic.orders.value.find((entry) => entry.id === orderId);
+        const requestGeneration = ++whatsAppSuggestionGeneration;
+        whatsAppSuggestion.value = null;
+        whatsAppSuggestionError.value = null;
+        const saved = await optimistic.confirmOrderPricing(orderId, payload);
+
+        if (!saved || !order) {
+            return saved;
+        }
+
+        try {
+            const suggestion = await api.fetchWhatsAppSuggestion(order.organization.slug, order);
+
+            if (requestGeneration === whatsAppSuggestionGeneration) {
+                whatsAppSuggestion.value = suggestion;
+            }
+        } catch (error: unknown) {
+            if (requestGeneration === whatsAppSuggestionGeneration) {
+                whatsAppSuggestionError.value =
+                    error instanceof Error
+                        ? error.message
+                        : 'Saran pesan WhatsApp tidak dapat dimuat.';
+            }
+        }
+
+        return true;
+    };
+
     const transitionPaymentStatus = (
         orderId: number,
         paymentId: number,
@@ -168,12 +217,14 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     };
 
     return {
+        confirmOrderPricing,
         createOrder,
         createPayment,
         createProcessing: api.createProcessing,
         loadReceipt,
         loadOrders: api.loadOrders,
         orders: optimistic.orders,
+        pricingProcessing: api.pricingProcessing,
         rollbackMessage: optimistic.rollbackMessage,
         setOrders,
         transitionOrder,

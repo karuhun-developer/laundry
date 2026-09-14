@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-    submit: [payload: CreateOrderPayload, quote: MobilePriceQuote];
+    submit: [payload: CreateOrderPayload, quote: MobilePriceQuote | null];
 }>();
 
 const customerId = ref<number | null>(null);
@@ -48,9 +48,7 @@ const catalogOptions = computed(() =>
         service.price_options.map((option) => ({ service, option })),
     ),
 );
-const selectedCatalogOption = computed(() =>
-    catalogOptions.value.find((entry) => entry.option.id === priceOptionId.value),
-);
+const isCustomer = computed(() => props.role === 'customer');
 const weightGrams = computed(() => Math.round(Number(weightKilograms.value) * 1000));
 const deliveryFee = computed(() =>
     includeDelivery.value && props.deliveryCoordinates ? props.deliveryFeeRupiah : 0,
@@ -104,7 +102,7 @@ const scheduleQuote = (): void => {
     quoteError.value = null;
     quoteLoading.value = false;
 
-    if (!props.branch || !priceOptionId.value || weightGrams.value < 1) {
+    if (isCustomer.value || !props.branch || !priceOptionId.value || weightGrams.value < 1) {
         return;
     }
 
@@ -133,9 +131,13 @@ const scheduleQuote = (): void => {
     }, 250);
 };
 
-watch([() => props.branch?.id ?? null, priceOptionId, weightGrams], scheduleQuote, {
-    immediate: true,
-});
+watch(
+    [() => props.branch?.id ?? null, () => props.role, priceOptionId, weightGrams],
+    scheduleQuote,
+    {
+        immediate: true,
+    },
+);
 
 onBeforeUnmount(() => {
     quoteGeneration += 1;
@@ -153,17 +155,27 @@ const submit = (): void => {
         return;
     }
 
-    if (!priceOptionId.value || weightGrams.value < 1) {
-        formError.value = 'Pilih paket dan masukkan berat laundry yang valid.';
+    if (!priceOptionId.value) {
+        formError.value = 'Pilih layanan laundry.';
         return;
     }
 
-    if (props.role === 'branch_admin' && !customerId.value) {
+    if (isCustomer.value && !props.deliveryCoordinates) {
+        formError.value = 'Pilih lokasi penjemputan dari menu Cabang terlebih dahulu.';
+        return;
+    }
+
+    if (!isCustomer.value && weightGrams.value < 1) {
+        formError.value = 'Masukkan berat laundry yang valid.';
+        return;
+    }
+
+    if (!isCustomer.value && !customerId.value) {
         formError.value = 'Pilih pelanggan untuk pesanan ini.';
         return;
     }
 
-    if (!quote.value || !hasCurrentQuote.value) {
+    if (!isCustomer.value && (!quote.value || !hasCurrentQuote.value)) {
         formError.value =
             quoteError.value ?? 'Tunggu rincian harga terbaru sebelum membuat pesanan.';
         return;
@@ -173,20 +185,20 @@ const submit = (): void => {
         items: [
             {
                 price_option_id: priceOptionId.value,
-                weight_grams: weightGrams.value,
             },
         ],
     };
 
-    if (props.role === 'branch_admin' && customerId.value) {
+    if (!isCustomer.value && customerId.value) {
         payload.customer_id = customerId.value;
+        payload.items[0].weight_grams = weightGrams.value;
     }
 
-    if (includeDelivery.value && props.deliveryCoordinates) {
+    if ((isCustomer.value || includeDelivery.value) && props.deliveryCoordinates) {
         payload.delivery = props.deliveryCoordinates;
     }
 
-    emit('submit', payload, quote.value);
+    emit('submit', payload, isCustomer.value ? null : quote.value);
 };
 </script>
 
@@ -230,20 +242,20 @@ const submit = (): void => {
             </label>
 
             <label class="block">
-                <span class="text-sm font-semibold text-ink-950">Paket layanan</span>
+                <span class="text-sm font-semibold text-ink-950">Layanan laundry</span>
                 <select
                     v-model="priceOptionId"
                     required
                     class="mt-2 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
                 >
-                    <option :value="null">Pilih paket</option>
+                    <option :value="null">Pilih layanan</option>
                     <option v-for="entry in catalogOptions" :key="entry.option.id" :value="entry.option.id">
                         {{ entry.service.name }} · {{ entry.option.name }}
                     </option>
                 </select>
             </label>
 
-            <label class="block">
+            <label v-if="role === 'branch_admin'" class="block">
                 <span class="text-sm font-semibold text-ink-950">Berat laundry</span>
                 <span class="relative mt-2 block">
                     <Scale
@@ -264,8 +276,32 @@ const submit = (): void => {
                 </span>
             </label>
 
+            <div
+                v-if="role === 'customer'"
+                class="flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3"
+                :class="
+                    deliveryCoordinates
+                        ? 'border-mint-500/30 bg-mint-500/10'
+                        : 'border-amber-500/30 bg-amber-500/10'
+                "
+                data-test="pickup-location-status"
+            >
+                <MapPin
+                    class="size-5 shrink-0"
+                    :class="deliveryCoordinates ? 'text-mint-500' : 'text-amber-700'"
+                    aria-hidden="true"
+                />
+                <span class="text-sm leading-5 text-ink-700">
+                    {{
+                        deliveryCoordinates
+                            ? 'Lokasi penjemputan sudah dipilih. Petugas akan menimbang laundry Anda.'
+                            : 'Pilih lokasi penjemputan dari menu Cabang sebelum membuat pesanan.'
+                    }}
+                </span>
+            </div>
+
             <label
-                v-if="deliveryCoordinates"
+                v-else-if="deliveryCoordinates"
                 class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface-blue px-4 py-3"
             >
                 <input v-model="includeDelivery" type="checkbox" class="size-4 accent-brand-700" />
@@ -273,7 +309,15 @@ const submit = (): void => {
                 <span class="text-sm text-ink-700">Gunakan lokasi saya untuk antar-jemput</span>
             </label>
 
-            <div class="rounded-2xl bg-canvas p-4" aria-live="polite">
+            <div
+                v-if="role === 'customer'"
+                class="rounded-2xl bg-canvas p-4 text-sm leading-6 text-ink-700"
+                data-test="pickup-pricing-notice"
+            >
+                Berat aktual dan total harga akan muncul setelah laundry dijemput dan ditimbang oleh petugas cabang.
+            </div>
+
+            <div v-else class="rounded-2xl bg-canvas p-4" aria-live="polite">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <p class="text-xs font-semibold tracking-[0.12em] text-ink-500 uppercase">Rincian harga server</p>
@@ -323,11 +367,24 @@ const submit = (): void => {
             <button
                 type="submit"
                 class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 text-sm font-semibold text-white transition hover:bg-brand-600 motion-safe:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                :disabled="processing || quoteLoading || !hasCurrentQuote || !branch || catalogOptions.length === 0"
+                :disabled="
+                    processing ||
+                    !branch ||
+                    catalogOptions.length === 0 ||
+                    (role === 'customer'
+                        ? !deliveryCoordinates
+                        : quoteLoading || !hasCurrentQuote)
+                "
                 data-test="create-order"
             >
                 <PlusCircle class="size-5" aria-hidden="true" />
-                {{ processing ? 'Menyimpan…' : 'Buat pesanan' }}
+                {{
+                    processing
+                        ? 'Menyimpan…'
+                        : role === 'customer'
+                          ? 'Minta penjemputan'
+                          : 'Buat pesanan'
+                }}
             </button>
         </form>
     </section>

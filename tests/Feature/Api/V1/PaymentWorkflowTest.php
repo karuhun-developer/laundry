@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\RoleName;
@@ -16,6 +17,34 @@ const PAYMENT_TEST_STATIC_QRIS = '00020101021126370014ID.CO.QRIS.WWW0115ID123456
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+});
+
+it('rejects payment before pickup pricing is confirmed', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $admin = User::factory()->for($organization)->create();
+    $admin->assignRole(RoleName::BranchAdmin->value);
+    $admin->branches()->attach($branch);
+    $order = Order::factory()->for($organization)->for($branch)->create([
+        'status' => OrderStatus::PickupRequested,
+        'items_subtotal_rupiah' => 0,
+        'total_rupiah' => 0,
+        'priced_at' => null,
+    ]);
+    Sanctum::actingAs($admin);
+
+    $this->postJson(route('api.v1.organizations.branches.orders.payments.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'order' => $order,
+    ]), [
+        'method' => PaymentMethod::Cash->value,
+        'amount_rupiah' => 12000,
+    ])->assertUnprocessable()
+        ->assertJsonPath('code', 'PAYMENT_CANNOT_BE_CREATED')
+        ->assertJsonPath('message', 'Harga pesanan belum dikonfirmasi oleh petugas.');
+
+    $this->assertDatabaseCount('payments', 0);
 });
 
 it('creates and manually reconciles a dynamic QRIS payment with audit history', function (): void {

@@ -18,6 +18,8 @@ const receipt: MobileOrderReceipt = {
     customer: { id: 9, name: 'Customer Demo' },
     items: [],
     pricing: {
+        confirmed: true,
+        confirmed_at: '2026-09-13T08:00:00.000Z',
         items_subtotal_rupiah: 30000,
         delivery_fee_rupiah: 0,
         total_rupiah: 30000,
@@ -39,6 +41,8 @@ const makeOrder = (): MobileOrder => ({
     customer: { id: 9, name: 'Customer Demo' },
     items: [],
     pricing: {
+        confirmed: true,
+        confirmed_at: '2026-09-13T08:00:00.000Z',
         items_subtotal_rupiah: 30000,
         delivery_fee_rupiah: 0,
         total_rupiah: 30000,

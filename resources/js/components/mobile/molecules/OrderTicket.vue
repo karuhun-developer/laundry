@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ChevronRight, Clock3, MapPin, X } from '@lucide/vue';
-import { computed } from 'vue';
+import { ChevronRight, Clock3, MapPin, Scale, X } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import MobileStatusBadge from '@/components/mobile/atoms/MobileStatusBadge.vue';
 import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
 import {
@@ -12,6 +12,7 @@ import {
     orderStatusLabels,
 } from '@/lib/mobileOrders';
 import type {
+    ConfirmOrderPricingPayload,
     MobileOrder,
     MobileOrderStatus,
     MobilePaymentActions,
@@ -22,6 +23,7 @@ type Props = {
     order: MobileOrder;
     role: MobileRole;
     processing?: boolean;
+    pricingProcessing?: boolean;
     paymentProcessing?: boolean;
     paymentActions?: MobilePaymentActions;
     printerConfigured?: boolean;
@@ -29,20 +31,44 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     processing: false,
+    pricingProcessing: false,
     paymentProcessing: false,
     paymentActions: undefined,
     printerConfigured: false,
 });
 
 const emit = defineEmits<{
+    'confirm-pricing': [orderId: number, payload: ConfirmOrderPricingPayload];
     transition: [orderId: number, status: MobileOrderStatus];
 }>();
 
+const actualWeightKilograms = ref<number | string>('');
 const nextStatus = computed(() => nextOrderStatus(props.order.status));
 const timeline = computed(() => buildOrderTimeline(props.order));
+const isPricingPending = computed(() => !props.order.pricing.confirmed);
+const actualWeightGrams = computed(() => Math.round(Number(actualWeightKilograms.value) * 1000));
+const canConfirmPricing = computed(
+    () =>
+        props.order.items[0] !== undefined &&
+        Number.isFinite(actualWeightGrams.value) &&
+        actualWeightGrams.value > 0,
+);
 const isTerminal = computed(
     () => props.order.status === 'completed' || props.order.status === 'cancelled',
 );
+
+const confirmPricing = (): void => {
+    const item = props.order.items[0];
+
+    if (!item || !canConfirmPricing.value) {
+        return;
+    }
+
+    emit('confirm-pricing', props.order.id, {
+        price_option_id: item.price_option.id,
+        weight_grams: actualWeightGrams.value,
+    });
+};
 </script>
 
 <template>
@@ -71,15 +97,22 @@ const isTerminal = computed(
                         {{ order.customer.name }}
                     </p>
                 </div>
-                <div class="text-right">
+                <div v-if="!isPricingPending" class="text-right">
                     <p class="text-ink-500">Total</p>
                     <p class="mt-0.5 font-display font-semibold text-brand-700">
                         {{ formatRupiah(order.pricing.total_rupiah) }}
                     </p>
                 </div>
+                <div v-else class="text-right">
+                    <p class="text-ink-500">Harga</p>
+                    <p class="mt-0.5 font-semibold text-amber-700">Menunggu konfirmasi</p>
+                </div>
             </div>
 
-            <div class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-canvas px-3 py-2 text-sm">
+            <div
+                v-if="!isPricingPending"
+                class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-canvas px-3 py-2 text-sm"
+            >
                 <span class="text-ink-500">Pembayaran</span>
                 <span
                     class="font-semibold"
@@ -97,15 +130,27 @@ const isTerminal = computed(
                 >
                     <div class="min-w-0">
                         <p class="font-medium text-ink-950">{{ item.service.name }}</p>
-                        <p class="text-ink-500">
+                        <p v-if="!isPricingPending" class="text-ink-500">
                             {{ item.price_option.name }} ·
                             {{ formatWeight(item.calculation.requested_weight_grams) }}
                         </p>
+                        <p v-else class="text-ink-500">
+                            {{ item.price_option.name }} · Berat ditentukan petugas cabang
+                        </p>
                     </div>
-                    <p class="shrink-0 font-medium text-ink-700">
+                    <p v-if="!isPricingPending" class="shrink-0 font-medium text-ink-700">
                         {{ formatRupiah(item.calculation.subtotal_rupiah) }}
                     </p>
                 </div>
+            </div>
+
+            <div
+                v-if="isPricingPending && role === 'customer'"
+                class="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-800"
+                data-test="pricing-pending-summary"
+            >
+                Harga menunggu konfirmasi. Pesanan Anda menunggu dijemput dan ditimbang oleh
+                petugas cabang.
             </div>
         </div>
 
@@ -166,8 +211,62 @@ const isTerminal = computed(
             {{ order.status === 'completed' ? 'Laundry selesai dan pesanan sudah ditutup.' : 'Pesanan dibatalkan. Tidak ada proses lanjutan.' }}
         </div>
 
+        <form
+            v-if="role === 'branch_admin' && isPricingPending && !isTerminal"
+            class="space-y-3 border-t border-line bg-canvas p-4"
+            data-test="pricing-controls"
+            @submit.prevent="confirmPricing"
+        >
+            <label class="block">
+                <span class="text-sm font-semibold text-ink-950">Berat aktual</span>
+                <span class="relative mt-2 block">
+                    <Scale
+                        class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-500"
+                        aria-hidden="true"
+                    />
+                    <input
+                        v-model.number="actualWeightKilograms"
+                        data-test="actual-weight"
+                        type="number"
+                        min="0.1"
+                        max="1000"
+                        step="any"
+                        inputmode="decimal"
+                        required
+                        class="min-h-11 w-full rounded-xl border border-line bg-surface pr-12 pl-10 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
+                    />
+                    <span
+                        class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-500"
+                    >kg</span>
+                </span>
+            </label>
+            <p class="text-xs leading-5 text-ink-500">
+                Harga dihitung server dari layanan dan berat aktual. Setelah tersimpan, preview
+                WhatsApp harga dan pembayaran QRIS akan tersedia.
+            </p>
+            <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <button
+                    type="submit"
+                    data-test="confirm-pricing"
+                    class="min-h-11 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white transition motion-safe:active:scale-[0.98] disabled:opacity-60"
+                    :disabled="pricingProcessing || order.pending || !canConfirmPricing"
+                >
+                    {{ pricingProcessing ? 'Menyimpan harga…' : 'Konfirmasi berat & harga' }}
+                </button>
+                <button
+                    type="button"
+                    class="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-600/25 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-600/5 motion-safe:active:scale-[0.98] disabled:opacity-60"
+                    :disabled="processing || pricingProcessing || order.pending"
+                    @click="emit('transition', order.id, 'cancelled')"
+                >
+                    <X class="size-4" aria-hidden="true" />
+                    Batalkan
+                </button>
+            </div>
+        </form>
+
         <div
-            v-if="role === 'branch_admin' && !isTerminal"
+            v-else-if="role === 'branch_admin' && !isTerminal"
             class="grid gap-2 border-t border-line bg-canvas p-4 sm:grid-cols-[1fr_auto]"
             data-test="status-controls"
         >
@@ -191,7 +290,10 @@ const isTerminal = computed(
             </button>
         </div>
 
-        <div v-if="role === 'branch_admin' && paymentActions" class="border-t border-line bg-surface px-4 py-3">
+        <div
+            v-if="role === 'branch_admin' && !isPricingPending && paymentActions"
+            class="border-t border-line bg-surface px-4 py-3"
+        >
             <PaymentDialog
                 :order="order"
                 :actions="paymentActions"

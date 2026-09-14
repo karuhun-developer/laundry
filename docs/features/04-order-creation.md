@@ -4,9 +4,9 @@ Phase: 1
 
 ## Scope
 
-Authenticated customers and authorized staff can create an order for one active branch. The server recalculates every catalog price and optional pickup/delivery fee, stores an immutable financial snapshot, creates the initial status event, and returns the canonical order representation in one database transaction.
+Authenticated customers submit a pickup request for one active branch by choosing one service and a pickup location. They do not enter weight and the server does not expose an unconfirmed laundry total. Authorized staff can still create weighted counter orders with immediate server pricing. Both paths create the initial status event and return the canonical order representation in one database transaction.
 
-One order accepts 1 to 20 distinct price options. Weight is submitted in integer grams and all monetary values are stored as integer rupiah.
+A customer pickup request accepts exactly one price option. A staff counter order accepts 1 to 20 distinct price options. Confirmed weight is submitted in integer grams and all monetary values are stored as integer rupiah.
 
 ## Authorization
 
@@ -21,14 +21,15 @@ One order accepts 1 to 20 distinct price options. Weight is submitted in integer
 
 `POST /api/v1/organizations/{organization-slug}/branches/{branch}/orders`
 
-The route requires a Sanctum-authenticated request. A staff request includes `customer_id`; a customer request must omit it. The `items` array contains `price_option_id` and `weight_grams`. Optional delivery coordinates are submitted together as `delivery.latitude` and `delivery.longitude`. Unknown fields are rejected, including client-supplied totals, statuses, and snapshots.
+The route requires a Sanctum-authenticated request. A staff request includes `customer_id` and `weight_grams` for every item. A customer request must omit both fields, submit exactly one `price_option_id`, and include `delivery.latitude` plus `delivery.longitude`. Unknown fields are rejected, including client-supplied totals, statuses, and snapshots.
 
 The successful `201 Created` response includes:
 
-- Server-generated order number and initial `received` status.
+- Server-generated order number and either `pickup_requested` for customers or `received` for staff.
 - Branch and snapshotted customer identity.
-- Catalog identity, pricing-rule snapshots, and calculation breakdown for every item.
-- Items subtotal, delivery fee, and final total.
+- Provisional selected-service snapshot with zero weight and subtotal for customer pickup requests.
+- Immutable catalog identity, pricing-rule snapshots, and calculation breakdown for weighted staff orders.
+- Delivery fee snapshot for both paths; items subtotal and final total remain zero until customer pickup pricing is confirmed.
 - Delivery distance and tariff snapshots when coordinates are supplied.
 - Append-only initial status history with actor and timestamp.
 
@@ -36,7 +37,8 @@ The order number uses `LDR-YYYYMMDD-########`, where the final segment is the ze
 
 ## Snapshot and transaction rules
 
-- The action reuses the catalog quote operation so checkout cannot diverge from the public quote contract.
+- Staff counter creation reuses the catalog quote operation so checkout cannot diverge from the public quote contract.
+- Customer pickup creation validates the selected option belongs to the active branch catalog but defers its calculated snapshot until actual weight confirmation.
 - Service name/code, price-option name/type/rules, requested and chargeable weight, base/excess calculations, and subtotal are copied to each order item.
 - Customer coordinates, calculated distance, free radius, excess-distance tariff, and delivery fee are copied to the order when delivery is requested.
 - Later catalog, branch-tariff, or customer-name changes do not rewrite the historical order.
@@ -44,11 +46,11 @@ The order number uses `LDR-YYYYMMDD-########`, where the final segment is the ze
 
 ## Optimistic client contract
 
-The web and Capacitor clients may show a locally pending order immediately by using the latest quote response. The pending record is never authoritative: on success it is replaced with the complete order resource returned by this endpoint, including the server order number, totals, snapshots, and status history. A failed request removes or rolls back the pending record and exposes the field error plus a retry action.
+The web and Capacitor clients may show a locally pending pickup request immediately from the selected branch, service, and location. The pending record is never authoritative: on success it is replaced with the complete order resource returned by this endpoint, including the server order number, delivery snapshot, and status history. A failed request removes or rolls back the pending record and exposes the field error plus a retry action.
 
 ## Tests
 
-- Customer weighted order with minimum charge and excess-distance delivery fee.
+- Customer pickup request with one service, required coordinates, zero total, and no confirmed pricing timestamp.
 - Assigned branch-admin fixed-package order for a selected customer.
 - Catalog and delivery snapshot immutability.
 - Missing authentication and unassigned branch-admin denial.
@@ -59,6 +61,6 @@ The web and Capacitor clients may show a locally pending order immediately by us
 - Delivery request rejection when branch coordinates are unavailable.
 - Initial status event and Spatie Activitylog record persistence.
 
-## Deferred
+## Pricing handoff
 
-Order queues and tracking screens, WhatsApp actions, payments, QRIS, and receipt printing are delivered in their respective later increments.
+Actual-weight confirmation, payment locking, WhatsApp price suggestions, and the transition to `weighed` are documented in the tracking and mobile-workspace feature contracts.

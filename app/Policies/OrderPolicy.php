@@ -77,6 +77,11 @@ class OrderPolicy
         return $this->staffCanAccessOrder($user, $order, PermissionName::UpdateOrderStatus);
     }
 
+    public function confirmPricing(User $user, Order $order): bool
+    {
+        return $this->staffCanAccessOrder($user, $order, PermissionName::UpdateOrderStatus);
+    }
+
     /**
      * Determine whether the user can delete the model.
      */

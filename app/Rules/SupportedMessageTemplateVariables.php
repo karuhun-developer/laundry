@@ -15,6 +15,8 @@ class SupportedMessageTemplateVariables implements ValidationRule
         'order_number',
         'status',
         'branch_name',
+        'weight',
+        'total',
         'tracking_url',
     ];
 

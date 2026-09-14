@@ -34,11 +34,19 @@ The authenticated staff payload is:
 
 `status` is required. `note` is optional, trimmed, and limited to 500 characters. Unknown fields are rejected. A successful response returns the same canonical order resource as the detail endpoint, including the newly appended event.
 
+`POST /api/v1/organizations/{organization-slug}/branches/{branch}/orders/{order}/pricing`
+
+Assigned branch staff submit the selected `price_option_id` and actual `weight_grams` for an unpriced `pickup_requested` order. The server locks the order and item, verifies the selected option, calculates the canonical price, stores immutable item and total snapshots, sets `priced_at`, advances the order to `weighed`, and appends timeline and audit records atomically. Repeated, mismatched, or out-of-state confirmation returns `409 Conflict`.
+
 ## Transition rules
 
-The normal lifecycle advances exactly one step at a time:
+The staff counter lifecycle advances exactly one step at a time:
 
 `received → weighed → washing → drying → ironing → ready_for_pickup → completed`
+
+The customer pickup lifecycle enters `weighed` through successful pricing confirmation:
+
+`pickup_requested → weighed → washing → drying → ironing → ready_for_pickup → completed`
 
 - Any non-terminal status can transition to `cancelled`.
 - `completed` and `cancelled` are terminal.
@@ -60,6 +68,7 @@ The web and Capacitor clients may display the selected next status immediately w
 - Success replaces the complete local order and timeline with the API response.
 - Validation, authorization, conflict, or network failure restores the previous status and timeline and offers retry.
 - A `409` prompts the client to fetch the detail endpoint before another transition because another actor may have advanced the order.
+- Actual-weight confirmation follows the same optimistic pending, canonical replacement, rollback, and `409` refresh rules.
 - The server timeline is always authoritative; clients never invent actor data, timestamps, or durable status events.
 
 ## Tests
@@ -71,7 +80,8 @@ The web and Capacitor clients may display the selected next status immediately w
 - Canonical response shape and ordered timeline.
 - Atomic status event and Spatie Activitylog persistence.
 - Failed-transition rollback with no order, timeline, or audit side effect.
+- Actual-weight pricing authorization, validation, canonical calculation, conflict handling, payment lock, timeline, and audit persistence.
 
-## Deferred
+## Payment and communication gates
 
-Order queues and tracking screens, configurable workflows, WhatsApp status actions, payments, QRIS, and receipt printing remain in their respective later increments.
+Payment and QRIS creation are rejected until `priced_at` is present. After pricing succeeds, the branch-admin workspace requests the configured `weighed` WhatsApp suggestion so staff can explicitly send the confirmed weight and total.

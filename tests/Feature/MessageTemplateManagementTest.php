@@ -31,7 +31,9 @@ it('lets owners manage templates only inside their organization', function (): v
             ->where('branches.0.id', $branch->id)
             ->has('organizations', 0)
             ->has('orderStatuses', count(OrderStatus::cases()))
-            ->where('supportedVariables.0', '{customer_name}'));
+            ->where('supportedVariables.0', '{customer_name}')
+            ->where('supportedVariables.5', '{weight}')
+            ->where('supportedVariables.6', '{total}'));
 
     $this->actingAs($owner)->post(route('cms.message-templates.store'), [
         'organization_id' => $otherOrganization->id,
@@ -50,7 +52,7 @@ it('lets owners manage templates only inside their organization', function (): v
     $this->actingAs($owner)->patch(route('cms.message-templates.update', $template), [
         'branch_id' => null,
         'order_status' => OrderStatus::ReadyForPickup->value,
-        'body' => 'Pesanan {order_number} milik {name} siap diambil di {branch_name}.',
+        'body' => 'Pesanan {order_number} milik {name} seberat {weight} total {total} siap diambil di {branch_name}.',
         'is_active' => false,
     ])->assertRedirect()->assertSessionHasNoErrors();
 

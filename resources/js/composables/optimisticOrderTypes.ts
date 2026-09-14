@@ -1,5 +1,6 @@
 import type { Ref } from 'vue';
 import type {
+    ConfirmOrderPricingPayload,
     CreateOrderPayload,
     CreatePaymentPayload,
     MobileOrder,
@@ -11,6 +12,10 @@ import type {
 export type MobileOrderApi = {
     createOrder: (payload: CreateOrderPayload) => Promise<MobileOrder>;
     fetchOrder: (order: MobileOrder) => Promise<MobileOrder>;
+    confirmOrderPricing: (
+        order: MobileOrder,
+        payload: ConfirmOrderPricingPayload,
+    ) => Promise<MobileOrder>;
     transitionOrder: (order: MobileOrder, payload: TransitionOrderPayload) => Promise<MobileOrder>;
     createPayment: (order: MobileOrder, payload: CreatePaymentPayload) => Promise<MobilePayment>;
     transitionPaymentStatus: (

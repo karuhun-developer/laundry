@@ -1,16 +1,18 @@
 import { useHttp } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
+import { index as customerOrderIndexRoute } from '@/routes/api/v1/mobile/orders';
 import {
     show as showOrderRoute,
     store as storeOrderRoute,
 } from '@/routes/api/v1/organizations/branches/orders';
+import { store as storePricingRoute } from '@/routes/api/v1/organizations/branches/orders/pricing';
 import { store as storeStatusRoute } from '@/routes/api/v1/organizations/branches/orders/status-events';
 import { show as showWhatsAppSuggestionRoute } from '@/routes/api/v1/organizations/branches/orders/whatsapp-suggestion';
 import { index as orderIndexRoute } from '@/routes/api/v1/organizations/orders';
-import { index as customerOrderIndexRoute } from '@/routes/api/v1/mobile/orders';
 import type {
     ApiEnvelope,
+    ConfirmOrderPricingPayload,
     CreateOrderPayload,
     MobileOrder,
     TransitionOrderPayload,
@@ -27,12 +29,18 @@ export const useMobileOrderApi = () => {
         status: 'received',
         note: '',
     });
+    const pricingRequest = useHttp<ConfirmOrderPricingPayload, ApiEnvelope<MobileOrder>>({
+        price_option_id: 0,
+        weight_grams: 1,
+    });
     const whatsAppSuggestionRequest = useHttp<EmptyRequest, ApiEnvelope<WhatsAppSuggestion>>({});
 
     const loadOrders = async (organizationSlug?: string): Promise<MobileOrder[]> => {
         ordersRequest.cancel();
         const response = await ordersRequest.get(
-            organizationSlug ? orderIndexRoute(organizationSlug).url : customerOrderIndexRoute().url,
+            organizationSlug
+                ? orderIndexRoute(organizationSlug).url
+                : customerOrderIndexRoute().url,
         );
 
         if (!response) {
@@ -135,6 +143,55 @@ export const useMobileOrderApi = () => {
         return response.data;
     };
 
+    const confirmOrderPricing = async (
+        organizationSlug: string,
+        order: MobileOrder,
+        payload: ConfirmOrderPricingPayload,
+    ): Promise<MobileOrder> => {
+        pricingRequest.price_option_id = payload.price_option_id;
+        pricingRequest.weight_grams = payload.weight_grams;
+        const httpException = { value: null as MobileHttpError | null };
+        let response: ApiEnvelope<MobileOrder> | undefined;
+
+        try {
+            response = await pricingRequest.post(
+                storePricingRoute({
+                    organization: organizationSlug,
+                    branch: order.branch.id,
+                    order: order.id,
+                }).url,
+                {
+                    onHttpException: (exceptionResponse) => {
+                        httpException.value = new MobileHttpError(
+                            messageFromResponseData(
+                                exceptionResponse.data,
+                                'Berat dan harga tidak dapat dikonfirmasi.',
+                            ),
+                            exceptionResponse.status,
+                        );
+                    },
+                },
+            );
+        } catch (error: unknown) {
+            if (httpException.value) {
+                throw httpException.value;
+            }
+
+            throw error;
+        }
+
+        if (!response) {
+            throw new Error(
+                firstRequestError(
+                    pricingRequest.errors,
+                    'Berat dan harga gagal disimpan. Periksa data lalu coba lagi.',
+                ),
+            );
+        }
+
+        return response.data;
+    };
+
     const fetchWhatsAppSuggestion = async (
         organizationSlug: string,
         order: MobileOrder,
@@ -156,11 +213,13 @@ export const useMobileOrderApi = () => {
     };
 
     return {
+        confirmOrderPricing,
         createOrder,
         createProcessing: computed(() => createRequest.processing),
         fetchOrder,
         fetchWhatsAppSuggestion,
         loadOrders,
+        pricingProcessing: computed(() => pricingRequest.processing),
         transitionOrder,
         transitionProcessing: computed(() => transitionRequest.processing),
     };

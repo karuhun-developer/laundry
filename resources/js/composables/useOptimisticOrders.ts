@@ -1,6 +1,7 @@
 import { readonly, ref } from 'vue';
 import type { MobileOrderApi, OptimisticOrderState } from '@/composables/optimisticOrderTypes';
 import { errorMessage } from '@/composables/optimisticOrderTypes';
+import { useOptimisticOrderPricing } from '@/composables/useOptimisticOrderPricing';
 import { useOptimisticOrderTransitions } from '@/composables/useOptimisticOrderTransitions';
 import { useOptimisticPayments } from '@/composables/useOptimisticPayments';
 import type { CreateOrderPayload, MobileOrder } from '@/types/mobile';
@@ -18,6 +19,7 @@ export const useOptimisticOrders = (api: MobileOrderApi) => {
         generation: () => collectionGeneration,
     };
     const { transitionOrder } = useOptimisticOrderTransitions(state, api);
+    const { confirmOrderPricing } = useOptimisticOrderPricing(state, api);
     const { createPayment, transitionPaymentStatus } = useOptimisticPayments(state, api);
 
     const setOrders = (nextOrders: MobileOrder[]): void => {
@@ -65,6 +67,7 @@ export const useOptimisticOrders = (api: MobileOrderApi) => {
         orders: readonly(orders),
         rollbackMessage: readonly(rollbackMessage),
         clearRollbackMessage,
+        confirmOrderPricing,
         createOrder,
         createPayment,
         setOrders,

@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
+import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import type {
     MobileBranch,
+    MobileCustomer,
     MobileOrder,
     MobilePriceOption,
     MobilePriceQuote,
@@ -43,6 +45,10 @@ const services: MobileService[] = [
         description: null,
         price_options: [packagePriceOption],
     },
+];
+
+const customers: MobileCustomer[] = [
+    { id: 9, name: 'Customer Demo', email: 'customer@laundryhub.test' },
 ];
 
 const quote: MobilePriceQuote = {
@@ -89,6 +95,8 @@ const makeOrder = (): MobileOrder => ({
         },
     ],
     pricing: {
+        confirmed: true,
+        confirmed_at: '2026-09-13T08:00:00.000Z',
         items_subtotal_rupiah: 30000,
         delivery_fee_rupiah: 0,
         total_rupiah: 30000,
@@ -175,7 +183,34 @@ describe('mobile role-aware components', () => {
         expect(wrapper.find('[data-test="status-controls"]').exists()).toBe(false);
     });
 
-    it('recalculates a package estimate after a decimal weight input', async () => {
+    it('creates a customer pickup request without weight or a final price', async () => {
+        const wrapper = mount(OrderComposer, {
+            props: {
+                role: 'customer',
+                branch,
+                services,
+                customers: [],
+                deliveryCoordinates: { latitude: -6.2607, longitude: 106.8136 },
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+
+        await wrapper.find('select').setValue('5');
+        await wrapper.find('form').trigger('submit');
+
+        expect(wrapper.find('input[type="number"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Berat aktual dan total harga akan muncul');
+        expect(wrapper.text()).not.toContain('Rincian harga server');
+        expect(wrapper.emitted('submit')?.[0]).toEqual([
+            {
+                items: [{ price_option_id: 5 }],
+                delivery: { latitude: -6.2607, longitude: 106.8136 },
+            },
+            null,
+        ]);
+    });
+
+    it('requires a pickup location before a customer can submit', async () => {
         const wrapper = mount(OrderComposer, {
             props: {
                 role: 'customer',
@@ -187,36 +222,109 @@ describe('mobile role-aware components', () => {
             },
         });
 
-        const weightInput = wrapper.find<HTMLInputElement>('input[type="number"]');
+        await wrapper.find('select').setValue('5');
 
-        await weightInput.setValue('12.5');
-
-        expect(weightInput.element.validity.valid).toBe(true);
-        await vi.waitFor(() => expect(wrapper.text()).toContain('Berat tertagih'));
-        expect(wrapper.text()).toContain('Rp 12.000');
-        expect(wrapper.text()).toContain('Rp 2.500');
-        expect(wrapper.text()).toContain('Rp 14.500');
-    });
-
-    it('blocks checkout when the server cannot quote package excess', async () => {
-        const wrapper = mount(OrderComposer, {
-            props: {
-                role: 'customer',
-                branch,
-                services,
-                customers: [],
-                deliveryCoordinates: null,
-                quoteOrder: vi.fn(async () => {
-                    throw new Error('Berat melebihi batas paket dan tarif kelebihan belum diatur.');
-                }),
-            },
-        });
-
-        await wrapper.find<HTMLInputElement>('input[type="number"]').setValue('12.5');
-        await vi.waitFor(() => expect(wrapper.text()).toContain('tarif kelebihan belum diatur'));
+        expect(wrapper.text()).toContain('Pilih lokasi penjemputan');
         expect(wrapper.find<HTMLButtonElement>('[data-test="create-order"]').element.disabled).toBe(
             true,
         );
     });
 
+    it('keeps server pricing for branch-admin counter orders', async () => {
+        const wrapper = mount(OrderComposer, {
+            props: {
+                role: 'branch_admin',
+                branch,
+                services,
+                customers,
+                deliveryCoordinates: null,
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+
+        await wrapper.findAll('select')[0]?.setValue('9');
+        await wrapper.findAll('select')[1]?.setValue('5');
+        const weightInput = wrapper.find<HTMLInputElement>('input[type="number"]');
+        await weightInput.setValue('12.5');
+
+        expect(weightInput.element.validity.valid).toBe(true);
+        await vi.waitFor(() => expect(wrapper.text()).toContain('Berat tertagih'));
+        expect(wrapper.text()).toContain('Rp 14.500');
+    });
+
+    it('hides payment and total until a pickup request is priced', () => {
+        const pickupOrder: MobileOrder = {
+            ...makeOrder(),
+            status: 'pickup_requested',
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 0,
+                total_rupiah: 0,
+            },
+            payment_summary: { paid_rupiah: 0, outstanding_rupiah: 0, is_paid: false },
+        };
+        const wrapper = mount(OrderTicket, {
+            props: { order: pickupOrder, role: 'customer' },
+        });
+
+        expect(wrapper.text()).toContain('Harga menunggu konfirmasi');
+        expect(wrapper.text()).toContain('menunggu dijemput dan ditimbang');
+        expect(wrapper.text()).not.toContain('Total');
+        expect(wrapper.find('[data-test="open-payment-dialog"]').exists()).toBe(false);
+    });
+
+    it('lets a branch admin submit the actual weight for a pickup request', async () => {
+        const pickupOrder: MobileOrder = {
+            ...makeOrder(),
+            status: 'pickup_requested',
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 0,
+                total_rupiah: 0,
+            },
+            payment_summary: { paid_rupiah: 0, outstanding_rupiah: 0, is_paid: false },
+        };
+        const wrapper = mount(OrderTicket, {
+            props: { order: pickupOrder, role: 'branch_admin' },
+        });
+
+        await wrapper.get<HTMLInputElement>('[data-test="actual-weight"]').setValue('3.5');
+        await wrapper.get('[data-test="pricing-controls"]').trigger('submit');
+
+        expect(wrapper.emitted('confirm-pricing')?.[0]).toEqual([
+            21,
+            { price_option_id: 5, weight_grams: 3500 },
+        ]);
+        expect(wrapper.find('[data-test="status-controls"]').exists()).toBe(false);
+    });
+
+    it('forwards actual-weight confirmation through the order list', async () => {
+        const pickupOrder: MobileOrder = {
+            ...makeOrder(),
+            status: 'pickup_requested',
+            pricing: {
+                confirmed: false,
+                confirmed_at: null,
+                items_subtotal_rupiah: 0,
+                delivery_fee_rupiah: 0,
+                total_rupiah: 0,
+            },
+            payment_summary: { paid_rupiah: 0, outstanding_rupiah: 0, is_paid: false },
+        };
+        const wrapper = mount(OrderListPanel, {
+            props: { orders: [pickupOrder], role: 'branch_admin' },
+        });
+
+        await wrapper.get<HTMLInputElement>('[data-test="actual-weight"]').setValue('3.5');
+        await wrapper.get('[data-test="pricing-controls"]').trigger('submit');
+
+        expect(wrapper.emitted('confirm-pricing')?.[0]).toEqual([
+            21,
+            { price_option_id: 5, weight_grams: 3500 },
+        ]);
+    });
 });

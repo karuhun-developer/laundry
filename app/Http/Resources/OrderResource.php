@@ -45,6 +45,8 @@ class OrderResource extends JsonResource
             ],
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'pricing' => [
+                'confirmed' => $this->priced_at !== null,
+                'confirmed_at' => $this->priced_at?->toISOString(),
                 'items_subtotal_rupiah' => $this->items_subtotal_rupiah,
                 'delivery_fee_rupiah' => $this->delivery_fee_rupiah,
                 'total_rupiah' => $this->total_rupiah,
@@ -66,7 +68,7 @@ class OrderResource extends JsonResource
             'payment_summary' => $this->when($this->relationLoaded('payments'), [
                 'paid_rupiah' => $paidRupiah,
                 'outstanding_rupiah' => max(0, $this->total_rupiah - $paidRupiah),
-                'is_paid' => $paidRupiah >= $this->total_rupiah,
+                'is_paid' => $this->priced_at !== null && $paidRupiah >= $this->total_rupiah,
             ]),
             'created_at' => $this->created_at->toISOString(),
         ];

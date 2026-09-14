@@ -32,6 +32,8 @@ const previewValues: Readonly<Record<string, string>> = {
     '{order_number}': 'LDR-20260913-00000001',
     '{status}': 'Siap diambil',
     '{branch_name}': 'Cabang Kemang',
+    '{weight}': '3,5 kg',
+    '{total}': 'Rp48.000',
     '{tracking_url}': 'https://laundryhub.test/app?order=1',
 };
 

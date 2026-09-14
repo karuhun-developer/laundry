@@ -105,6 +105,7 @@ it('allows cancellation from every non-terminal status', function (OrderStatus $
         'note' => null,
     ]);
 })->with([
+    OrderStatus::PickupRequested,
     OrderStatus::Received,
     OrderStatus::Weighed,
     OrderStatus::Washing,
@@ -134,6 +135,7 @@ it('rejects skipped, backward, duplicate, and terminal transitions without side 
         'subject_id' => $order->id,
     ]);
 })->with([
+    'pickup pricing must use dedicated endpoint' => [OrderStatus::PickupRequested, OrderStatus::Weighed],
     'skipped' => [OrderStatus::Received, OrderStatus::Washing],
     'backward' => [OrderStatus::Washing, OrderStatus::Weighed],
     'duplicate' => [OrderStatus::Drying, OrderStatus::Drying],

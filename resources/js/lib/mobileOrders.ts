@@ -18,7 +18,18 @@ export const orderStatusSequence: MobileOrderStatus[] = [
     'completed',
 ];
 
+const pickupOrderStatusSequence: MobileOrderStatus[] = [
+    'pickup_requested',
+    'weighed',
+    'washing',
+    'drying',
+    'ironing',
+    'ready_for_pickup',
+    'completed',
+];
+
 export const orderStatusLabels: Record<MobileOrderStatus, string> = {
+    pickup_requested: 'Menunggu dijemput',
     received: 'Diterima',
     weighed: 'Ditimbang',
     washing: 'Dicuci',
@@ -51,6 +62,10 @@ export const formatOrderDate = (value: string): string =>
     }).format(new Date(value));
 
 export const nextOrderStatus = (status: MobileOrderStatus): MobileOrderStatus | null => {
+    if (status === 'pickup_requested') {
+        return null;
+    }
+
     const currentIndex = orderStatusSequence.indexOf(status);
 
     if (currentIndex < 0 || currentIndex === orderStatusSequence.length - 1) {
@@ -75,9 +90,12 @@ export const buildOrderTimeline = (order: MobileOrder): MobileTimelineStep[] => 
         }));
     }
 
-    const currentIndex = orderStatusSequence.indexOf(order.status);
+    const sequence = order.status_history.some((event) => event.status === 'pickup_requested')
+        ? pickupOrderStatusSequence
+        : orderStatusSequence;
+    const currentIndex = sequence.indexOf(order.status);
 
-    return orderStatusSequence.map((status, index) => ({
+    return sequence.map((status, index) => ({
         status,
         state: index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'future',
         event: order.status_history.find((event) => event.status === status) ?? null,
@@ -120,20 +138,23 @@ export const findCatalogOption = (
 type DraftOrderInput = {
     branch: MobileBranch;
     customer: { id: number; name: string };
-    quote: MobilePriceQuote;
+    option: MobilePriceOption;
+    quote: MobilePriceQuote | null;
     service: MobileService;
     deliveryFeeRupiah: number;
 };
 
 export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
-    const option = input.quote.price_option;
-    const subtotal = input.quote.total_rupiah;
+    const option = input.quote?.price_option ?? input.option;
+    const subtotal = input.quote?.total_rupiah ?? 0;
+    const pricingConfirmed = input.quote !== null;
+    const status: MobileOrderStatus = pricingConfirmed ? 'received' : 'pickup_requested';
     const timestamp = new Date().toISOString();
 
     return {
         id: -Date.now(),
         order_number: 'Menunggu nomor',
-        status: 'received',
+        status,
         organization_id: input.branch.organization.id,
         organization: input.branch.organization,
         branch: {
@@ -166,25 +187,27 @@ export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
                     },
                 },
                 calculation: {
-                    requested_weight_grams: input.quote.requested_weight_grams,
-                    chargeable_weight_grams: input.quote.chargeable_weight_grams,
-                    base_price_rupiah: input.quote.base_price_rupiah,
-                    excess_weight_grams: input.quote.excess_weight_grams,
-                    excess_price_rupiah: input.quote.excess_price_rupiah,
+                    requested_weight_grams: input.quote?.requested_weight_grams ?? 0,
+                    chargeable_weight_grams: input.quote?.chargeable_weight_grams ?? 0,
+                    base_price_rupiah: input.quote?.base_price_rupiah ?? 0,
+                    excess_weight_grams: input.quote?.excess_weight_grams ?? 0,
+                    excess_price_rupiah: input.quote?.excess_price_rupiah ?? 0,
                     subtotal_rupiah: subtotal,
                 },
             },
         ],
         pricing: {
+            confirmed: pricingConfirmed,
+            confirmed_at: pricingConfirmed ? timestamp : null,
             items_subtotal_rupiah: subtotal,
             delivery_fee_rupiah: input.deliveryFeeRupiah,
-            total_rupiah: subtotal + input.deliveryFeeRupiah,
+            total_rupiah: pricingConfirmed ? subtotal + input.deliveryFeeRupiah : 0,
         },
         delivery: null,
         status_history: [
             {
                 id: -Date.now(),
-                status: 'received',
+                status,
                 actor: { id: 0, name: 'Menunggu konfirmasi server' },
                 note: null,
                 occurred_at: timestamp,
@@ -194,7 +217,7 @@ export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
         payments: [],
         payment_summary: {
             paid_rupiah: 0,
-            outstanding_rupiah: subtotal + input.deliveryFeeRupiah,
+            outstanding_rupiah: pricingConfirmed ? subtotal + input.deliveryFeeRupiah : 0,
             is_paid: false,
         },
         created_at: timestamp,

@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property int $items_subtotal_rupiah
  * @property int $delivery_fee_rupiah
  * @property int $total_rupiah
+ * @property Carbon|null $priced_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Branch $branch
@@ -52,6 +53,7 @@ use Illuminate\Support\Carbon;
     'items_subtotal_rupiah',
     'delivery_fee_rupiah',
     'total_rupiah',
+    'priced_at',
 ])]
 
 class Order extends Model
@@ -114,6 +116,7 @@ class Order extends Model
             'items_subtotal_rupiah' => 'integer',
             'delivery_fee_rupiah' => 'integer',
             'total_rupiah' => 'integer',
+            'priced_at' => 'datetime',
         ];
     }
 }

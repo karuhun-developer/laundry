@@ -25,6 +25,11 @@ final readonly class CreatePayment
     ): Payment {
         return DB::transaction(function () use ($order, $branch, $actor, $data): Payment {
             $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedOrder->priced_at === null) {
+                throw PaymentCannotBeCreated::pricingNotConfirmed();
+            }
+
             $paidRupiah = (int) $lockedOrder->payments()
                 ->where('status', PaymentStatus::Paid)
                 ->sum('amount_rupiah');

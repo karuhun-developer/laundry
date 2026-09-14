@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum OrderStatus: string
 {
+    case PickupRequested = 'pickup_requested';
     case Received = 'received';
     case Weighed = 'weighed';
     case Washing = 'washing';
@@ -34,6 +35,7 @@ enum OrderStatus: string
     public function label(): string
     {
         return match ($this) {
+            self::PickupRequested => 'Menunggu dijemput',
             self::Received => 'Diterima',
             self::Weighed => 'Ditimbang',
             self::Washing => 'Dicuci',
@@ -48,6 +50,7 @@ enum OrderStatus: string
     private function nextStatus(): ?self
     {
         return match ($this) {
+            self::PickupRequested => null,
             self::Received => self::Weighed,
             self::Weighed => self::Washing,
             self::Washing => self::Drying,

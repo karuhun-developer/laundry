@@ -22,6 +22,8 @@ export const makeOrder = (id: number, status: MobileOrder['status'] = 'received'
     customer: { id: 9, name: 'Customer Demo' },
     items: [],
     pricing: {
+        confirmed: true,
+        confirmed_at: '2026-09-13T08:00:00.000Z',
         items_subtotal_rupiah: 30000,
         delivery_fee_rupiah: 0,
         total_rupiah: 30000,
@@ -65,6 +67,7 @@ export const makePayment = (
 export const makeApi = (overrides: Partial<MobileOrderApi> = {}): MobileOrderApi => ({
     createOrder: vi.fn(async () => makeOrder(1)),
     fetchOrder: vi.fn(async (order) => order),
+    confirmOrderPricing: vi.fn(async (order) => order),
     transitionOrder: vi.fn(async (order) => order),
     createPayment: vi.fn(async () => makePayment(1)),
     transitionPaymentStatus: vi.fn(async (_order, payment) => payment),

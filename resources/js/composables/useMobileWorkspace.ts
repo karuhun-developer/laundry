@@ -60,10 +60,7 @@ export const useMobileWorkspace = () => {
         }
 
         try {
-            const response = await catalogApi.loadCatalog(
-                branch.organization.slug,
-                branch.id,
-            );
+            const response = await catalogApi.loadCatalog(branch.organization.slug, branch.id);
 
             if (requestGeneration === catalogGeneration) {
                 services.value = response;
@@ -239,12 +236,14 @@ export const useMobileWorkspace = () => {
         whatsAppSuggestion: orderWorkspace.whatsAppSuggestion,
         whatsAppSuggestionError: orderWorkspace.whatsAppSuggestionError,
         createProcessing: orderWorkspace.createProcessing,
+        pricingProcessing: orderWorkspace.pricingProcessing,
         transitionProcessing: orderWorkspace.transitionProcessing,
         paymentProcessing: orderWorkspace.paymentProcessing,
         paymentActions,
         printer,
         findNearestBranches,
         quoteOrder,
+        confirmOrderPricing: orderWorkspace.confirmOrderPricing,
         createOrder: orderWorkspace.createOrder,
         load,
         selectBranch,

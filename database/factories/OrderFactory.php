@@ -40,6 +40,7 @@ class OrderFactory extends Factory
             'items_subtotal_rupiah' => 12000,
             'delivery_fee_rupiah' => 0,
             'total_rupiah' => 12000,
+            'priced_at' => now(),
         ];
     }
 }

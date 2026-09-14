@@ -124,6 +124,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 vi.mock('leaflet', () => {
     const map = {
+        fitBounds: vi.fn(),
         invalidateSize: vi.fn(),
         on: vi.fn((event: string, handler: (event: MapClickEvent) => void) => {
             if (event === 'click') {
@@ -133,26 +134,43 @@ vi.mock('leaflet', () => {
         remove: vi.fn(),
         setView: vi.fn(),
     };
+    const layerGroup = {
+        addTo: vi.fn(),
+        clearLayers: vi.fn(),
+    };
     const marker = {
         addTo: vi.fn(),
+        bindTooltip: vi.fn(),
         getLatLng: vi.fn(() => leafletHarness.markerPosition()),
         on: vi.fn((event: string, handler: () => void) => {
             if (event === 'dragend') {
                 leafletHarness.registerMarkerDrag(handler);
             }
         }),
-        setLatLng: vi.fn(([latitude, longitude]: [number, number]) => {
+        setLatLng: vi.fn((coordinates: [number, number] | MapClickEvent['latlng']) => {
+            const latitude = Array.isArray(coordinates) ? coordinates[0] : coordinates.lat;
+            const longitude = Array.isArray(coordinates) ? coordinates[1] : coordinates.lng;
+
             leafletHarness.setMarkerPosition(latitude, longitude);
         }),
         setOpacity: vi.fn((opacity: number) => {
             leafletHarness.setMarkerOpacity(opacity);
         }),
     };
+    const circle = {
+        addTo: vi.fn(),
+        on: vi.fn(),
+    };
 
+    circle.addTo.mockReturnValue(circle);
+    layerGroup.addTo.mockReturnValue(layerGroup);
     marker.addTo.mockReturnValue(marker);
 
     return {
+        circle: vi.fn(() => circle),
         divIcon: vi.fn(() => ({})),
+        latLngBounds: vi.fn(() => ({})),
+        layerGroup: vi.fn(() => layerGroup),
         map: vi.fn(() => map),
         marker: vi.fn((_coordinates: [number, number], options: { opacity: number }) => {
             leafletHarness.setMarkerOpacity(options.opacity);
@@ -277,7 +295,7 @@ describe('CMS dialogs', () => {
             branch_id: 7,
             scope_key: 'branch:7',
             order_status: 'ready_for_pickup',
-            body: 'Halo {customer_name}, pesanan {order_number} sudah {status}.',
+            body: 'Halo {customer_name}, pesanan {order_number} sudah {status}. Berat {weight}, total {total}.',
             is_active: true,
             organization: { id: 1, name: 'Kirei Wash Jakarta' },
             branch: { id: 7, name: 'Kemang' },
@@ -288,7 +306,13 @@ describe('CMS dialogs', () => {
                 branches: [{ id: 7, organization_id: 1, name: 'Kemang' }],
                 organizations: [{ id: 1, name: 'Kirei Wash Jakarta' }],
                 orderStatuses: [{ value: 'ready_for_pickup', label: 'Siap diambil' }],
-                supportedVariables: ['{customer_name}', '{order_number}', '{status}'],
+                supportedVariables: [
+                    '{customer_name}',
+                    '{order_number}',
+                    '{status}',
+                    '{weight}',
+                    '{total}',
+                ],
                 currentOrganizationId: 1,
                 isSuperadmin: false,
             },
@@ -303,7 +327,7 @@ describe('CMS dialogs', () => {
             messageTemplate.body,
         );
         expect(wrapper.text()).toContain(
-            'Halo Budi Santoso, pesanan LDR-20260913-00000001 sudah Siap diambil.',
+            'Halo Budi Santoso, pesanan LDR-20260913-00000001 sudah Siap diambil. Berat 3,5 kg, total Rp48.000.',
         );
     });
 

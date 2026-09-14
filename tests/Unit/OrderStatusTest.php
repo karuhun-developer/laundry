@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 
 it('allows only the configured forward step or cancellation from an active status', function (): void {
     $allowedTransitions = [
+        OrderStatus::PickupRequested->value => [OrderStatus::Cancelled],
         OrderStatus::Received->value => [OrderStatus::Weighed, OrderStatus::Cancelled],
         OrderStatus::Weighed->value => [OrderStatus::Washing, OrderStatus::Cancelled],
         OrderStatus::Washing->value => [OrderStatus::Drying, OrderStatus::Cancelled],
