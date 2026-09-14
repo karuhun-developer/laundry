@@ -23,6 +23,7 @@ const mobileWorkspace = vi.hoisted(() => ({
     orders: { value: [] },
     customers: { value: [] },
     nearestBranches: { value: [] },
+    deliveryCoordinates: { value: null },
     services: { value: [] },
     selectedBranch: { value: null },
     selectedBranchId: { value: null },
@@ -145,6 +146,12 @@ const suggestion: WhatsAppSuggestion = {
 };
 
 beforeEach(() => {
+    mobileWorkspace.context.value = {
+        role: 'branch_admin',
+        organization: { id: 1, name: 'LaundryHub Demo', slug: 'laundryhub-demo' },
+        organizations: [],
+        branches: [],
+    };
     mobileWorkspace.whatsAppSuggestion.value = null;
     mobileWorkspace.whatsAppSuggestionError.value = null;
 });
@@ -152,6 +159,24 @@ beforeEach(() => {
 afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
+});
+
+describe('customer mobile navigation', () => {
+    it('shows the exact Home shortcut and opens the branch list', async () => {
+        mobileWorkspace.context.value = {
+            role: 'customer',
+            organization: { id: 1, name: 'LaundryHub Demo', slug: 'laundryhub-demo' },
+            organizations: [],
+            branches: [],
+        };
+        const wrapper = mountMobileApp();
+
+        const shortcut = wrapper.get('[data-test="view-branches-shortcut"]');
+
+        expect(shortcut.text()).toBe('Lihat daftar cabang');
+        await shortcut.trigger('click');
+        expect(wrapper.find('branch-explorer-stub').exists()).toBe(true);
+    });
 });
 
 describe('branch-admin mobile tab rendering', () => {

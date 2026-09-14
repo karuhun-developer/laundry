@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, MessageCircle, RefreshCw, Shirt } from '@lucide/vue';
+import { AlertTriangle, Building2, MessageCircle, RefreshCw, Shirt } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CustomerCredentialDialog from '@/components/mobile/molecules/CustomerCredentialDialog.vue';
 import CustomerDetachDialog from '@/components/mobile/molecules/CustomerDetachDialog.vue';
@@ -14,7 +14,6 @@ import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.v
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
-import type { Coordinates } from '@/composables/useGeolocation';
 import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
 import { orderStatusLabels } from '@/lib/mobileOrders';
 import type {
@@ -33,7 +32,6 @@ import type {
 const page = usePage();
 const workspace = useMobileWorkspace();
 const activeTab = ref<MobileTab>('home');
-const deliveryCoordinates = ref<Coordinates | null>(null);
 const whatsAppDialogOpen = ref(false);
 const customerFormOpen = ref(false);
 const customerFormMode = ref<'create' | 'edit'>('create');
@@ -135,9 +133,7 @@ const onBranchSelected = (branchId: number): void => {
 };
 
 const updateDeliveryLocation = async (latitude: number, longitude: number): Promise<void> => {
-    if (await workspace.findNearestBranches(latitude, longitude)) {
-        deliveryCoordinates.value = { latitude, longitude };
-    }
+    await workspace.findNearestBranches(latitude, longitude);
 };
 
 const onLocationFound = (latitude: number, longitude: number): void => {
@@ -257,12 +253,21 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                             :branch="workspace.selectedBranch.value"
                             :services="workspace.services.value"
                             :customers="workspace.customers.value"
-                            :delivery-coordinates="deliveryCoordinates"
+                            :delivery-coordinates="workspace.deliveryCoordinates.value"
                             :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
                             :quote-order="workspace.quoteOrder"
                             :processing="workspace.createProcessing.value"
                             @submit="onCreateOrder"
                         />
+                        <button
+                            type="button"
+                            class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-brand-600 bg-surface px-5 text-sm font-semibold text-brand-700 shadow-low transition hover:bg-brand-100 motion-safe:active:scale-[0.98]"
+                            data-test="view-branches-shortcut"
+                            @click="activeTab = 'branches'"
+                        >
+                            <Building2 class="size-5" aria-hidden="true" />
+                            Lihat daftar cabang
+                        </button>
                         <OrderListPanel
                             v-if="recentOrders.length"
                             :orders="recentOrders"
@@ -291,7 +296,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         :branches="workspace.context.value.branches"
                         :nearest-branches="workspace.nearestBranches.value"
                         :selected-branch-id="workspace.selectedBranchId.value"
-                        :selected-coordinates="deliveryCoordinates"
+                        :selected-coordinates="workspace.deliveryCoordinates.value"
                         @locate="onLocationFound"
                         @select="onBranchSelected"
                     />
@@ -351,7 +356,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         :branch="workspace.selectedBranch.value"
                         :services="workspace.services.value"
                         :customers="workspace.customers.value"
-                        :delivery-coordinates="deliveryCoordinates"
+                        :delivery-coordinates="workspace.deliveryCoordinates.value"
                         :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
                         :quote-order="workspace.quoteOrder"
                         :processing="workspace.createProcessing.value"

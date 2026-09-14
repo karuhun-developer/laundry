@@ -1,4 +1,5 @@
 import { computed, onMounted, readonly, ref } from 'vue';
+import { type Coordinates, useGeolocation } from '@/composables/useGeolocation';
 import { useMobileCatalogApi } from '@/composables/useMobileCatalogApi';
 import { useMobileCustomerWorkspace } from '@/composables/useMobileCustomerWorkspace';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
@@ -22,15 +23,18 @@ export const useMobileWorkspace = () => {
     const services = ref<MobileService[]>([]);
     const customers = ref<MobileCustomer[]>([]);
     const nearestBranches = ref<NearestMobileBranch[]>([]);
+    const deliveryCoordinates = ref<Coordinates | null>(null);
     const selectedBranchId = ref<number | null>(null);
     const loading = ref(true);
     const requestError = ref<string | null>(null);
     const catalogApi = useMobileCatalogApi();
+    const geolocation = useGeolocation();
     const printer = useMobilePrinter();
     const customerWorkspace = useMobileCustomerWorkspace(customers);
     let loadGeneration = 0;
     let catalogGeneration = 0;
     let nearestGeneration = 0;
+    let branchSelectionGeneration = 0;
 
     const selectedBranch = computed<MobileBranch | null>(
         () =>
@@ -101,8 +105,119 @@ export const useMobileWorkspace = () => {
         await loadCatalog();
     };
 
+    type NearestRequestContext = {
+        branchSelectionGeneration: number;
+        loadGeneration: number;
+        nearestGeneration: number;
+    };
+
+    const findNearestBranches = async (
+        latitude: number,
+        longitude: number,
+        requestContext?: NearestRequestContext,
+    ): Promise<boolean> => {
+        const currentContext = context.value;
+        const currentRequest = requestContext ?? {
+            branchSelectionGeneration,
+            loadGeneration,
+            nearestGeneration: ++nearestGeneration,
+        };
+
+        if (!currentContext) {
+            return false;
+        }
+
+        requestError.value = null;
+
+        try {
+            const response = await catalogApi.findNearest(latitude, longitude);
+
+            if (
+                currentRequest.nearestGeneration !== nearestGeneration ||
+                currentRequest.loadGeneration !== loadGeneration ||
+                currentContext !== context.value
+            ) {
+                return false;
+            }
+
+            const branchIds = new Set(currentContext.branches.map((branch) => branch.id));
+            const rankedBranches = [...response]
+                .filter((branch) => branchIds.has(branch.id))
+                .sort(
+                    (left, right) => left.delivery.distance_meters - right.delivery.distance_meters,
+                );
+            nearestBranches.value = rankedBranches;
+            deliveryCoordinates.value = { latitude, longitude };
+
+            const nearestBranch = rankedBranches[0];
+
+            if (
+                nearestBranch &&
+                currentRequest.branchSelectionGeneration === branchSelectionGeneration
+            ) {
+                selectedBranchId.value = nearestBranch.id;
+                services.value = [];
+
+                try {
+                    await loadCatalog();
+                } catch (error: unknown) {
+                    if (
+                        currentRequest.nearestGeneration === nearestGeneration &&
+                        currentRequest.loadGeneration === loadGeneration
+                    ) {
+                        requestError.value = errorMessage(
+                            error,
+                            'Katalog cabang tidak dapat dimuat.',
+                        );
+                    }
+                }
+            }
+
+            return true;
+        } catch (error: unknown) {
+            if (
+                currentRequest.nearestGeneration === nearestGeneration &&
+                currentRequest.loadGeneration === loadGeneration
+            ) {
+                nearestBranches.value = [];
+                requestError.value = errorMessage(error, 'Cabang terdekat tidak dapat dihitung.');
+            }
+
+            return false;
+        }
+    };
+
+    const locateNearestBranchAutomatically = async (
+        requestLoadGeneration: number,
+    ): Promise<void> => {
+        const currentContext = context.value;
+
+        if (currentContext?.role !== 'customer') {
+            return;
+        }
+
+        const requestContext: NearestRequestContext = {
+            branchSelectionGeneration,
+            loadGeneration: requestLoadGeneration,
+            nearestGeneration: ++nearestGeneration,
+        };
+        const coordinates = await geolocation.locate();
+
+        if (
+            !coordinates ||
+            requestContext.nearestGeneration !== nearestGeneration ||
+            requestContext.loadGeneration !== loadGeneration ||
+            currentContext !== context.value
+        ) {
+            return;
+        }
+
+        await findNearestBranches(coordinates.latitude, coordinates.longitude, requestContext);
+    };
+
     const load = async (organizationSlug?: string): Promise<void> => {
         const requestGeneration = ++loadGeneration;
+        let shouldLocateAutomatically = false;
         loading.value = true;
         requestError.value = null;
 
@@ -122,9 +237,12 @@ export const useMobileWorkspace = () => {
             services.value = [];
             customerWorkspace.setCustomers([]);
             nearestBranches.value = [];
+            deliveryCoordinates.value = null;
             orderWorkspace.setOrders([]);
             nearestGeneration += 1;
+            branchSelectionGeneration += 1;
             await loadOrganizationData(requestGeneration);
+            shouldLocateAutomatically = response.role === 'customer';
         } catch (error: unknown) {
             if (requestGeneration === loadGeneration) {
                 requestError.value = errorMessage(
@@ -135,6 +253,10 @@ export const useMobileWorkspace = () => {
         } finally {
             if (requestGeneration === loadGeneration) {
                 loading.value = false;
+
+                if (shouldLocateAutomatically) {
+                    void locateNearestBranchAutomatically(requestGeneration);
+                }
             }
         }
     };
@@ -145,6 +267,7 @@ export const useMobileWorkspace = () => {
             return;
         }
 
+        branchSelectionGeneration += 1;
         selectedBranchId.value = branchId;
         services.value = [];
         requestError.value = null;
@@ -153,35 +276,6 @@ export const useMobileWorkspace = () => {
             await loadCatalog();
         } catch (error: unknown) {
             requestError.value = errorMessage(error, 'Katalog cabang tidak dapat dimuat.');
-        }
-    };
-
-    const findNearestBranches = async (latitude: number, longitude: number): Promise<boolean> => {
-        const currentContext = context.value;
-        const requestGeneration = ++nearestGeneration;
-
-        if (!currentContext) {
-            return false;
-        }
-
-        requestError.value = null;
-
-        try {
-            const response = await catalogApi.findNearest(latitude, longitude);
-
-            if (requestGeneration !== nearestGeneration) {
-                return false;
-            }
-
-            nearestBranches.value = response;
-            return true;
-        } catch (error: unknown) {
-            if (requestGeneration === nearestGeneration) {
-                nearestBranches.value = [];
-                requestError.value = errorMessage(error, 'Cabang terdekat tidak dapat dihitung.');
-            }
-
-            return false;
         }
     };
 
@@ -228,6 +322,7 @@ export const useMobileWorkspace = () => {
         context: readonly(context),
         services: readonly(services),
         customers: readonly(customers),
+        deliveryCoordinates: readonly(deliveryCoordinates),
         selectedCustomerId: customerWorkspace.selectedCustomerId,
         nearestBranches: readonly(nearestBranches),
         selectedBranch,
