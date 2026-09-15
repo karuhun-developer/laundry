@@ -4,7 +4,7 @@ Status: Delivered
 
 ## User outcome
 
-After the customer workspace is ready, LaundryHub attempts to locate the customer, rank eligible branches nearest first, select the nearest branch, and load its catalog. Location failure never blocks manual pickup-point or branch selection, and branch-admin sessions do not trigger automatic geolocation.
+After the customer workspace is ready, LaundryHub uses the selected/default saved pickup address to rank eligible branches nearest first, select the nearest branch, and load its catalog. Customers without a saved address are offered their current location as the initial point. Location failure never blocks manual pickup-point or branch selection, and branch-admin sessions do not trigger automatic geolocation.
 
 ## Platform contract
 
@@ -16,12 +16,14 @@ After the customer workspace is ready, LaundryHub attempts to locate the custome
 
 ## Automatic and manual flow
 
-- Automatic discovery starts only for the customer role and only after workspace, context, organization, and catalog loading have completed. Branch admins never receive the automatic permission request.
+- Saved addresses persist label, recipient, normalized WhatsApp phone, address, optional notes, coordinates, and default state. The selected address is the authoritative pickup point and can be changed from the order composer shortcut.
+- Discovery starts only for the customer role and only after workspace and context loading have completed. A saved selected/default address is used without requesting device location; otherwise the current location seeds the address flow. Branch admins never receive the automatic permission request.
 - A valid position updates the shared pickup coordinates and requests ranked branches. The result is filtered to branches in the current workspace context and sorted by `distance_meters`.
-- The nearest ranked branch is selected automatically and its catalog is reloaded. The pickup coordinates remain in workspace state and are submitted with the order.
+- The nearest ranked branch is selected automatically and its catalog is reloaded. The selected address identifier is submitted with the order, and the server writes immutable recipient, contact, address, notes, and coordinate snapshots.
 - Workspace, nearest-branch, branch-selection, and catalog generations reject stale responses. A manual branch selection advances the selection generation, so a late automatic nearest result cannot overwrite the customer's choice.
 - If automation fails, the customer can still use map click, draggable pin, latitude/longitude fields, `Gunakan lokasi saya`, `Hitung dari titik ini`, branch cards, and the branch dropdown.
 - The Home shortcut `Lihat daftar cabang` opens the Branches tab.
+- A customer with an active non-terminal pickup request cannot create a duplicate request. The current order disables the action in the client and the server rejects concurrent or stale duplicate submissions.
 
 ## Ordering and delivery fee
 
@@ -32,12 +34,13 @@ After the customer workspace is ready, LaundryHub attempts to locate the custome
 ## API and client boundaries
 
 - `GET /api/v1/mobile/branches/nearest` accepts customer latitude and longitude and returns eligible active branches with canonical distance, coverage, and fee values.
+- Customer address list, create, update, default, and delete endpoints are authenticated customer-only routes generated through Wayfinder. Address ownership policies prevent access to another customer's records.
 - Frontend route identities come from generated Wayfinder functions. Server-side tenant and role authorization, validation, Haversine calculation, sorting, and fee calculation remain authoritative.
 
 ## Pengujian dan verifikasi
 
 - Pest pada `tests/Feature/Api/V1/NearestBranchTest.php` memverifikasi autentikasi pelanggan, cabang aktif lintas organisasi, validasi koordinat, urutan terdekat, dan quote ongkir. `tests/Unit/DeliveryRouteCalculatorTest.php` mengunci jarak Haversine, radius gratis, dan pembulatan kilometer berlebih; `tests/Unit/AndroidLocationPermissionsTest.php` memeriksa deklarasi coarse/fine location dan GPS opsional pada manifest.
-- Vitest pada `resources/js/composables/useGeolocation.test.ts` mencakup seam native Capacitor, fallback browser, penolakan izin, GPS/timeout yang tidak tersedia, dan koordinat tidak valid. `resources/js/composables/useMobileWorkspace.test.ts` mencakup auto-selection khusus pelanggan setelah readiness, pengecualian branch admin, fallback manual, perlindungan pilihan manual dan respons workspace usang, pengurutan, reload katalog, serta label/fee. `resources/js/components/mobile/MobileBranchDiscovery.test.ts` memverifikasi kontrol titik manual dan presentasi cakupan, sedangkan `resources/js/pages/mobile/App.test.ts` mengunci shortcut Home `Lihat daftar cabang`.
+- Vitest pada `resources/js/composables/useGeolocation.test.ts` mencakup seam native Capacitor, fallback browser, penolakan izin, GPS/timeout yang tidak tersedia, dan koordinat tidak valid. `resources/js/composables/useMobileWorkspace.test.ts` mencakup alamat default tanpa permission prompt, auto-selection khusus pelanggan, pengecualian branch admin, fallback manual, perlindungan pilihan manual dan respons workspace usang, pengurutan, reload katalog, serta label/fee. `resources/js/components/mobile/CustomerAddressDialog.test.ts` mencakup create/edit/default/select/delete dan verifikasi internal, sedangkan `resources/js/pages/mobile/App.test.ts` mengunci shortcut Home dan proteksi alur pickup aktif.
 - Perintah terfokus: `php artisan test --compact tests/Feature/Api/V1/NearestBranchTest.php tests/Unit/DeliveryRouteCalculatorTest.php tests/Unit/AndroidLocationPermissionsTest.php` dan `bun run test -- resources/js/composables/useGeolocation.test.ts resources/js/composables/useMobileWorkspace.test.ts resources/js/components/mobile/MobileBranchDiscovery.test.ts resources/js/pages/mobile/App.test.ts`.
 - Kompilasi Android tidak diverifikasi secara lokal. APK/AAB bertanda tangan dibangun dan diverifikasi hanya oleh `.github/workflows/android-release.yml` ketika push tag versi semantik berpola `v[0-9]*.[0-9]*.[0-9]*` memicu CI/CD.
 

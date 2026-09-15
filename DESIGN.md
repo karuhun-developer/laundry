@@ -94,10 +94,10 @@ Components respond to their container where possible; viewport breakpoints own o
 
 - `/login` presents separate customer and staff modes inside the same responsive authentication shell. Customer mode accepts a WhatsApp phone number and six-digit PIN; staff mode accepts email and password and may expose staff-only passkey authentication.
 - Public registration collects customer name, WhatsApp phone number, PIN, and PIN confirmation. Registration creates a global customer identity without an organization selector or automatic organization membership.
-- Customer and branch-admin sessions enter `/app`. Owner and superadmin sessions enter `/cms`. `/` and `/dashboard` resolve through role-aware redirects, and logout returns to `/login`.
+- Guest browsers see the public LaundryHub landing page at `/`. Authenticated customer and branch-admin sessions redirect to `/app`, owner and superadmin sessions redirect to `/cms`, `/dashboard` remains a role-aware compatibility redirect, and logout returns to `/login`. Native Android entry bypasses the landing page and opens `/app`.
 - A temporary customer PIN is displayed only in the authorized branch-admin result flow, expires after 24 hours, and marks the customer account for a PIN change. PIN changes and administrative resets invalidate stale customer sessions through the account session version.
-- The `/login` title, description, canonical URL, robots directives, Open Graph data, Twitter data, and WebApplication JSON-LD are emitted by the Blade application shell. The login screen remains an Inertia page; the metadata contract does not depend on SSR.
-- Inertia SSR is disabled in both Laravel and Vite configuration. Non-login application pages use a noindex/nofollow head contract.
+- The public landing title, description, canonical URL, robots directives, Open Graph data, Twitter data, favicon, and Organization/WebSite JSON-LD are emitted by the Blade application shell. The landing remains an Inertia page and its metadata contract does not depend on SSR.
+- Inertia SSR is disabled in both Laravel and Vite configuration. Login, registration, `/app`, `/cms`, and other non-landing application pages use a noindex/nofollow head contract without the landing canonical or JSON-LD.
 
 ### Customer mobile navigation
 
@@ -108,9 +108,9 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Location and branch discovery
 
-- Customers select their pickup point on an OpenStreetMap surface before calculating nearby branches.
+- Customers manage saved pickup addresses with recipient name, normalized WhatsApp phone, address text, optional notes, coordinates, and one default marker. They select a saved address before requesting pickup and may adjust its point on an OpenStreetMap surface.
 - Customers never select an organization. The selected branch and each existing order carry the internal organization identity needed for tenant-safe API routing.
-- After customer workspace, context, organization, and catalog loading settle, the application automatically attempts current-location discovery. Branch-admin workspaces never start this automatic flow.
+- After customer workspace and context loading settle, an existing selected/default saved address immediately drives nearest-branch calculation. The application requests the current device location only when the customer has no saved address. Branch-admin workspaces never start this automatic flow.
 - Native Android uses Capacitor permission checks and location retrieval; browsers use `navigator.geolocation`. Precise or coarse native permission is sufficient. Location requests use high accuracy, a 10-second timeout, and a 60-second maximum age.
 - `Gunakan lokasi saya` remains an explicit retry path in the location picker and exposes a recoverable inline error when the request fails. An automatic denial, disabled GPS, timeout, unavailable API, or invalid coordinate is non-blocking and falls back to manual controls.
 - Clicking the map or dragging its pin adjusts the pickup point before the customer chooses `Hitung dari titik ini`; labeled latitude and longitude fields remain the keyboard-accessible fallback.
@@ -172,8 +172,8 @@ Components respond to their container where possible; viewport breakpoints own o
 - Creating a new phone displays a one-time temporary PIN and expiry after the canonical response. Linking an existing identity returns no credential. The credential dialog supports copying and states that the PIN will not be shown again.
 - Edit controls are available only for customers with exactly one organization membership and change only name and normalized WhatsApp phone. Shared customer profiles are hidden or denied as not found to prevent cross-tenant profile edits.
 - Reset PIN is limited to the same single-membership boundary, uses a confirmation dialog, returns a new one-time 24-hour temporary PIN, and invalidates existing customer sessions.
-- Detach uses typed-name confirmation and removes only the current organization membership. It never deletes the global customer account and is denied when the customer has order history in that organization.
-- Create and link show a pending directory record while the mutation is active. Success reconciles it by temporary optimistic identifier, while validation, authorization, or network failure removes that pending record. Operation generations protect update, reset, and detach responses, not create or link.
+- Customer identities remain available as shared records to branch staff in their organization; the mobile directory exposes no detach or delete operation.
+- Create and link show a pending directory record while the mutation is active. Success reconciles it by temporary optimistic identifier, while validation, authorization, or network failure removes that pending record. Operation generations protect update and reset responses, not create or link.
 - Frontend requests use Wayfinder-generated route functions with Inertia's HTTP client. Policies, Form Requests, Actions, API Resources, tenant scoping, and activity logging remain authoritative.
 
 ### Reporting dashboard
@@ -197,12 +197,11 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Branch admin mobile navigation
 
-- Queue owns the assigned order list, status/pricing work, and the latest complete WhatsApp destination/message preview shortcut.
-- New order owns the counter-order composer.
-- Customers owns the current-organization customer directory and its create, edit, reset, credential, and detach dialogs.
+- Queue owns the assigned order list, debounced search, status/pricing work, the focused counter-order dialog, and the latest complete WhatsApp destination/message preview shortcut.
+- Customers owns the current-organization customer directory and its create, edit, reset, and credential dialogs.
 - More owns the signed-in identity, WhatsApp phone, organization, printer/device settings, and logout.
 
-Content does not leak between these tabs: Queue and New order do not render account controls, Customers does not render order or device controls, and More does not render queue/customer-management work. The role switch changes available navigation; it never hides authorization failures behind client-only logic.
+Content does not leak between these tabs: Queue does not render account controls, Customers does not render order or device controls, and More does not render queue/customer-management work. Successful and failed mobile mutations produce visible toast feedback while inline validation remains near the affected control. The role switch changes available navigation; it never hides authorization failures behind client-only logic.
 
 ## 4. Content and Voice
 
@@ -303,7 +302,7 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Conflict responses reload the order before another payment mutation; refresh failures keep the previous canonical order and expose both failure causes.
 - Digital receipts are loaded from the server immediately before viewing or printing so catalog and payment history are not reconstructed from stale client state.
 - Printer profiles are stored only on the current device and include connection type, device identity, display name, and 58 mm or 80 mm paper width.
-- Bluetooth and USB discovery, test print, and receipt print expose visible progress and recoverable inline errors. Browser surfaces explain that native printer transport requires the Android app.
+- Bluetooth and USB discovery, test print, and receipt print expose visible progress and recoverable inline errors. A completed scan with no devices uses a neutral `printer tidak ditemukan` state; native bridge or permission failures use an error state. Browser surfaces explain that native printer transport requires the Android app.
 
 ### WhatsApp template and suggestion surface
 

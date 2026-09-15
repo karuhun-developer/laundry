@@ -4,7 +4,7 @@ Status: Active
 
 Owner: Product and Engineering
 
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 ## Product summary
 
@@ -27,7 +27,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ### Customer
 
 - Registers and signs in from the mobile surface with a normalized WhatsApp phone number and six-digit PIN.
-- Sets a pickup point, chooses from globally discovered branches ordered nearest first, then selects one service option.
+- Saves one or more pickup addresses, selects or adjusts the pickup point, chooses from globally discovered branches ordered nearest first, then selects one service option.
 - Does not select or need to understand an organization; tenant routing is derived internally from the selected branch and existing order.
 - Submits a pickup request without entering weight or accepting an estimated laundry total.
 - Views the confirmed weight, total, payment options, and status history after branch staff price the order.
@@ -36,7 +36,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 ### Branch admin
 
 - Works only within assigned branches.
-- Manages the current organization's customer directory by creating or linking global customer identities, updating eligible single-organization profiles, resetting temporary PINs, and detaching memberships when order history permits.
+- Manages the current organization's shared customer directory by creating or linking global customer identities, updating eligible single-organization profiles, and resetting temporary PINs. Customer identities are never detached from the mobile directory.
 - Creates customer orders and records measured weight.
 - Advances an order through the configured laundry workflow.
 - Sends the rendered price message through an explicit WhatsApp action and presents dynamic QRIS after pricing is confirmed.
@@ -76,8 +76,9 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Phone inputs in `08...`, `+62...`, and `62...` forms normalize to the stored Indonesian `62...` form before uniqueness and credential checks.
 - A branch admin may issue a one-time temporary PIN when creating a new customer or resetting an eligible customer's PIN. The PIN expires after 24 hours and the account is marked to change it.
 - Changing or resetting a customer PIN advances the account's session version so stale customer web and API sessions are invalidated.
-- Customers and branch admins enter `/app`; owners and superadmins enter `/cms`. `/` and `/dashboard` only redirect according to the authenticated role.
-- The branch-admin mobile shell keeps Queue, New order, Customers, and More as isolated work areas. WhatsApp order actions stay with Queue, while identity, organization, printer/device settings, and logout stay in More.
+- Guest browsers may view the public landing page at `/`. Authenticated customers and branch admins are redirected to `/app`, while owners and superadmins are redirected to `/cms`; `/dashboard` remains a compatibility redirect. Native Android entry bypasses the landing page and opens `/app`.
+- Landing SEO metadata is emitted entirely by the Blade shell and Inertia SSR remains disabled. All authenticated and authentication surfaces are `noindex,nofollow`.
+- The branch-admin mobile shell keeps Queue, Customers, and More as isolated work areas. Queue owns search, order status work, WhatsApp order actions, and the new-order dialog; identity, organization, printer/device settings, and logout stay in More.
 
 ## Pricing rules
 
@@ -93,7 +94,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 - Each branch may store latitude and longitude coordinates. Branches without coordinates are excluded from automatic routing.
 - Customers receive nearest-branch recommendations across active branches in every active organization. Branches without coordinates are listed after ranked branches and are excluded from distance calculation.
-- After customer workspace, organization context, and catalog loading are ready, the mobile surface automatically attempts location discovery. Branch-admin sessions never trigger this automatic request.
+- After customer workspace, organization context, and catalog loading are ready, the mobile surface first uses the customer's selected or default saved address. Only customers without a saved pickup point trigger automatic current-location discovery. Branch-admin sessions never trigger this automatic request.
 - Native Android uses Capacitor geolocation while browsers use the platform geolocation API. Permission denial, disabled GPS, timeout, or unavailable coordinates remain non-blocking because map placement, coordinate entry, branch cards, and the branch selector remain available.
 - The nearest ranked branch is selected automatically and its catalog is loaded. Request generations prevent late workspace, location, nearest-branch, or catalog responses from replacing newer state, and a manual branch selection cannot be overwritten by a late automatic result.
 - Distance uses the Haversine formula in application code for identical SQLite and MySQL behavior. A spatial database optimization may be introduced later without changing the API contract.
@@ -101,7 +102,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - Distance beyond the free radius is charged per started kilometer: `ceil(excess meters / 1,000) × configured rupiah per km`.
 - The branch dropdown remains available, ordered nearest to farthest after a pickup point is calculated, and labels each ranked branch as free or outside the free radius with an estimated surcharge.
 - The pickup map shows outlet markers and configured free-radius overlays; selecting a marker selects the matching branch.
-- The final order stores the selected branch, customer coordinates, calculated distance, free radius, per-kilometer tariff, and delivery-fee snapshot.
+- The final order stores the selected branch, customer coordinates, recipient/contact/address snapshot, calculated distance, free radius, per-kilometer tariff, and delivery-fee snapshot.
 
 ## Order lifecycle
 
@@ -118,6 +119,8 @@ The default customer pickup workflow is:
 Cancelled is a terminal exception state. Every transition is authorized, recorded, and shown in the customer timeline.
 
 Customer orders start at `pickup_requested` with one selected service, pickup/delivery snapshots, zero financial totals, and no confirmed weight. Branch-admin counter orders retain immediate server pricing and start at `received`. Every order receives a server-generated `LDR-YYYYMMDD-########` number and an initial status event in the same transaction. Clients cannot submit authoritative totals, statuses, or snapshot values.
+
+A customer cannot create another pickup request while an existing non-terminal pickup request is still active. The client disables the action using canonical order state, and the server enforces the same invariant transactionally.
 
 After pickup, assigned branch staff submit the actual weight through the pricing-confirmation endpoint. The server locks the order, recalculates the selected price option, replaces the provisional zero-value item snapshot, stores `priced_at`, advances the order to `weighed`, and appends timeline and audit records atomically. Payment and QRIS creation remain unavailable until this confirmation succeeds.
 
@@ -162,8 +165,9 @@ Deliverables:
 - Deterministic demo credentials and role shortcuts on the local login screen.
 - Responsive split authentication shell with product context on wide screens and a focused single-column form on compact screens.
 - Role-separated customer phone/PIN and staff email/password entry with role-aware destinations and customer session invalidation.
-- Branch-scoped customer management backed by global customer identities and organization memberships.
-- Isolated Queue, New order, Customers, and More tabs for branch-admin work.
+- Branch-scoped customer management backed by shared global customer identities and organization memberships, without customer detach.
+- Customer pickup-address management with selected/default address routing and immutable order snapshots.
+- Isolated Queue, Customers, and More tabs for branch-admin work, with new-order creation in a Queue dialog and tenant-scoped Queue search.
 
 Exit criteria:
 

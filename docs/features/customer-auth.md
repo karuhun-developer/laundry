@@ -19,7 +19,7 @@ Customers register and sign in with their WhatsApp phone number and a six-digit 
 - `POST /login/customer` authenticates a normalized phone number and six-digit PIN. Invalid customer credentials use a generic response.
 - Fortify `POST /login` authenticates staff by email and password and rejects customer accounts. Passkey login is staff-only.
 - `GET /register` and `POST /register` provide public customer registration without an organization selector.
-- Customers and branch admins resolve to `/app`; owners and superadmins resolve to `/cms`. `/` and `/dashboard` are compatibility redirects that apply the same role decision. Logout returns to `/login`.
+- Guest browsers see the public landing page at `/`. Authenticated customers and branch admins resolve to `/app`; owners and superadmins resolve to `/cms`. `/dashboard` is the compatibility role redirect, native Android entry opens `/app`, and logout returns to `/login`.
 
 Frontend navigation and submissions use generated Wayfinder route functions rather than manually assembled URLs.
 
@@ -35,7 +35,7 @@ Frontend navigation and submissions use generated Wayfinder route functions rath
 - Customer login stores the account session version. Web and stateful API middleware log out a customer when the stored version is absent or no longer matches the account.
 - Customer login is limited to five failed attempts with a 60-second decay, keyed by normalized phone number and IP address. Staff Fortify login is limited to five attempts per minute, and passkey login to ten attempts per minute.
 - PINs are hashed and are never stored or logged in plain text. Customer credential errors do not reveal whether a phone number exists.
-- The login page is the only indexable application route. Blade emits its canonical, robots, Open Graph, Twitter, and WebApplication JSON-LD metadata; other application routes are noindex/nofollow and Inertia SSR remains disabled.
+- The public landing page is the only indexable route. Blade emits its title, description, canonical, robots, Open Graph, Twitter, favicon, and Organization/WebSite JSON-LD metadata; authentication and authenticated application routes are noindex/nofollow and Inertia SSR remains disabled.
 
 ## API and implementation boundaries
 

@@ -4,6 +4,18 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-09-15
+
+- Added a public LaundryHub landing page with a fixed light background and Blade-owned title, canonical, robots, Open Graph, Twitter, favicon, and JSON-LD metadata while keeping Inertia SSR disabled and redirecting authenticated users by role.
+- Added a customer pickup-address book with current-location defaults, map adjustment, default-address selection, persisted recipient/contact details, and immutable pickup-address snapshots on orders.
+- Added server-side protection against duplicate active customer pickup requests and disabled the customer request action while the latest pickup is still awaiting branch handling.
+- Changed the branch-admin Queue into the single operational order surface with debounced tenant-scoped search and a focused new-order dialog.
+- Changed customer records to remain shared global identities without a detach action, while organization membership continues to protect profile and PIN mutations across tenants.
+- Added visible success and failure toasts for mobile customer, order, payment, PIN, address, and printer mutations.
+- Improved Bluetooth and USB printer discovery so an empty result is distinguished from a native transport failure.
+- Fixed customer pickup serialization and address validation so a selected persisted pickup point creates one request without a misleading follow-up error.
+- Added regression coverage for customer address management, saved-address nearest-branch selection, queue search and order dialog behavior, public landing SEO, dynamic QRIS, message-template scope and seeding, customer authentication, and shared-customer protections.
+
 ## [1.0.8] - 2026-09-15
 
 - Added customer self-service dynamic QRIS payments for the exact outstanding order balance, including scannable SVG display and download.
