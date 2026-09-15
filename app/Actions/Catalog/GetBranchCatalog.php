@@ -25,12 +25,17 @@ final class GetBranchCatalog
             ->where('organization_id', $organization->id)
             ->where('is_active', true)
             ->whereHas('priceOptions', fn (Builder $query): Builder => $query
-                ->where('branch_id', $branch->id)
+                ->where(fn (Builder $scope): Builder => $scope
+                    ->whereNull('branch_id')
+                    ->orWhere('branch_id', $branch->id))
                 ->where('is_active', true))
             ->with(['priceOptions' => function (Relation $relation) use ($branch): void {
                 $relation->getQuery()
-                    ->where('branch_id', $branch->id)
+                    ->where(fn (Builder $scope): Builder => $scope
+                        ->whereNull('branch_id')
+                        ->orWhere('branch_id', $branch->id))
                     ->where('is_active', true)
+                    ->orderBy('branch_id')
                     ->orderBy('name')
                     ->orderBy('id');
             }])

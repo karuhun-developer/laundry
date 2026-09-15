@@ -27,7 +27,7 @@ it('lets a customer request pickup for one service without entering weight or se
         'delivery_fee_per_km_rupiah' => 3000,
     ]);
     $service = Service::factory()->for($organization)->create();
-    $priceOption = PriceOption::factory()->for($service)->for($branch)->create([
+    $priceOption = PriceOption::factory()->for($service)->forAllBranches()->create([
         'price_per_kilogram_rupiah' => 12000,
         'minimum_chargeable_grams' => 3000,
     ]);

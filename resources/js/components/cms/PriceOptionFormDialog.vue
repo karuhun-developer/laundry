@@ -33,8 +33,7 @@ const availableBranches = computed(() =>
             (branch.is_active || branch.id === props.priceOption?.branch_id),
     ),
 );
-const defaultBranchId = (): string =>
-    (props.priceOption?.branch_id ?? availableBranches.value[0]?.id)?.toString() ?? '';
+const defaultBranchId = (): number | null => props.priceOption?.branch_id ?? null;
 const form = useForm({
     branch_id: defaultBranchId(),
     type: (props.priceOption?.type ?? 'per_kilogram') as PriceTypeValue,
@@ -94,9 +93,9 @@ const clearUnusedPricingFields = (): void => {
 };
 
 const submit = (): void => {
-    const branch = availableBranches.value.find((item) => item.id.toString() === form.branch_id);
+    const branch = availableBranches.value.find((item) => item.id === form.branch_id) ?? null;
 
-    if (!branch) {
+    if (form.branch_id !== null && !branch) {
         form.setError('branch_id', 'Pilih cabang yang tersedia.');
         return;
     }
@@ -104,7 +103,7 @@ const submit = (): void => {
     const pending: PriceOptionSummary = {
         id: props.priceOption?.id ?? -Date.now(),
         service_id: props.service.id,
-        branch_id: branch.id,
+        branch_id: form.branch_id,
         type: form.type,
         name: form.name,
         package_weight_grams: optionalNumber(form.package_weight_grams),
@@ -159,10 +158,9 @@ const submit = (): void => {
         v-model:open="open"
         form-test="price-option-form"
         :title="isEditing ? 'Edit paket' : 'Paket baru'"
-        :description="`Atur tarif ${service.name} untuk cabang tertentu.`"
+        :description="`Atur tarif ${service.name} untuk semua cabang atau satu cabang tertentu.`"
         :processing="form.processing"
         :submit-label="isEditing ? 'Simpan perubahan' : 'Tambah paket'"
-        :submit-disabled="availableBranches.length === 0"
         content-class="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl"
         @submit="submit"
     >
@@ -172,7 +170,7 @@ const submit = (): void => {
                 :variant="isEditing ? 'ghost' : 'secondary'"
                 :size="isEditing ? 'sm' : 'default'"
                 :class="isEditing ? 'min-h-11 min-w-11' : undefined"
-                :disabled="service.pending || priceOption?.pending || availableBranches.length === 0"
+                :disabled="service.pending || priceOption?.pending"
                 :aria-label="isEditing ? `Edit ${priceOption?.name}` : undefined"
                 data-test="open-price-option-dialog"
             >
@@ -191,22 +189,21 @@ const submit = (): void => {
                 id="price-option-branch"
                 v-model="form.branch_id"
                 class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-11 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-3 disabled:opacity-50"
-                :disabled="availableBranches.length === 0"
-                required
                 :aria-invalid="Boolean(form.errors.branch_id)"
                 aria-describedby="price-option-branch-error"
             >
-                <option value="" disabled>
-                    {{ availableBranches.length === 0 ? 'Tambahkan cabang dahulu' : 'Pilih cabang' }}
-                </option>
+                <option :value="null">Semua cabang</option>
                 <option
                     v-for="branch in availableBranches"
                     :key="branch.id"
-                    :value="branch.id.toString()"
+                    :value="branch.id"
                 >
                     {{ branch.name }} · {{ branch.code }}
                 </option>
             </select>
+            <p class="text-ink-500 text-xs">
+                Paket semua cabang otomatis tersedia di cabang baru organisasi ini.
+            </p>
             <InputError id="price-option-branch-error" :message="form.errors.branch_id" />
         </div>
 

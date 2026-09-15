@@ -129,14 +129,15 @@ describe('catalog dialogs', () => {
 
         const branchSelect = wrapper.get('#price-option-branch');
 
+        expect(branchSelect.text()).toContain('Semua cabang');
         expect(branchSelect.text()).toContain('Kemang');
         expect(branchSelect.text()).not.toContain('Cabang Nonaktif');
         expect(branchSelect.text()).not.toContain('Bandung');
     });
 
-    it('converts fixed-package kilograms to grams before submission', async () => {
+    it('defaults to all branches and converts fixed-package kilograms to grams', async () => {
         const wrapper = mount(PriceOptionFormDialog, {
-            props: { service, branches },
+            props: { service, branches: [] },
             global: { stubs: dialogStubs },
         });
 
@@ -148,7 +149,7 @@ describe('catalog dialogs', () => {
         await wrapper.get('[data-test="price-option-form"]').trigger('submit');
 
         expect(inertiaHarness.submittedData()).toEqual({
-            branch_id: '11',
+            branch_id: null,
             type: 'fixed_package',
             name: 'Paket Hemat 12,5 kg',
             package_weight_grams: '12500',
@@ -156,6 +157,24 @@ describe('catalog dialogs', () => {
             price_per_kilogram_rupiah: 5000,
             minimum_chargeable_grams: '',
             is_active: true,
+        });
+    });
+
+    it('still supports a price for one selected branch', async () => {
+        const wrapper = mount(PriceOptionFormDialog, {
+            props: { service, branches },
+            global: { stubs: dialogStubs },
+        });
+
+        await wrapper.get('#price-option-branch').setValue('11');
+        await wrapper.get('#price-option-name').setValue('Kiloan Kemang');
+        await wrapper.get('#kilogram-price').setValue('15000');
+        await wrapper.get('[data-test="price-option-form"]').trigger('submit');
+
+        expect(inertiaHarness.submittedData()).toMatchObject({
+            branch_id: 11,
+            name: 'Kiloan Kemang',
+            price_per_kilogram_rupiah: 15000,
         });
     });
 });

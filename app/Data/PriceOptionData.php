@@ -9,7 +9,7 @@ use App\Http\Requests\Cms\UpdatePriceOptionRequest;
 final readonly class PriceOptionData
 {
     public function __construct(
-        public int $branchId,
+        public ?int $branchId,
         public PriceType $type,
         public string $name,
         public ?int $packageWeightGrams,
@@ -22,7 +22,7 @@ final readonly class PriceOptionData
     public static function fromRequest(StorePriceOptionRequest|UpdatePriceOptionRequest $request): self
     {
         return new self(
-            branchId: $request->integer('branch_id'),
+            branchId: $request->filled('branch_id') ? $request->integer('branch_id') : null,
             type: PriceType::from($request->string('type')->toString()),
             name: $request->string('name')->toString(),
             packageWeightGrams: $request->filled('package_weight_grams')

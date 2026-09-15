@@ -75,7 +75,7 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
             <CmsPageHeader
                 eyebrow="Katalog harga"
                 title="Layanan dan paket"
-                description="Atur jenis layanan, paket berat tetap, dan tarif per kilogram untuk setiap cabang."
+                description="Atur layanan dan tarif yang berlaku untuk semua cabang atau cabang tertentu."
             >
                 <template #actions>
                     <ServiceFormDialog
@@ -102,7 +102,7 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
                 <CmsMetricCard
                     label="Total paket"
                     :value="packageCount"
-                    detail="Tarif per cabang"
+                    detail="Tarif global dan cabang"
                     :icon="BadgeDollarSign"
                 />
             </section>
@@ -131,7 +131,7 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
             <CmsEmptyState
                 v-if="visibleServices.length === 0"
                 title="Belum ada layanan"
-                description="Tambahkan layanan pertama, lalu tentukan paket atau tarif kiloan per cabang."
+                description="Tambahkan layanan pertama, lalu tentukan paket untuk semua cabang atau cabang tertentu."
                 :icon="PackageOpen"
             />
 
@@ -179,9 +179,9 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
                     <div class="space-y-4 p-5">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h3 class="text-ink-950 text-sm font-semibold">Paket cabang</h3>
+                                <h3 class="text-ink-950 text-sm font-semibold">Paket dan tarif</h3>
                                 <p class="text-ink-500 mt-1 text-xs">
-                                    Setiap cabang dapat memiliki nama dan model harga berbeda.
+                                    Paket semua cabang otomatis berlaku juga untuk cabang yang baru dibuat.
                                 </p>
                             </div>
                             <PriceOptionFormDialog
@@ -218,7 +218,8 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
                                     </div>
                                     <p class="text-ink-700 mt-1 text-sm">{{ pricingSummary(priceOption) }}</p>
                                     <p class="text-ink-500 mt-1 text-xs">
-                                        {{ priceOption.branch.name }} · {{ pricingDetail(priceOption) }}
+                                        {{ priceOption.branch?.name ?? 'Semua cabang' }} ·
+                                        {{ pricingDetail(priceOption) }}
                                     </p>
                                 </div>
                                 <div class="flex shrink-0 gap-1">

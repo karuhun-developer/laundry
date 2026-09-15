@@ -237,7 +237,9 @@ final readonly class CreateOrder
         return PriceOption::query()
             ->with('service')
             ->whereKey($priceOption->id)
-            ->where('branch_id', $branch->id)
+            ->where(fn (Builder $query): Builder => $query
+                ->whereNull('branch_id')
+                ->orWhere('branch_id', $branch->id))
             ->where('is_active', true)
             ->whereHas('service', fn (Builder $query): Builder => $query
                 ->where('organization_id', $organization->id)

@@ -37,6 +37,44 @@ it('returns only active services and prices for the requested organization branc
         ->assertJsonPath('data.0.price_options.0.pricing.price_per_kilogram_rupiah', 12000);
 });
 
+it('makes an all-branches price available to existing and future branches', function (): void {
+    $organization = Organization::factory()->create();
+    $firstBranch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $globalOption = PriceOption::factory()->for($service)->forAllBranches()->create([
+        'name' => 'Kiloan semua cabang',
+    ]);
+    $firstBranchOption = PriceOption::factory()->for($service)->for($firstBranch)->create([
+        'name' => 'Kiloan khusus cabang',
+    ]);
+    $futureBranch = Branch::factory()->for($organization)->create();
+
+    $firstCatalog = $this->getJson(route('api.v1.organizations.branches.catalog', [
+        'organization' => $organization,
+        'branch' => $firstBranch,
+    ]))->assertOk();
+
+    expect(collect($firstCatalog->json('data.0.price_options'))->pluck('id')->all())
+        ->toContain($globalOption->id, $firstBranchOption->id);
+
+    $futureCatalog = $this->getJson(route('api.v1.organizations.branches.catalog', [
+        'organization' => $organization,
+        'branch' => $futureBranch,
+    ]))->assertOk()
+        ->assertJsonCount(1, 'data.0.price_options')
+        ->assertJsonPath('data.0.price_options.0.id', $globalOption->id);
+
+    expect(collect($futureCatalog->json('data.0.price_options'))->pluck('id')->all())
+        ->not->toContain($firstBranchOption->id);
+
+    $this->postJson(route('api.v1.organizations.branches.catalog.quote', [
+        'organization' => $organization,
+        'branch' => $futureBranch,
+        'priceOption' => $globalOption,
+    ]), ['weight_grams' => 1000])->assertOk()
+        ->assertJsonPath('data.total_rupiah', 12000);
+});
+
 it('quotes a per-kilogram option with its minimum chargeable weight', function (): void {
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();

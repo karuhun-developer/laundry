@@ -48,4 +48,11 @@ class PriceOptionFactory extends Factory
             'minimum_chargeable_grams' => null,
         ]);
     }
+
+    public function forAllBranches(): static
+    {
+        return $this->state(fn (): array => [
+            'branch_id' => null,
+        ]);
+    }
 }

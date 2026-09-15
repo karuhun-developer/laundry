@@ -115,7 +115,7 @@ export type CatalogBranchSummary = {
 export type PriceOptionSummary = {
     id: number;
     service_id: number;
-    branch_id: number;
+    branch_id: number | null;
     type: PriceTypeValue;
     name: string;
     package_weight_grams: number | null;
@@ -123,7 +123,7 @@ export type PriceOptionSummary = {
     price_per_kilogram_rupiah: number | null;
     minimum_chargeable_grams: number | null;
     is_active: boolean;
-    branch: Pick<CatalogBranchSummary, 'id' | 'organization_id' | 'name' | 'code'>;
+    branch: Pick<CatalogBranchSummary, 'id' | 'organization_id' | 'name' | 'code'> | null;
     pending?: boolean;
 };
 

@@ -23,12 +23,12 @@ class UpdatePriceOptionRequest extends FormRequest
     {
         $priceOption = $this->priceOption();
         $service = $priceOption?->service;
-        $branchId = $this->integer('branch_id');
+        $branchId = $this->filled('branch_id') ? $this->integer('branch_id') : null;
         $isFixedPackage = $this->string('type')->toString() === PriceType::FixedPackage->value;
 
         return [
             'branch_id' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('branches', 'id')->where('organization_id', $service->organization_id ?? 0),
             ],
@@ -39,9 +39,13 @@ class UpdatePriceOptionRequest extends FormRequest
                 'max:120',
                 Rule::unique('price_options', 'name')
                     ->where(
-                        fn (Builder $query): Builder => $query
-                            ->where('service_id', $service->id ?? 0)
-                            ->where('branch_id', $branchId),
+                        function (Builder $query) use ($service, $branchId): Builder {
+                            $query->where('service_id', $service->id ?? 0);
+
+                            return $branchId === null
+                                ? $query->whereNull('branch_id')
+                                : $query->where('branch_id', $branchId);
+                        },
                     )
                     ->ignore($priceOption),
             ],

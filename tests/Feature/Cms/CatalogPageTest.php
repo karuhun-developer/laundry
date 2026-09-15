@@ -24,7 +24,7 @@ it('shows an owner only their services packages and branches', function (): void
     Branch::factory()->for($otherOrganization)->create(['name' => 'Cabang Dago']);
     $service = Service::factory()->for($organization)->create(['name' => 'Cuci Kering']);
     Service::factory()->for($otherOrganization)->create(['name' => 'Dry Clean']);
-    PriceOption::factory()->for($service)->for($branch)->create(['name' => 'Kiloan reguler']);
+    PriceOption::factory()->for($service)->forAllBranches()->create(['name' => 'Kiloan reguler']);
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
 
@@ -34,6 +34,8 @@ it('shows an owner only their services packages and branches', function (): void
             ->has('services', 1)
             ->where('services.0.name', 'Cuci Kering')
             ->where('services.0.price_options.0.name', 'Kiloan reguler')
+            ->where('services.0.price_options.0.branch_id', null)
+            ->where('services.0.price_options.0.branch', null)
             ->has('branches', 1)
             ->where('branches.0.name', 'Cabang Kemang')
             ->has('organizations', 0));

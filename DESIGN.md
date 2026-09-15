@@ -134,7 +134,8 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Service catalog and pricing
 
-- Catalog content is grouped by service, then by the selected branch's active price options.
+- Catalog content is grouped by service, then by active organization-wide price options and the selected branch's active price options.
+- CMS package creation defaults to `Semua cabang`. Organization-wide options remain available to existing branches and automatically apply to branches created later, while branch-specific options remain available for location-level pricing.
 - Fixed packages show the included weight, base price, and excess tariff when configured.
 - Per-kilogram options show the kilogram tariff and minimum chargeable weight when configured.
 - Customers choose one service option and do not enter or estimate laundry weight during pickup-request creation.

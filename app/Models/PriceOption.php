@@ -15,7 +15,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 /**
  * @property int $id
  * @property int $service_id
- * @property int $branch_id
+ * @property int|null $branch_id
  * @property PriceType $type
  * @property string $name
  * @property int|null $package_weight_grams
@@ -24,6 +24,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int|null $minimum_chargeable_grams
  * @property bool $is_active
  * @property-read Service $service
+ * @property-read Branch|null $branch
  */
 #[Fillable([
     'service_id',

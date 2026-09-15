@@ -11,10 +11,12 @@ final class CreatePriceOption
 {
     public function handle(Service $service, PriceOptionData $data): PriceOption
     {
-        Branch::query()
-            ->whereKey($data->branchId)
-            ->where('organization_id', $service->organization_id)
-            ->firstOrFail();
+        if ($data->branchId !== null) {
+            Branch::query()
+                ->whereKey($data->branchId)
+                ->where('organization_id', $service->organization_id)
+                ->firstOrFail();
+        }
 
         return $service->priceOptions()->create([
             'branch_id' => $data->branchId,

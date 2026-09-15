@@ -48,6 +48,41 @@ it('allows an owner to create services and branch prices in their organization',
     ]);
 });
 
+it('allows an owner to create one price for all current and future branches', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $payload = [
+        'type' => PriceType::PerKilogram->value,
+        'name' => 'Kiloan semua cabang',
+        'price_per_kilogram_rupiah' => 15000,
+    ];
+
+    $this->actingAs($owner)
+        ->post(route('cms.services.price-options.store', $service), $payload)
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('price_options', [
+        'service_id' => $service->id,
+        'branch_id' => null,
+        'name' => 'Kiloan semua cabang',
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('cms.services.price-options.store', $service), $payload)
+        ->assertSessionHasErrors('name');
+
+    $this->actingAs($owner)->post(route('cms.services.price-options.store', $service), [
+        ...$payload,
+        'branch_id' => $branch->id,
+    ])->assertRedirect();
+
+    expect($service->priceOptions()->where('name', 'Kiloan semua cabang')->count())->toBe(2);
+});
+
 it('allows a superadmin to target an organization when creating a service', function (): void {
     $organization = Organization::factory()->create();
     $superadmin = User::factory()->create();

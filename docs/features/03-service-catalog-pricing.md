@@ -4,7 +4,7 @@ Phase: 1
 
 ## Scope
 
-Organizations own reusable laundry services. Each branch attaches its own active price options to those services, allowing the same service to have different tariffs by location. Public catalog responses expose only active organizations, branches, services, and branch-specific options.
+Organizations own reusable laundry services. A price option may apply to every branch in the organization or only one selected branch, allowing shared default packages without duplicating configuration while preserving location-specific tariffs. Public catalog responses expose only active organizations, branches, services, and options available to the requested branch.
 
 ## Pricing rules
 
@@ -14,6 +14,8 @@ Organizations own reusable laundry services. Each branch attaches its own active
 - Fixed packages charge the base price up to the package weight. Excess weight is proportional by gram using the configured excess per-kilogram tariff.
 - An overweight package without an excess tariff is rejected with `PACKAGE_EXCESS_RATE_REQUIRED`; it is never silently charged at the base price.
 - Fractional rupiah uses deterministic integer half-up rounding: `intdiv((grams × rupiah_per_kg) + 500, 1000)`.
+- A nullable `price_options.branch_id` represents an organization-wide option. It is available to every current and future branch belonging to the service organization.
+- A non-null `branch_id` restricts the option to that branch. Global and branch-specific options may share a name, but names must remain unique inside the same service and scope.
 
 ## Authorization
 
@@ -31,7 +33,7 @@ Management routes require authenticated, verified web sessions:
 - `PATCH /cms/price-options/{price-option}`
 - `DELETE /cms/price-options/{price-option}`
 
-The CMS exposes modal create/edit flows and typed deletion confirmation. Owners only see their own organization, while superadmins can filter and manage every organization. Package branch choices are restricted to the service organization. Weight inputs are shown in kilograms and converted to integer grams before persistence. Services or packages referenced by order history cannot be deleted; they can be deactivated instead.
+The CMS exposes modal create/edit flows and typed deletion confirmation. Owners only see their own organization, while superadmins can filter and manage every organization. Package scope defaults to `Semua cabang`; selecting a specific branch restricts the option to an active branch in the service organization. Global packages can be created before the first branch exists and automatically apply to branches added later. Weight inputs are shown in kilograms and converted to integer grams before persistence. Services or packages referenced by order history cannot be deleted; they can be deactivated instead.
 
 Public API routes:
 
@@ -47,5 +49,5 @@ The quote body contains `weight_grams`. Its canonical response includes requeste
 - Per-kilogram proportional calculation, half-up rounding, and minimum chargeable weight.
 - Type-specific management validation.
 - Owner/superadmin permissions, branch admin/customer denial, and tenant isolation.
-- Modal package input conversion from kilograms to grams and organization-safe branch filtering.
-- Public active-state filtering and quote boundary validation.
+- Modal package input conversion from kilograms to grams, global-scope defaults, and organization-safe branch filtering.
+- Public active-state filtering, global-option availability for existing and future branches, branch-option isolation, and quote boundary validation.

@@ -62,7 +62,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 - User: authenticated actor. Customer identity is global by normalized phone number, while customer access to an organization is represented by an explicit membership rather than an organization selector at registration.
 - Customer organization membership: link between a global customer identity and an organization, used to scope branch-admin customer management without duplicating the customer's account.
 - Service: laundry service category, for example wash-and-fold or dry cleaning.
-- Price option: fixed package or per-kilogram price attached to a service and branch.
+- Price option: fixed package or per-kilogram price attached to a service, either organization-wide for every branch or restricted to one branch.
 - Order: branch-owned customer transaction with immutable calculated pricing snapshots.
 - Order item: selected price option, quantity or measured weight, and calculated subtotal.
 - Order status event: append-only status history with actor and timestamp.
@@ -84,6 +84,7 @@ The product is API-first. The web CMS and Capacitor Android application consume 
 
 - A fixed package defines a package weight, package price, and optional excess per-kilogram price.
 - A per-kilogram option defines a price per kilogram and optional minimum chargeable weight.
+- A price option without a branch applies to every current and future branch in the service organization. A branch-specific option remains available only at that branch.
 - Weight is stored as integer grams; money is stored as integer rupiah.
 - Calculation never uses binary floating-point values.
 - The order stores a pricing snapshot so future catalog changes do not rewrite historical totals.
@@ -153,7 +154,7 @@ Deliverables:
 - Multi-organization branch and branch-membership domain backed by a shared global city catalog.
 - Coordinate-based nearest-branch discovery with configurable free-delivery radius and excess-distance pricing.
 - Customer branch discovery across active organizations without exposing an organization selector.
-- Service catalog with package and per-kilogram pricing.
+- Service catalog with organization-wide or branch-specific package and per-kilogram pricing.
 - Order creation, deterministic total calculation, and status tracking.
 - Owner/superadmin CMS and mobile-first customer/branch-admin surfaces.
 - Owner/superadmin CMS for organizations, cities, branches, users, roles, and branch assignments.
