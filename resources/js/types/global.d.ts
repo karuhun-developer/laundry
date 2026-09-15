@@ -1,4 +1,10 @@
 import type { Auth } from '@/types/auth';
+import type { FlashToast } from '@/types/ui';
+
+type SharedFlash = {
+    success?: string | null;
+    error?: string | null;
+};
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -15,10 +21,14 @@ declare module 'vite/client' {
 
 declare module '@inertiajs/core' {
     export interface InertiaConfig {
+        flashDataType: {
+            toast?: FlashToast;
+        };
         sharedPageProps: {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            flash?: SharedFlash;
             [key: string]: unknown;
         };
     }

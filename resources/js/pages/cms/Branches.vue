@@ -153,8 +153,8 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                                         <CmsDeleteDialog
                                             title="Hapus cabang?"
                                             :description="`Cabang ${branch.name} akan dihapus permanen jika belum memiliki data operasional.`"
-                                            :confirmation="branch.code"
-                                            confirmation-label="Kode cabang"
+                                            :confirmation="branch.name"
+                                            confirmation-label="Nama cabang"
                                             :route="destroyBranch(branch.id)"
                                             :disabled="branch.pending"
                                         />
@@ -202,8 +202,8 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                             <CmsDeleteDialog
                                 title="Hapus cabang?"
                                 :description="`Cabang ${branch.name} akan dihapus permanen jika belum memiliki data operasional.`"
-                                :confirmation="branch.code"
-                                confirmation-label="Kode cabang"
+                                :confirmation="branch.name"
+                                confirmation-label="Nama cabang"
                                 :route="destroyBranch(branch.id)"
                                 :disabled="branch.pending"
                             />
