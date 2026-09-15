@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AppUpdateController;
 use App\Http\Controllers\Api\V1\BranchCatalogController;
 use App\Http\Controllers\Api\V1\CustomerAddressIndexController;
 use App\Http\Controllers\Api\V1\CustomerIndexController;
@@ -49,6 +50,9 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     Route::get('mobile/orders', CustomerOrderIndexController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.orders.index');
+    Route::get('mobile/app-update', AppUpdateController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.app-update.show');
     Route::put('mobile/account/pin', UpdateCustomerPinController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.account.pin.update');

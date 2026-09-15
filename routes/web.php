@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppUpdateDownloadController;
 use App\Http\Controllers\Cms\BranchController;
 use App\Http\Controllers\Cms\CityController;
 use App\Http\Controllers\Cms\MessageTemplateController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MobileAppController;
+use App\Http\Controllers\PublicOrderReceiptController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RoleRedirectController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +21,14 @@ Route::get('/', LandingPageController::class)->name('home');
 Route::post('login/customer', CustomerLoginController::class)
     ->middleware('guest')
     ->name('customer-login.store');
+Route::get('struk/{order}', PublicOrderReceiptController::class)
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('receipts.public.show');
+Route::get('app-updates/{asset}/{filename}', AppUpdateDownloadController::class)
+    ->whereNumber('asset')
+    ->where('filename', 'laundryhub-v[0-9]+\.[0-9]+\.[0-9]+\.apk')
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('app-updates.download');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', RoleRedirectController::class)->name('dashboard');

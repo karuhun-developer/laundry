@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
 import type {
     MobileOrder,
@@ -9,7 +9,9 @@ import type {
     WhatsAppSuggestion,
 } from '@/types/mobile';
 
-const externalLinkMocks = vi.hoisted(() => ({ open: vi.fn(async () => undefined) }));
+const externalLinkMocks = vi.hoisted(() => ({
+    open: vi.fn(async (_url: string): Promise<void> => undefined),
+}));
 
 vi.mock('@/lib/externalLinks/transport', () => ({
     externalLinkTransport: externalLinkMocks,
@@ -66,6 +68,7 @@ const receipt: MobileOrderReceipt = {
     payments: [],
     issued_at: '2026-09-13T10:30:00.000Z',
     ordered_at: '2026-09-13T08:00:00.000Z',
+    share_url: 'https://example.test/struk/21?expires=1789466400&signature=signed-receipt',
 };
 
 const makeOrder = (): MobileOrder => ({
@@ -125,6 +128,10 @@ const makeActions = (refreshedOrder: MobileOrder = makeOrder()): MobilePaymentAc
     transitionPaymentStatus: vi.fn(async () => true),
     loadReceipt: vi.fn(async () => receipt),
     printReceipt: vi.fn(async () => true),
+});
+
+beforeEach(() => {
+    externalLinkMocks.open.mockClear();
 });
 
 describe('mobile payment dialog', () => {
@@ -209,6 +216,20 @@ describe('mobile payment dialog', () => {
         await vi.waitFor(() => expect(actions.loadReceipt).toHaveBeenCalledWith(21));
         await vi.waitFor(() => expect(document.body.textContent).toContain('Customer Demo'));
         expect(document.body.querySelector('[data-test="print-receipt"]')).toBeNull();
+
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="share-receipt-whatsapp"]')
+            ?.click();
+        await vi.waitFor(() =>
+            expect(externalLinkMocks.open).toHaveBeenCalledWith(
+                expect.stringMatching(/^https:\/\/wa\.me\/\?text=/),
+            ),
+        );
+        const sharedReceiptUrl = new URL(
+            vi.mocked(externalLinkMocks.open).mock.calls[0]?.[0] ?? '',
+        );
+        expect(sharedReceiptUrl.searchParams.get('text')).toContain(receipt.receipt_number);
+        expect(sharedReceiptUrl.searchParams.get('text')).toContain(receipt.share_url);
 
         document.body
             .querySelector<HTMLButtonElement>('[data-test="request-payment-verification"]')

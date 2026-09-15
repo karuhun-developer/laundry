@@ -10,13 +10,16 @@ use App\Models\Organization;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('returns a stable digital receipt from order and payment snapshots', function (): void {
+it('returns a stable digital receipt with a signed public share URL', function (): void {
+    $this->withoutVite();
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'name' => 'Cabang Kemang',
@@ -44,11 +47,13 @@ it('returns a stable digital receipt from order and payment snapshots', function
     ]);
     Sanctum::actingAs($customer);
 
-    $this->getJson(route('api.v1.organizations.branches.orders.receipt.show', [
+    $response = $this->getJson(route('api.v1.organizations.branches.orders.receipt.show', [
         'organization' => $organization,
         'branch' => $branch,
         'order' => $order,
-    ]))->assertOk()
+    ]));
+
+    $response->assertOk()
         ->assertJsonPath('data.receipt_number', $order->order_number)
         ->assertJsonPath('data.branch.name', 'Cabang Kemang')
         ->assertJsonPath('data.customer.name', 'Budi')
@@ -56,7 +61,13 @@ it('returns a stable digital receipt from order and payment snapshots', function
         ->assertJsonPath('data.pricing.total_rupiah', 27000)
         ->assertJsonPath('data.pricing.paid_rupiah', 27000)
         ->assertJsonPath('data.pricing.outstanding_rupiah', 0)
-        ->assertJsonPath('data.payments.0.status', PaymentStatus::Paid->value);
+        ->assertJsonPath('data.payments.0.status', PaymentStatus::Paid->value)
+        ->assertJsonStructure(['data' => ['share_url']]);
+
+    $shareUrl = $response->json('data.share_url');
+
+    expect($shareUrl)->toBeString();
+    expect(URL::hasValidSignature(Request::create($shareUrl)))->toBeTrue();
 });
 
 it('prevents a customer from reading another customer receipt', function (): void {

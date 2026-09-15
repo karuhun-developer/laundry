@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Printer } from '@lucide/vue';
+import { MessageCircle, Printer } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type { MobileOrderReceipt } from '@/types/mobile';
@@ -17,6 +17,7 @@ withDefaults(
 const emit = defineEmits<{
     load: [];
     print: [];
+    share: [];
 }>();
 </script>
 
@@ -76,17 +77,29 @@ const emit = defineEmits<{
                     </dd>
                 </div>
             </dl>
-            <Button
-                v-if="showPrintAction"
-                type="button"
-                class="mt-4 w-full bg-brand-700 text-white"
-                :disabled="busy || !printerConfigured"
-                data-test="print-receipt"
-                @click="emit('print')"
-            >
-                <Printer class="size-4" aria-hidden="true" />
-                {{ printerConfigured ? 'Cetak ulang struk' : 'Atur printer di Akun' }}
-            </Button>
+            <div class="mt-4 grid gap-2" :class="showPrintAction ? 'sm:grid-cols-2' : ''">
+                <Button
+                    type="button"
+                    class="w-full bg-mint-500 text-white hover:bg-mint-500/90"
+                    :disabled="busy"
+                    data-test="share-receipt-whatsapp"
+                    @click="emit('share')"
+                >
+                    <MessageCircle class="size-4" aria-hidden="true" />
+                    Bagikan ke WhatsApp
+                </Button>
+                <Button
+                    v-if="showPrintAction"
+                    type="button"
+                    class="w-full bg-brand-700 text-white"
+                    :disabled="busy || !printerConfigured"
+                    data-test="print-receipt"
+                    @click="emit('print')"
+                >
+                    <Printer class="size-4" aria-hidden="true" />
+                    {{ printerConfigured ? 'Cetak ulang struk' : 'Atur printer di Akun' }}
+                </Button>
+            </div>
         </div>
     </section>
 </template>

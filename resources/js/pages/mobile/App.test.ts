@@ -142,8 +142,10 @@ const passThroughStub = defineComponent({
     template: '<div><slot /></div>',
 });
 
-const mountMobileApp = (): VueWrapper =>
-    mount(MobileApp, {
+const mountedMobileApps: VueWrapper[] = [];
+
+const mountMobileApp = (): VueWrapper => {
+    const wrapper = mount(MobileApp, {
         global: {
             stubs: {
                 BranchExplorer: true,
@@ -157,11 +159,17 @@ const mountMobileApp = (): VueWrapper =>
                 DialogDescription: passThroughStub,
                 DialogHeader: passThroughStub,
                 DialogTitle: passThroughStub,
+                MobileAppUpdateSettings: true,
                 MobileWorkspaceSwitcher: true,
                 WhatsAppSuggestionDialog: whatsAppDialogStub,
             },
         },
     });
+
+    mountedMobileApps.push(wrapper);
+
+    return wrapper;
+};
 
 const selectTab = async (wrapper: VueWrapper, tab: MobileTab): Promise<void> => {
     await wrapper.get(`[data-test="mobile-tab-${tab}"]`).trigger('click');
@@ -228,6 +236,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    for (const wrapper of mountedMobileApps.splice(0)) {
+        wrapper.unmount();
+    }
+
     document.body.innerHTML = '';
     vi.useRealTimers();
     vi.clearAllMocks();

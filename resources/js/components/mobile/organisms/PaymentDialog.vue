@@ -300,6 +300,26 @@ const printReceipt = async (): Promise<void> => {
     }
 };
 
+const shareReceipt = async (): Promise<void> => {
+    if (!receipt.value) {
+        return;
+    }
+
+    const whatsappUrl = new URL('https://wa.me/');
+    whatsappUrl.searchParams.set(
+        'text',
+        `Struk digital ${receipt.value.receipt_number}\n${receipt.value.share_url}`,
+    );
+
+    try {
+        await externalLinkTransport.open(whatsappUrl.toString());
+    } catch (openError: unknown) {
+        error.value =
+            openError instanceof Error ? openError.message : 'WhatsApp tidak dapat dibuka.';
+        toast.error(error.value);
+    }
+};
+
 const requestPaymentVerification = async (payment: MobilePayment): Promise<void> => {
     actionProcessing.value = true;
     resetAnnouncements();
@@ -494,6 +514,7 @@ const requestPaymentVerification = async (payment: MobilePayment): Promise<void>
                 :show-print-action="role === 'branch_admin'"
                 @load="loadReceipt"
                 @print="printReceipt"
+                @share="shareReceipt"
             />
             </template>
         </DialogScrollContent>

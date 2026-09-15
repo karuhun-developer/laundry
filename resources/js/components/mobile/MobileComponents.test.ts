@@ -311,9 +311,38 @@ describe('mobile role-aware components', () => {
         });
 
         expect(wrapper.find('[data-test="open-payment-dialog"]').exists()).toBe(true);
+        expect(wrapper.find('[data-test="payment-status-badge"]').exists()).toBe(false);
         expect(wrapper.find('[data-test="open-payment-dialog"]').text()).toContain(
             'Bayar dengan QRIS',
         );
+    });
+
+    it('shows branch payment status beside laundry status', () => {
+        const unpaidWrapper = mount(OrderTicket, {
+            props: { order: makeOrder(), role: 'branch_admin', paymentActions },
+        });
+        const paidOrder = makeOrder();
+        paidOrder.payment_summary = {
+            paid_rupiah: paidOrder.pricing.total_rupiah,
+            outstanding_rupiah: 0,
+            is_paid: true,
+        };
+        const paidWrapper = mount(OrderTicket, {
+            props: { order: paidOrder, role: 'branch_admin', paymentActions },
+        });
+
+        expect(unpaidWrapper.get('[data-test="payment-status-badge"]').text()).toBe('Belum lunas');
+        expect(paidWrapper.get('[data-test="payment-status-badge"]').text()).toBe('Lunas');
+    });
+
+    it('places payment actions directly below the payment summary', () => {
+        const wrapper = mount(OrderTicket, {
+            props: { order: makeOrder(), role: 'branch_admin', paymentActions },
+        });
+        const paymentSummary = wrapper.get('[data-test="payment-summary"]');
+        const paymentActionsElement = wrapper.get('[data-test="payment-actions"]');
+
+        expect(paymentSummary.element.nextElementSibling).toBe(paymentActionsElement.element);
     });
 
     it('limits optimistic animation to the pending marker', () => {

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\URL;
 
 /** @mixin Order */
 class OrderReceiptResource extends JsonResource
@@ -52,6 +53,11 @@ class OrderReceiptResource extends JsonResource
             'payments' => PaymentResource::collection($this->payments),
             'issued_at' => now()->toISOString(),
             'ordered_at' => $this->created_at->toISOString(),
+            'share_url' => URL::temporarySignedRoute(
+                'receipts.public.show',
+                now()->addDays(7),
+                ['order' => $this->id],
+            ),
         ];
     }
 }

@@ -162,6 +162,10 @@ describe('branch-admin account', () => {
             },
             global: {
                 stubs: {
+                    MobileAppUpdateSettings: defineComponent({
+                        template:
+                            '<section data-test="app-update-settings">Pembaruan aplikasi</section>',
+                    }),
                     MobilePrinterSettings: defineComponent({
                         template: '<section data-test="thermal-printer">Printer termal</section>',
                     }),
@@ -174,6 +178,7 @@ describe('branch-admin account', () => {
         expect(wrapper.text()).toContain('628111222333');
         expect(wrapper.text()).toContain('LaundryHub Demo');
         expect(wrapper.get('[data-test="thermal-printer"]').text()).toBe('Printer termal');
+        expect(wrapper.get('[data-test="app-update-settings"]').text()).toBe('Pembaruan aplikasi');
         expect(wrapper.text()).toContain('Keluar');
     });
 
@@ -183,6 +188,9 @@ describe('branch-admin account', () => {
                 name: 'Admin Cabang',
                 role: 'branch_admin',
                 notificationAvailable: false,
+            },
+            global: {
+                stubs: { MobileAppUpdateSettings: true },
             },
         });
 
@@ -203,6 +211,9 @@ describe('branch-admin account', () => {
                     notificationAvailable: true,
                     notificationStatus,
                 },
+                global: {
+                    stubs: { MobileAppUpdateSettings: true },
+                },
             });
 
             expect(wrapper.get('[data-test="notification-settings"]').text()).toContain(
@@ -222,6 +233,9 @@ describe('branch-admin account', () => {
                 notificationAvailable: true,
                 notificationStatus: 'error',
                 notificationError: 'Firebase belum siap.',
+            },
+            global: {
+                stubs: { MobileAppUpdateSettings: true },
             },
         });
 

@@ -320,6 +320,7 @@ export type MobileOrderReceipt = {
     payments: readonly MobilePayment[];
     issued_at: string;
     ordered_at: string;
+    share_url: string;
 };
 
 export type MobilePaymentActions = {

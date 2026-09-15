@@ -10,6 +10,7 @@ import {
     UserRound,
 } from '@lucide/vue';
 import CustomerPinSettings from '@/components/mobile/organisms/CustomerPinSettings.vue';
+import MobileAppUpdateSettings from '@/components/mobile/organisms/MobileAppUpdateSettings.vue';
 import MobilePrinterSettings from '@/components/mobile/organisms/MobilePrinterSettings.vue';
 import type { PushNotificationStatus } from '@/composables/usePushNotifications';
 import type { PrinterConnection, PrinterDevice, PrinterProfile } from '@/lib/printer/types';
@@ -180,6 +181,8 @@ defineEmits<{
             @clear="$emit('clearPrinter')"
             @test-print="$emit('testPrinter')"
         />
+
+        <MobileAppUpdateSettings />
 
         <button
             type="button"

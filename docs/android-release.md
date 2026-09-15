@@ -18,6 +18,13 @@ Repository secrets, except where noted:
 - `ANDROID_KEY_PASSWORD`: the upload key password.
 - `ANDROID_GOOGLE_SERVICES_JSON_BASE64`: the Firebase Android `google-services.json` for package `com.karuhundeveloper.laundryhub`, encoded as one-line Base64. Store this in the `android-release` GitHub Actions environment; it is required for release builds and FCM delivery.
 
+Configure these values in the deployed Laravel environment for the in-app updater:
+
+- `GITHUB_RELEASE_REPOSITORY`: the private GitHub repository in `owner/repository` format.
+- `GITHUB_RELEASE_TOKEN`: a server-side token with read access to the repository releases and assets. Never expose this token to the frontend or Android application.
+
+The updater reads the latest stable GitHub Release, expects an APK named `laundryhub-vMAJOR.MINOR.PATCH.apk`, verifies its SHA-256 digest, and serves it through a short-lived signed Laravel URL.
+
 Generate the Base64 value without committing it:
 
 ```bash
@@ -107,6 +114,7 @@ Then verify on representative physical Android devices:
 9. Confirm the release build points to the production HTTPS API and contains no demo credentials or development server URL.
 10. Enable notifications from the Account tab, confirm the device registration succeeds, then verify pickup requests notify only assigned branch admins.
 11. Confirm pricing and status changes notify only the matching customer, and tapping a notification opens `/app` with refreshed order data.
+12. Open Account, confirm the installed version and changelog are shown, then verify a newer release downloads and opens the Android installer after checksum validation.
 
 ## Artifacts
 
