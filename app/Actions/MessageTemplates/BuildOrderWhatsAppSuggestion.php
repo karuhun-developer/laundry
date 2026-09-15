@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Services\WhatsAppMessageRenderer;
 use App\Services\WhatsAppPhoneNormalizer;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\URL;
 
 final readonly class BuildOrderWhatsAppSuggestion
 {
@@ -44,7 +45,9 @@ final readonly class BuildOrderWhatsAppSuggestion
         }
 
         $order->loadMissing('branch:id,name');
-        $trackingUrl = route('mobile.app', ['order' => $order->id]);
+        $trackingUrl = URL::signedRoute('orders.public.show', [
+            'order' => $order->order_number,
+        ]);
         $message = $this->renderer->render($order, $template->body, $trackingUrl);
         $query = http_build_query(['text' => $message], '', '&', PHP_QUERY_RFC3986);
 

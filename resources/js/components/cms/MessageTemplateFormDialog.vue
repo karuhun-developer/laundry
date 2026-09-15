@@ -34,7 +34,7 @@ const previewValues: Readonly<Record<string, string>> = {
     '{branch_name}': 'Cabang Kemang',
     '{weight}': '3,5 kg',
     '{total}': 'Rp48.000',
-    '{tracking_url}': 'https://laundryhub.test/app?order=1',
+    '{tracking_url}': 'https://laundryhub.test/pesanan/LDR-20260913-00000001?signature=contoh',
 };
 
 const open = ref(false);
