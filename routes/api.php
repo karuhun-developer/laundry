@@ -1,10 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V1\BranchCatalogController;
+use App\Http\Controllers\Api\V1\CustomerAddressIndexController;
 use App\Http\Controllers\Api\V1\CustomerIndexController;
 use App\Http\Controllers\Api\V1\CustomerNearestBranchController;
 use App\Http\Controllers\Api\V1\CustomerOrderIndexController;
-use App\Http\Controllers\Api\V1\DetachCustomerController;
+use App\Http\Controllers\Api\V1\DeleteCustomerAddressController;
 use App\Http\Controllers\Api\V1\MobileContextController;
 use App\Http\Controllers\Api\V1\MobileOrderIndexController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
@@ -20,7 +21,10 @@ use App\Http\Controllers\Api\V1\PaymentGatewayWebhookController;
 use App\Http\Controllers\Api\V1\PaymentStatusEventController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
 use App\Http\Controllers\Api\V1\ResetCustomerPinController;
+use App\Http\Controllers\Api\V1\SetDefaultCustomerAddressController;
+use App\Http\Controllers\Api\V1\StoreCustomerAddressController;
 use App\Http\Controllers\Api\V1\StoreCustomerController;
+use App\Http\Controllers\Api\V1\UpdateCustomerAddressController;
 use App\Http\Controllers\Api\V1\UpdateCustomerController;
 use App\Http\Controllers\Api\V1\UpdateCustomerPinController;
 use App\Http\Middleware\EnsureCustomerSessionIsCurrent;
@@ -45,6 +49,21 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     Route::put('mobile/account/pin', UpdateCustomerPinController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.account.pin.update');
+    Route::get('mobile/account/addresses', CustomerAddressIndexController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.account.addresses.index');
+    Route::post('mobile/account/addresses', StoreCustomerAddressController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.account.addresses.store');
+    Route::patch('mobile/account/addresses/{address}', UpdateCustomerAddressController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.account.addresses.update');
+    Route::delete('mobile/account/addresses/{address}', DeleteCustomerAddressController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.account.addresses.destroy');
+    Route::put('mobile/account/addresses/{address}/default', SetDefaultCustomerAddressController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.account.addresses.default');
     Route::post('mobile/customers', StoreCustomerController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.customers.store');
@@ -54,9 +73,6 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     Route::post('mobile/customers/{customer}/reset-pin', ResetCustomerPinController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.customers.reset-pin');
-    Route::delete('mobile/customers/{customer}', DetachCustomerController::class)
-        ->middleware('auth:sanctum')
-        ->name('mobile.customers.destroy');
     Route::get('organizations/{organization:slug}/orders', MobileOrderIndexController::class)
         ->middleware('auth:sanctum')
         ->name('organizations.orders.index');

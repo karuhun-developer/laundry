@@ -5,7 +5,6 @@ import {
     House,
     ListChecks,
     MoreHorizontal,
-    PlusCircle,
     UserRound,
     UsersRound,
 } from '@lucide/vue';
@@ -28,7 +27,6 @@ const customerTabs: { id: MobileTab; label: string }[] = [
 ];
 const adminTabs: { id: MobileTab; label: string }[] = [
     { id: 'queue', label: 'Antrean' },
-    { id: 'new-order', label: 'Pesanan baru' },
     { id: 'customers', label: 'Pelanggan' },
     { id: 'more', label: 'Lainnya' },
 ];
@@ -36,7 +34,8 @@ const adminTabs: { id: MobileTab; label: string }[] = [
 
 <template>
     <nav
-        class="safe-bottom fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-3xl grid-cols-4 border-t border-line bg-surface/95 px-2 pt-2 shadow-raised backdrop-blur"
+        class="safe-bottom fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-3xl border-t border-line bg-surface/95 px-2 pt-2 shadow-raised backdrop-blur"
+        :class="role === 'customer' ? 'grid-cols-4' : 'grid-cols-3'"
         aria-label="Navigasi aplikasi"
     >
         <template v-if="role === 'customer'">
@@ -78,11 +77,6 @@ const adminTabs: { id: MobileTab; label: string }[] = [
                 @click="emit('update:modelValue', item.id)"
             >
                 <ListChecks v-if="item.id === 'queue'" class="size-5" aria-hidden="true" />
-                <PlusCircle
-                    v-else-if="item.id === 'new-order'"
-                    class="size-5"
-                    aria-hidden="true"
-                />
                 <UsersRound
                     v-else-if="item.id === 'customers'"
                     class="size-5"

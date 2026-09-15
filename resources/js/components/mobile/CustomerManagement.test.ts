@@ -2,7 +2,6 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
 import CustomerCredentialDialog from '@/components/mobile/molecules/CustomerCredentialDialog.vue';
-import CustomerDetachDialog from '@/components/mobile/molecules/CustomerDetachDialog.vue';
 import CustomerFormDialog from '@/components/mobile/molecules/CustomerFormDialog.vue';
 import CustomerResetPinDialog from '@/components/mobile/molecules/CustomerResetPinDialog.vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
@@ -69,7 +68,6 @@ const mobileWorkspace = vi.hoisted(() => ({
     createCustomer: vi.fn(),
     updateCustomer: vi.fn(),
     resetCustomerPin: vi.fn(),
-    detachCustomer: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -287,55 +285,6 @@ describe('mobile customer management dialogs', () => {
         expect(wrapper.emitted('dismiss')).toHaveLength(1);
     });
 
-    it('requires exact in-dialog verification and surfaces a blocked detach without native confirm', async () => {
-        const nativeConfirm = vi.fn();
-        vi.stubGlobal('confirm', nativeConfirm);
-        const detach = vi.fn(async (): Promise<void> => {
-            throw new Error('Customer dengan riwayat pesanan tidak dapat dilepas dari organisasi.');
-        });
-        const wrapper = mount(CustomerDetachDialog, {
-            props: { open: true, customer, detach },
-            global: { stubs: dialogStubs },
-        });
-        const submit = wrapper.get<HTMLButtonElement>('[data-test="confirm-customer-detach"]');
-
-        expect(submit.element.disabled).toBe(true);
-        await wrapper.get('[data-test="customer-detach-verification"]').setValue('budi santoso');
-        expect(submit.element.disabled).toBe(true);
-        await wrapper.get('[data-test="customer-detach-verification"]').setValue(customer.name);
-        expect(submit.element.disabled).toBe(false);
-        await wrapper.get('[data-test="customer-detach-form"]').trigger('submit');
-        await flushPromises();
-
-        expect(nativeConfirm).not.toHaveBeenCalled();
-        expect(wrapper.text()).toContain('riwayat pesanan');
-        expect(wrapper.emitted('detached')).toBeUndefined();
-        expect(wrapper.get('#customer-detach-verification').attributes('aria-describedby')).toBe(
-            'customer-detach-instruction customer-detach-error',
-        );
-    });
-
-    it('restores focus to the stable directory heading after detach succeeds', async () => {
-        const directoryHeading = document.createElement('h2');
-        directoryHeading.id = 'customer-directory-title';
-        directoryHeading.tabIndex = -1;
-        document.body.append(directoryHeading);
-        const focus = vi.spyOn(directoryHeading, 'focus');
-        const wrapper = mount(CustomerDetachDialog, {
-            props: { open: true, customer, detach: vi.fn(async (): Promise<void> => undefined) },
-            global: { stubs: dialogStubs },
-        });
-        await wrapper.get('[data-test="customer-detach-verification"]').setValue(customer.name);
-        await wrapper.get('[data-test="customer-detach-form"]').trigger('submit');
-        await flushPromises();
-        const preventDefault = vi.fn();
-
-        wrapper.findComponent(dialogContentStub).vm.$emit('closeAutoFocus', { preventDefault });
-
-        expect(preventDefault).toHaveBeenCalledOnce();
-        expect(focus).toHaveBeenCalledOnce();
-    });
-
     it('requests a PIN reset from an accessible confirmation dialog', async () => {
         const reset = vi.fn(async () => ({
             customer,
@@ -373,11 +322,9 @@ describe('mobile customer surfaces', () => {
 
         await wrapper.get('[data-test="edit-customer-21"]').trigger('click');
         await wrapper.get('[data-test="reset-customer-pin-21"]').trigger('click');
-        await wrapper.get('[data-test="detach-customer-21"]').trigger('click');
 
         expect(wrapper.emitted('edit')?.[0]).toEqual([customerWithUnexpectedSecret]);
         expect(wrapper.emitted('reset-pin')?.[0]).toEqual([customerWithUnexpectedSecret]);
-        expect(wrapper.emitted('detach')?.[0]).toEqual([customerWithUnexpectedSecret]);
     });
 
     it('provides a stable focus target for destructive-action completion', () => {
@@ -392,7 +339,6 @@ describe('mobile customer surfaces', () => {
                 stubs: {
                     BranchExplorer: true,
                     CustomerCredentialDialog: true,
-                    CustomerDetachDialog: true,
                     CustomerDirectory: true,
                     CustomerFormDialog: true,
                     CustomerResetPinDialog: true,
@@ -440,13 +386,6 @@ describe('mobile customer surfaces', () => {
         await wrapper.vm.$nextTick();
         expect(wrapper.get('[data-test="customer-status"]').text()).toBe(
             'PIN pelanggan Budi Santoso berhasil direset.',
-        );
-
-        wrapper.findComponent(CustomerDirectory).vm.$emit('detach', customer);
-        wrapper.findComponent(CustomerDetachDialog).vm.$emit('detached', customer.id);
-        await wrapper.vm.$nextTick();
-        expect(wrapper.get('[data-test="customer-status"]').text()).toBe(
-            'Pelanggan Budi Santoso berhasil dilepas dari organisasi.',
         );
     });
 

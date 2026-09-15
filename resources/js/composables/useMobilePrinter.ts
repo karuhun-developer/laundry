@@ -68,7 +68,7 @@ export const useMobilePrinter = (options: MobilePrinterOptions = {}) => {
             message.value =
                 devices.value.length > 0
                     ? `${devices.value.length} printer ditemukan.`
-                    : 'Belum ada printer yang terdeteksi.';
+                    : 'Tidak ada printer ditemukan.';
             return true;
         } catch (discoveryError: unknown) {
             devices.value = [];

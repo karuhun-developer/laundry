@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { LoaderCircle, UserPlus, UserRoundPen } from '@lucide/vue';
 import { ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -105,6 +106,7 @@ const save = async (): Promise<void> => {
 
         requestError.value =
             error instanceof Error ? error.message : 'Data pelanggan tidak dapat disimpan.';
+        toast.error(requestError.value);
 
         if (error instanceof MobileCustomerValidationError) {
             fieldErrors.value = error.fieldErrors;

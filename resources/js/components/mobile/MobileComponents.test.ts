@@ -8,6 +8,7 @@ import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import type {
     MobileBranch,
     MobileCustomer,
+    MobileCustomerAddress,
     MobileOrder,
     MobilePaymentActions,
     MobilePriceOption,
@@ -69,6 +70,20 @@ const customers: MobileCustomer[] = [
         pin_expires_at: null,
     },
 ];
+
+const customerAddress: MobileCustomerAddress = {
+    id: 41,
+    label: 'Rumah',
+    recipient_name: 'Customer Demo',
+    whatsapp_phone: '6281234567890',
+    address: 'Jl. Kemang Raya No. 10',
+    notes: null,
+    latitude: -6.2607,
+    longitude: 106.8136,
+    is_default: true,
+    created_at: '2026-09-15T08:00:00+00:00',
+    updated_at: '2026-09-15T08:00:00+00:00',
+};
 
 const quote: MobilePriceQuote = {
     price_option: packagePriceOption,
@@ -186,8 +201,9 @@ describe('mobile role-aware components', () => {
         });
 
         expect(wrapper.text()).toContain('Antrean');
-        expect(wrapper.text()).toContain('Pesanan baru');
         expect(wrapper.text()).toContain('Pelanggan');
+        expect(wrapper.text()).toContain('Lainnya');
+        expect(wrapper.find('[data-test="mobile-tab-new-order"]').exists()).toBe(false);
         expect(wrapper.find('[data-test="mobile-tab-home"]').exists()).toBe(false);
     });
 
@@ -247,6 +263,7 @@ describe('mobile role-aware components', () => {
                 services,
                 customers: [],
                 deliveryCoordinates: { latitude: -6.2607, longitude: 106.8136 },
+                selectedAddress: customerAddress,
                 quoteOrder: vi.fn(async () => quote),
             },
         });
@@ -260,7 +277,7 @@ describe('mobile role-aware components', () => {
         expect(wrapper.emitted('submit')?.[0]).toEqual([
             {
                 items: [{ price_option_id: 5 }],
-                delivery: { latitude: -6.2607, longitude: 106.8136 },
+                customer_address_id: 41,
             },
             null,
         ]);
@@ -280,7 +297,8 @@ describe('mobile role-aware components', () => {
 
         await wrapper.find('select').setValue('5');
 
-        expect(wrapper.text()).toContain('Pilih lokasi penjemputan');
+        expect(wrapper.text()).toContain('Alamat penjemputan belum dipilih');
+        expect(wrapper.text()).toContain('Tambah alamat penjemputan');
         expect(wrapper.find<HTMLButtonElement>('[data-test="create-order"]').element.disabled).toBe(
             true,
         );

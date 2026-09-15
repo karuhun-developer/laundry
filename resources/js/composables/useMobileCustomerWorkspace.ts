@@ -8,20 +8,13 @@ import type {
     MobileCustomerProfilePayload,
 } from '@/types/mobile';
 
-let optimisticCustomerId = 0;
-
-const nextOptimisticCustomerId = (): number => {
-    optimisticCustomerId += 1;
-
-    return -optimisticCustomerId;
-};
-
 export const useMobileCustomerWorkspace = (
     customers: Ref<MobileCustomer[]>,
     customerApi: MobileCustomerApi = useMobileCustomerApi(),
 ) => {
     const selectedCustomerId = ref<number | null>(null);
     const operationGenerations = new Map<number, number>();
+    let nextOptimisticCustomerId = -1;
 
     const beginCustomerOperation = (customerId: number): number => {
         const generation = (operationGenerations.get(customerId) ?? 0) + 1;
@@ -48,13 +41,10 @@ export const useMobileCustomerWorkspace = (
         selectedCustomerId.value = customerId;
     };
 
-    const reconcileCustomer = (replacedCustomerId: number, customer: MobileCustomer): void => {
+    const prependCustomer = (customer: MobileCustomer): void => {
         customers.value = [
             customer,
-            ...customers.value.filter(
-                (currentCustomer) =>
-                    currentCustomer.id !== replacedCustomerId && currentCustomer.id !== customer.id,
-            ),
+            ...customers.value.filter((currentCustomer) => currentCustomer.id !== customer.id),
         ];
     };
 
@@ -67,9 +57,9 @@ export const useMobileCustomerWorkspace = (
     const createCustomer = async (
         payload: MobileCustomerProfilePayload,
     ): Promise<MobileCustomerMutationResult> => {
-        const temporaryId = nextOptimisticCustomerId();
+        const optimisticCustomerId = nextOptimisticCustomerId--;
         const optimisticCustomer: MobileCustomer = {
-            id: temporaryId,
+            id: optimisticCustomerId,
             name: payload.name,
             email: null,
             whatsapp_phone: payload.whatsapp_phone,
@@ -77,16 +67,25 @@ export const useMobileCustomerWorkspace = (
             pin_expires_at: null,
             pending: true,
         };
-        customers.value = [optimisticCustomer, ...customers.value];
+        prependCustomer(optimisticCustomer);
 
         try {
             const result = await customerApi.createCustomer(payload);
-            reconcileCustomer(temporaryId, result.customer);
+            customers.value = [
+                result.customer,
+                ...customers.value.filter(
+                    (customer) =>
+                        customer.id !== optimisticCustomerId && customer.id !== result.customer.id,
+                ),
+            ];
             selectedCustomerId.value = result.customer.id;
 
             return result;
         } catch (error: unknown) {
-            customers.value = customers.value.filter((customer) => customer.id !== temporaryId);
+            customers.value = customers.value.filter(
+                (customer) => customer.id !== optimisticCustomerId,
+            );
+
             throw error;
         }
     };
@@ -118,25 +117,9 @@ export const useMobileCustomerWorkspace = (
         return result;
     };
 
-    const detachCustomer = async (customerId: number): Promise<void> => {
-        const generation = beginCustomerOperation(customerId);
-        await customerApi.detachCustomer(customerId);
-
-        if (!isCurrentCustomerOperation(customerId, generation)) {
-            return;
-        }
-
-        customers.value = customers.value.filter((customer) => customer.id !== customerId);
-
-        if (selectedCustomerId.value === customerId) {
-            selectedCustomerId.value = null;
-        }
-    };
-
     return {
         selectedCustomerId: readonly(selectedCustomerId),
         createCustomer,
-        detachCustomer,
         resetCustomerPin,
         selectCustomer,
         setCustomers,

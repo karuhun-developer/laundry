@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { KeyRound, LoaderCircle } from '@lucide/vue';
 import { ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,6 +81,7 @@ const resetPin = async (): Promise<void> => {
 
         requestError.value =
             error instanceof Error ? error.message : 'PIN sementara tidak dapat dibuat.';
+        toast.error(requestError.value);
     } finally {
         if (generation === operationGeneration) {
             processing.value = false;

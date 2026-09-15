@@ -1,6 +1,7 @@
 import { computed, onMounted, readonly, ref } from 'vue';
 import { type Coordinates, useGeolocation } from '@/composables/useGeolocation';
 import { useMobileCatalogApi } from '@/composables/useMobileCatalogApi';
+import { useMobileCustomerAddressApi } from '@/composables/useMobileCustomerAddressApi';
 import { useMobileCustomerWorkspace } from '@/composables/useMobileCustomerWorkspace';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
 import { useMobilePrinter } from '@/composables/useMobilePrinter';
@@ -9,6 +10,8 @@ import type {
     MobileBranch,
     MobileContext,
     MobileCustomer,
+    MobileCustomerAddress,
+    MobileCustomerAddressPayload,
     MobilePaymentActions,
     MobilePriceQuote,
     MobileService,
@@ -22,12 +25,15 @@ export const useMobileWorkspace = () => {
     const context = ref<MobileContext | null>(null);
     const services = ref<MobileService[]>([]);
     const customers = ref<MobileCustomer[]>([]);
+    const addresses = ref<MobileCustomerAddress[]>([]);
     const nearestBranches = ref<NearestMobileBranch[]>([]);
     const deliveryCoordinates = ref<Coordinates | null>(null);
     const selectedBranchId = ref<number | null>(null);
     const loading = ref(true);
+    const queueLoading = ref(false);
     const requestError = ref<string | null>(null);
     const catalogApi = useMobileCatalogApi();
+    const customerAddressApi = useMobileCustomerAddressApi();
     const geolocation = useGeolocation();
     const printer = useMobilePrinter();
     const customerWorkspace = useMobileCustomerWorkspace(customers);
@@ -35,6 +41,7 @@ export const useMobileWorkspace = () => {
     let catalogGeneration = 0;
     let nearestGeneration = 0;
     let branchSelectionGeneration = 0;
+    let orderSearchGeneration = 0;
 
     const selectedBranch = computed<MobileBranch | null>(
         () =>
@@ -44,6 +51,10 @@ export const useMobileWorkspace = () => {
         () =>
             nearestBranches.value.find((branch) => branch.id === selectedBranchId.value)?.delivery
                 .fee_rupiah ?? 0,
+    );
+    const selectedAddressId = ref<number | null>(null);
+    const selectedAddress = computed<MobileCustomerAddress | null>(
+        () => addresses.value.find((address) => address.id === selectedAddressId.value) ?? null,
     );
     const orderWorkspace = useMobileOrderWorkspace({
         context,
@@ -85,7 +96,7 @@ export const useMobileWorkspace = () => {
             return;
         }
 
-        const [orders, organizationCustomers] = await Promise.all([
+        const [orders, organizationCustomers, customerAddresses] = await Promise.all([
             orderWorkspace.loadOrders(
                 currentContext.role === 'branch_admin'
                     ? currentContext.organization.slug
@@ -93,6 +104,9 @@ export const useMobileWorkspace = () => {
             ),
             currentContext.role === 'branch_admin'
                 ? catalogApi.loadCustomers(currentContext.organization.slug)
+                : Promise.resolve([]),
+            currentContext.role === 'customer'
+                ? customerAddressApi.loadAddresses()
                 : Promise.resolve([]),
         ]);
 
@@ -102,6 +116,14 @@ export const useMobileWorkspace = () => {
 
         orderWorkspace.setOrders(orders);
         customerWorkspace.setCustomers(organizationCustomers);
+        addresses.value = customerAddresses;
+        selectedAddressId.value = customerAddresses.some(
+            (address) => address.id === selectedAddressId.value,
+        )
+            ? selectedAddressId.value
+            : (customerAddresses.find((address) => address.is_default)?.id ??
+              customerAddresses[0]?.id ??
+              null);
         await loadCatalog();
     };
 
@@ -236,13 +258,23 @@ export const useMobileWorkspace = () => {
                 : (response.branches[0]?.id ?? null);
             services.value = [];
             customerWorkspace.setCustomers([]);
+            addresses.value = [];
+            selectedAddressId.value = null;
             nearestBranches.value = [];
             deliveryCoordinates.value = null;
             orderWorkspace.setOrders([]);
             nearestGeneration += 1;
             branchSelectionGeneration += 1;
             await loadOrganizationData(requestGeneration);
-            shouldLocateAutomatically = response.role === 'customer';
+
+            if (response.role === 'customer' && selectedAddress.value) {
+                await findNearestBranches(
+                    selectedAddress.value.latitude,
+                    selectedAddress.value.longitude,
+                );
+            } else {
+                shouldLocateAutomatically = response.role === 'customer';
+            }
         } catch (error: unknown) {
             if (requestGeneration === loadGeneration) {
                 requestError.value = errorMessage(
@@ -297,6 +329,114 @@ export const useMobileWorkspace = () => {
         );
     };
 
+    const selectAddress = async (addressId: number): Promise<boolean> => {
+        const address = addresses.value.find((entry) => entry.id === addressId);
+
+        if (!address) {
+            requestError.value = 'Alamat penjemputan tidak tersedia.';
+            return false;
+        }
+
+        selectedAddressId.value = address.id;
+
+        return findNearestBranches(address.latitude, address.longitude);
+    };
+
+    const normalizeDefaultAddress = (address: MobileCustomerAddress): void => {
+        addresses.value = addresses.value.map((entry) =>
+            entry.id === address.id
+                ? address
+                : address.is_default
+                  ? { ...entry, is_default: false }
+                  : entry,
+        );
+    };
+
+    const createAddress = async (
+        payload: MobileCustomerAddressPayload,
+    ): Promise<MobileCustomerAddress> => {
+        const address = await customerAddressApi.createAddress(payload);
+        addresses.value = [address, ...addresses.value.filter((entry) => entry.id !== address.id)];
+        normalizeDefaultAddress(address);
+        await selectAddress(address.id);
+
+        return address;
+    };
+
+    const updateAddress = async (
+        addressId: number,
+        payload: MobileCustomerAddressPayload,
+    ): Promise<MobileCustomerAddress> => {
+        const address = await customerAddressApi.updateAddress(addressId, payload);
+        normalizeDefaultAddress(address);
+
+        if (selectedAddressId.value === address.id) {
+            await selectAddress(address.id);
+        }
+
+        return address;
+    };
+
+    const deleteAddress = async (addressId: number): Promise<void> => {
+        await customerAddressApi.deleteAddress(addressId);
+        const wasSelected = selectedAddressId.value === addressId;
+        addresses.value = addresses.value.filter((address) => address.id !== addressId);
+
+        if (!wasSelected) {
+            return;
+        }
+
+        const fallbackAddress =
+            addresses.value.find((address) => address.is_default) ?? addresses.value[0] ?? null;
+        selectedAddressId.value = fallbackAddress?.id ?? null;
+
+        if (fallbackAddress) {
+            await findNearestBranches(fallbackAddress.latitude, fallbackAddress.longitude);
+        } else {
+            deliveryCoordinates.value = null;
+            nearestBranches.value = [];
+        }
+    };
+
+    const setDefaultAddress = async (addressId: number): Promise<MobileCustomerAddress> => {
+        const address = await customerAddressApi.setDefaultAddress(addressId);
+        normalizeDefaultAddress(address);
+        await selectAddress(address.id);
+
+        return address;
+    };
+
+    const searchOrders = async (search: string): Promise<void> => {
+        const currentContext = context.value;
+
+        if (currentContext?.role !== 'branch_admin') {
+            return;
+        }
+
+        const requestGeneration = ++orderSearchGeneration;
+        queueLoading.value = true;
+        requestError.value = null;
+
+        try {
+            const orders = await orderWorkspace.loadOrders(
+                currentContext.organization.slug,
+                search,
+            );
+
+            if (requestGeneration === orderSearchGeneration && currentContext === context.value) {
+                orderWorkspace.setOrders(orders);
+            }
+        } catch (error: unknown) {
+            if (requestGeneration === orderSearchGeneration) {
+                requestError.value = errorMessage(error, 'Antrean tidak dapat dimuat.');
+            }
+        } finally {
+            if (requestGeneration === orderSearchGeneration) {
+                queueLoading.value = false;
+            }
+        }
+    };
+
     const paymentActions: MobilePaymentActions = {
         createPayment: orderWorkspace.createPayment,
         loadPaymentGatewayMethods: orderWorkspace.loadPaymentGatewayMethods,
@@ -320,15 +460,19 @@ export const useMobileWorkspace = () => {
 
     return {
         context: readonly(context),
+        addresses: readonly(addresses),
         services: readonly(services),
         customers: readonly(customers),
         deliveryCoordinates: readonly(deliveryCoordinates),
+        selectedAddress,
+        selectedAddressId: readonly(selectedAddressId),
         selectedCustomerId: customerWorkspace.selectedCustomerId,
         nearestBranches: readonly(nearestBranches),
         selectedBranch,
         selectedBranchId: readonly(selectedBranchId),
         selectedBranchDeliveryFee,
         loading: readonly(loading),
+        queueLoading: readonly(queueLoading),
         requestError: readonly(requestError),
         orders: orderWorkspace.orders,
         rollbackMessage: orderWorkspace.rollbackMessage,
@@ -343,14 +487,19 @@ export const useMobileWorkspace = () => {
         findNearestBranches,
         quoteOrder,
         confirmOrderPricing: orderWorkspace.confirmOrderPricing,
+        createAddress,
         createCustomer: customerWorkspace.createCustomer,
         createOrder: orderWorkspace.createOrder,
-        detachCustomer: customerWorkspace.detachCustomer,
+        deleteAddress,
         load,
         resetCustomerPin: customerWorkspace.resetCustomerPin,
+        searchOrders,
+        selectAddress,
         selectBranch,
         selectCustomer: customerWorkspace.selectCustomer,
         transitionOrder: orderWorkspace.transitionOrder,
+        setDefaultAddress,
+        updateAddress,
         updateCustomer: customerWorkspace.updateCustomer,
     };
 };

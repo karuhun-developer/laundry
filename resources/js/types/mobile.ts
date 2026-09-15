@@ -20,15 +20,7 @@ export type {
 
 export type MobileRole = 'customer' | 'branch_admin';
 
-export type MobileTab =
-    | 'home'
-    | 'orders'
-    | 'branches'
-    | 'account'
-    | 'queue'
-    | 'new-order'
-    | 'customers'
-    | 'more';
+export type MobileTab = 'home' | 'orders' | 'branches' | 'account' | 'queue' | 'customers' | 'more';
 
 export type MobileOrderStatus =
     | 'pickup_requested'
@@ -104,6 +96,31 @@ export type MobileCustomer = {
 export type MobileCustomerProfilePayload = {
     name: string;
     whatsapp_phone: string;
+};
+
+export type MobileCustomerAddress = {
+    id: number;
+    label: string;
+    recipient_name: string;
+    whatsapp_phone: string;
+    address: string;
+    notes: string | null;
+    latitude: number;
+    longitude: number;
+    is_default: boolean;
+    created_at: string | null;
+    updated_at: string | null;
+};
+
+export type MobileCustomerAddressPayload = {
+    label: string;
+    recipient_name: string;
+    whatsapp_phone: string;
+    address: string;
+    notes: string | null;
+    latitude: number;
+    longitude: number;
+    is_default: boolean;
 };
 
 export type MobileCustomerCredential = {
@@ -215,6 +232,10 @@ export type MobileOrder = {
         free_radius_meters_snapshot: number;
         fee_per_km_rupiah_snapshot: number;
         fee_rupiah: number;
+        address: null | Pick<
+            MobileCustomerAddress,
+            'id' | 'label' | 'recipient_name' | 'whatsapp_phone' | 'address' | 'notes'
+        >;
     };
     status_history: readonly MobileOrderStatusEvent[];
     payments: readonly MobilePayment[];
@@ -225,6 +246,7 @@ export type MobileOrder = {
 
 export type CreateOrderPayload = {
     customer_id?: number;
+    customer_address_id?: number;
     items: Array<{
         price_option_id: number;
         weight_grams?: number;

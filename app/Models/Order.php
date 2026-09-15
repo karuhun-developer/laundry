@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property int $branch_id
  * @property int|null $customer_id
+ * @property int|null $customer_address_id
  * @property int|null $created_by_id
  * @property string|null $order_number
  * @property OrderStatus $status
@@ -24,6 +25,11 @@ use Illuminate\Support\Carbon;
  * @property string|null $customer_whatsapp_phone_snapshot
  * @property float|null $customer_latitude
  * @property float|null $customer_longitude
+ * @property string|null $pickup_label_snapshot
+ * @property string|null $pickup_recipient_name_snapshot
+ * @property string|null $pickup_whatsapp_phone_snapshot
+ * @property string|null $pickup_address_snapshot
+ * @property string|null $pickup_notes_snapshot
  * @property int|null $delivery_distance_meters
  * @property int|null $delivery_free_radius_meters_snapshot
  * @property int|null $delivery_fee_per_km_rupiah_snapshot
@@ -40,6 +46,7 @@ use Illuminate\Support\Carbon;
     'organization_id',
     'branch_id',
     'customer_id',
+    'customer_address_id',
     'created_by_id',
     'order_number',
     'status',
@@ -47,6 +54,11 @@ use Illuminate\Support\Carbon;
     'customer_whatsapp_phone_snapshot',
     'customer_latitude',
     'customer_longitude',
+    'pickup_label_snapshot',
+    'pickup_recipient_name_snapshot',
+    'pickup_whatsapp_phone_snapshot',
+    'pickup_address_snapshot',
+    'pickup_notes_snapshot',
     'delivery_distance_meters',
     'delivery_free_radius_meters_snapshot',
     'delivery_fee_per_km_rupiah_snapshot',
@@ -77,6 +89,12 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    /** @return BelongsTo<CustomerAddress, $this> */
+    public function customerAddress(): BelongsTo
+    {
+        return $this->belongsTo(CustomerAddress::class);
     }
 
     /** @return BelongsTo<User, $this> */

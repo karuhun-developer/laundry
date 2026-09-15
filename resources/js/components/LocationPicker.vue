@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useGeolocation } from '@/composables/useGeolocation';
 import type { BranchLocation, LocationMapController, MapCoordinates } from '@/lib/locationMap';
 import { createLocationMap } from '@/lib/locationMap';
 
@@ -41,6 +42,7 @@ const emit = defineEmits<{
 const mapElement = ref<HTMLDivElement | null>(null);
 const locating = ref(false);
 const locationError = ref('');
+const geolocation = useGeolocation();
 const helpId = computed(() => `${props.inputIdPrefix}-help`);
 const latitudeId = computed(() => `${props.inputIdPrefix}-latitude`);
 const longitudeId = computed(() => `${props.inputIdPrefix}-longitude`);
@@ -98,33 +100,22 @@ const initializeMap = async (): Promise<void> => {
     });
 };
 
-const useCurrentLocation = (): void => {
+const useCurrentLocation = async (): Promise<void> => {
     locationError.value = '';
+    locating.value = true;
 
-    if (!navigator.geolocation) {
-        locationError.value = 'Perangkat ini tidak mendukung deteksi lokasi.';
+    const coordinates = await geolocation.locate();
+    locating.value = false;
+
+    if (!coordinates) {
+        locationError.value =
+            geolocation.error.value ?? 'Lokasi tidak dapat diambil. Pilih titik secara manual.';
         return;
     }
 
-    locating.value = true;
-    navigator.geolocation.getCurrentPosition(
-        ({ coords }) => {
-            locating.value = false;
-            mapController?.setCoordinates([coords.latitude, coords.longitude], true);
-            updateCoordinates(coords.latitude, coords.longitude);
-            emit('located', coords.latitude, coords.longitude);
-        },
-        () => {
-            locating.value = false;
-            locationError.value =
-                'Lokasi tidak dapat diambil. Izinkan akses lokasi lalu coba lagi.';
-        },
-        {
-            enableHighAccuracy: true,
-            maximumAge: 30000,
-            timeout: 10000,
-        },
-    );
+    mapController?.setCoordinates([coordinates.latitude, coordinates.longitude], true);
+    updateCoordinates(coordinates.latitude, coordinates.longitude);
+    emit('located', coordinates.latitude, coordinates.longitude);
 };
 
 watch(

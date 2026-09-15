@@ -85,4 +85,18 @@ describe('useMobilePrinter', () => {
         await expect(printer.discover('usb')).resolves.toBe(false);
         expect(printer.error.value).toContain('aplikasi Android');
     });
+
+    it('reports an empty discovery as a successful search', async () => {
+        const transport: PrinterTransport = {
+            available: true,
+            connections: ['bluetooth', 'usb'],
+            list: vi.fn(async () => []),
+            print: vi.fn(async () => undefined),
+        };
+        const printer = useMobilePrinter({ transport, storage: createStorage() });
+
+        await expect(printer.discover('bluetooth')).resolves.toBe(true);
+        expect(printer.error.value).toBeNull();
+        expect(printer.message.value).toBe('Tidak ada printer ditemukan.');
+    });
 });

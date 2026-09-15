@@ -7,6 +7,7 @@ import type {
     CreateOrderPayload,
     MobileBranch,
     MobileCustomer,
+    MobileCustomerAddress,
     MobilePriceQuote,
     MobileRole,
     MobileService,
@@ -18,6 +19,8 @@ type Props = {
     services: readonly MobileService[];
     customers: readonly MobileCustomer[];
     deliveryCoordinates: Coordinates | null;
+    selectedAddress?: MobileCustomerAddress | null;
+    activePickupOrderNumber?: string | null;
     quoteOrder: (priceOptionId: number, weightGrams: number) => Promise<MobilePriceQuote>;
     deliveryFeeRupiah?: number;
     processing?: boolean;
@@ -28,11 +31,14 @@ const props = withDefaults(defineProps<Props>(), {
     deliveryFeeRupiah: 0,
     processing: false,
     selectedCustomerId: null,
+    selectedAddress: null,
+    activePickupOrderNumber: null,
 });
 
 const emit = defineEmits<{
     submit: [payload: CreateOrderPayload, quote: MobilePriceQuote | null];
     'create-customer': [];
+    'manage-addresses': [];
     'update:selectedCustomerId': [customerId: number | null];
 }>();
 
@@ -167,8 +173,13 @@ const submit = (): void => {
         return;
     }
 
-    if (isCustomer.value && !props.deliveryCoordinates) {
-        formError.value = 'Pilih lokasi penjemputan dari menu Cabang terlebih dahulu.';
+    if (isCustomer.value && !props.selectedAddress) {
+        formError.value = 'Pilih alamat penjemputan terlebih dahulu.';
+        return;
+    }
+
+    if (isCustomer.value && props.activePickupOrderNumber) {
+        formError.value = `Penjemputan ${props.activePickupOrderNumber} masih diproses.`;
         return;
     }
 
@@ -201,7 +212,11 @@ const submit = (): void => {
         payload.items[0].weight_grams = weightGrams.value;
     }
 
-    if ((isCustomer.value || includeDelivery.value) && props.deliveryCoordinates) {
+    if (isCustomer.value && props.selectedAddress) {
+        payload.customer_address_id = props.selectedAddress.id;
+    }
+
+    if (!isCustomer.value && includeDelivery.value && props.deliveryCoordinates) {
         payload.delivery = props.deliveryCoordinates;
     }
 
@@ -305,26 +320,46 @@ const submit = (): void => {
 
             <div
                 v-if="role === 'customer'"
-                class="flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3"
-                :class="
-                    deliveryCoordinates
-                        ? 'border-mint-500/30 bg-mint-500/10'
-                        : 'border-amber-500/30 bg-amber-500/10'
-                "
+                class="rounded-2xl border border-line bg-surface-blue p-4"
                 data-test="pickup-location-status"
             >
-                <MapPin
-                    class="size-5 shrink-0"
-                    :class="deliveryCoordinates ? 'text-mint-500' : 'text-amber-700'"
-                    aria-hidden="true"
-                />
-                <span class="text-sm leading-5 text-ink-700">
-                    {{
-                        deliveryCoordinates
-                            ? 'Lokasi penjemputan sudah dipilih. Petugas akan menimbang laundry Anda.'
-                            : 'Pilih lokasi penjemputan dari menu Cabang sebelum membuat pesanan.'
-                    }}
-                </span>
+                <div class="flex items-start gap-3">
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+                        <MapPin class="size-5" aria-hidden="true" />
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-ink-950">
+                            {{ selectedAddress?.label ?? 'Alamat penjemputan belum dipilih' }}
+                        </p>
+                        <p v-if="selectedAddress" class="mt-1 text-sm leading-5 text-ink-700">
+                            {{ selectedAddress.recipient_name }} · {{ selectedAddress.whatsapp_phone }}
+                        </p>
+                        <p class="mt-1 text-sm leading-5 text-ink-500">
+                            {{
+                                selectedAddress
+                                    ? selectedAddress.address
+                                    : 'Tambahkan alamat dan tentukan titik penjemputan di peta.'
+                            }}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    class="mt-3 min-h-11 w-full rounded-xl border border-brand-600 bg-surface px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
+                    data-test="manage-pickup-address"
+                    @click="emit('manage-addresses')"
+                >
+                    {{ selectedAddress ? 'Ganti alamat / titik penjemputan' : 'Tambah alamat penjemputan' }}
+                </button>
+            </div>
+
+            <div
+                v-if="role === 'customer' && activePickupOrderNumber"
+                class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-5 text-ink-700"
+                data-test="active-pickup-notice"
+            >
+                Penjemputan <strong>{{ activePickupOrderNumber }}</strong> masih menunggu diproses.
+                Buat pesanan berikutnya setelah penjemputan ini dilanjutkan petugas.
             </div>
 
             <label
@@ -399,7 +434,7 @@ const submit = (): void => {
                     !branch ||
                     catalogOptions.length === 0 ||
                     (role === 'customer'
-                        ? !deliveryCoordinates
+                        ? !selectedAddress || Boolean(activePickupOrderNumber)
                         : quoteLoading || !hasCurrentQuote)
                 "
                 data-test="create-order"

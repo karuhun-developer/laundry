@@ -7,6 +7,7 @@ import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
 import type {
     MobileBranch,
     MobileContext,
+    MobileCustomerAddress,
     MobileService,
     NearestMobileBranch,
 } from '@/types/mobile';
@@ -25,6 +26,13 @@ const orderApi = vi.hoisted(() => ({
     loadOrders: vi.fn(),
     setOrders: vi.fn(),
 }));
+const customerAddressApi = vi.hoisted(() => ({
+    loadAddresses: vi.fn(),
+    createAddress: vi.fn(),
+    updateAddress: vi.fn(),
+    deleteAddress: vi.fn(),
+    setDefaultAddress: vi.fn(),
+}));
 
 vi.mock('@/composables/useMobileCatalogApi', () => ({
     useMobileCatalogApi: () => catalogApi,
@@ -37,6 +45,9 @@ vi.mock('@/composables/useGeolocation', () => ({
         locate: geolocation.locate,
     }),
 }));
+vi.mock('@/composables/useMobileCustomerAddressApi', () => ({
+    useMobileCustomerAddressApi: () => customerAddressApi,
+}));
 vi.mock('@/composables/useMobileCustomerWorkspace', async () => {
     const { ref } = await import('vue');
 
@@ -44,7 +55,6 @@ vi.mock('@/composables/useMobileCustomerWorkspace', async () => {
         useMobileCustomerWorkspace: () => ({
             selectedCustomerId: ref(null),
             createCustomer: vi.fn(),
-            detachCustomer: vi.fn(),
             resetCustomerPin: vi.fn(),
             selectCustomer: vi.fn(),
             setCustomers: vi.fn(),
@@ -169,6 +179,19 @@ const nearestBranches: NearestMobileBranch[] = [
         },
     },
 ];
+const defaultCustomerAddress: MobileCustomerAddress = {
+    id: 41,
+    label: 'Rumah',
+    recipient_name: 'Pelanggan Demo',
+    whatsapp_phone: '6281234567890',
+    address: 'Jl. Rumah Pelanggan No. 1',
+    notes: 'Pagar biru',
+    latitude: -6.91,
+    longitude: 107.61,
+    is_default: true,
+    created_at: '2026-09-15T08:00:00+00:00',
+    updated_at: '2026-09-15T08:00:00+00:00',
+};
 const serviceFor = (branchId: number): MobileService => ({
     id: branchId * 10,
     name: `Layanan cabang ${branchId}`,
@@ -255,11 +278,33 @@ beforeEach(() => {
     );
     catalogApi.loadCustomers.mockResolvedValue([]);
     catalogApi.findNearest.mockResolvedValue(nearestBranches);
+    customerAddressApi.loadAddresses.mockResolvedValue([]);
     geolocation.locate.mockResolvedValue({ latitude: -6.9, longitude: 107.6 });
     orderApi.loadOrders.mockResolvedValue([]);
 });
 
 describe('mobile workspace automatic nearest branch selection', () => {
+    it('uses the saved default address before requesting the current device location', async () => {
+        customerAddressApi.loadAddresses.mockResolvedValue([defaultCustomerAddress]);
+        const { workspace, unmount } = mountWorkspace();
+
+        await vi.waitFor(() => expect(workspace.selectedBranchId.value).toBe(dagoBranch.id));
+
+        expect(geolocation.locate).not.toHaveBeenCalled();
+        expect(catalogApi.findNearest).toHaveBeenCalledWith(
+            defaultCustomerAddress.latitude,
+            defaultCustomerAddress.longitude,
+        );
+        expect(workspace.selectedAddress.value).toEqual(defaultCustomerAddress);
+        expect(workspace.deliveryCoordinates.value).toEqual({
+            latitude: defaultCustomerAddress.latitude,
+            longitude: defaultCustomerAddress.longitude,
+        });
+        expect(workspace.services.value).toEqual([serviceFor(dagoBranch.id)]);
+
+        unmount();
+    });
+
     it('locates customers after readiness, sorts nearest-first, selects the nearest, and reloads its catalog', async () => {
         const { workspace, unmount } = mountWorkspace();
 

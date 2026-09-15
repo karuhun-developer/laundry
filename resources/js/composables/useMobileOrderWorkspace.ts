@@ -83,9 +83,9 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
 
         if (
             isCustomer &&
-            (!payload.delivery || item.weight_grams !== undefined || quote !== null)
+            (!payload.customer_address_id || item.weight_grams !== undefined || quote !== null)
         ) {
-            state.setRequestError('Pilih lokasi penjemputan. Berat akan diisi petugas.');
+            state.setRequestError('Pilih alamat penjemputan. Berat akan diisi petugas.');
             return false;
         }
 
@@ -109,12 +109,30 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
             return false;
         }
 
+        if (isCustomer) {
+            try {
+                const order = await api.createOrder(branch.organization.slug, branch.id, payload);
+                optimistic.setOrders([
+                    order,
+                    ...optimistic.orders.value.filter((entry) => entry.id !== order.id),
+                ]);
+
+                return true;
+            } catch (error: unknown) {
+                state.setRequestError(
+                    error instanceof Error ? error.message : 'Pesanan tidak dapat dibuat.',
+                );
+
+                return false;
+            }
+        }
+
         const nearestBranch = state.nearestBranches.value.find((entry) => entry.id === branch.id);
         const draft = buildDraftOrder({
             branch,
             customer: { id: customer.id, name: customer.name },
             option: catalogEntry.option,
-            quote: isCustomer ? null : quote,
+            quote,
             service: catalogEntry.service,
             deliveryFeeRupiah: payload.delivery ? (nearestBranch?.delivery.fee_rupiah ?? 0) : 0,
         });

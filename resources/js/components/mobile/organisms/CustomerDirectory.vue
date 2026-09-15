@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { KeyRound, Mail, Pencil, Phone, UserMinus, UserPlus, UserRound } from '@lucide/vue';
+import { KeyRound, Mail, Pencil, Phone, UserPlus, UserRound } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import type { MobileCustomer } from '@/types/mobile';
 
@@ -9,7 +9,6 @@ const emit = defineEmits<{
     create: [];
     edit: [customer: MobileCustomer];
     'reset-pin': [customer: MobileCustomer];
-    detach: [customer: MobileCustomer];
 }>();
 
 const formatExpiry = (expiresAt: string): string =>
@@ -102,7 +101,7 @@ const formatExpiry = (expiresAt: string): string =>
 
                 <div
                     v-if="!customer.pending"
-                    class="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-3 sm:grid-cols-3"
+                    class="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-3"
                 >
                     <Button
                         type="button"
@@ -125,17 +124,6 @@ const formatExpiry = (expiresAt: string): string =>
                     >
                         <KeyRound class="size-4" aria-hidden="true" />
                         Reset PIN
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        class="col-span-2 min-h-11 rounded-xl px-2 text-red-600 hover:bg-red-600/5 hover:text-red-600 sm:col-span-1"
-                        :data-test="`detach-customer-${customer.id}`"
-                        :aria-label="`Lepas ${customer.name}`"
-                        @click="emit('detach', customer)"
-                    >
-                        <UserMinus class="size-4" aria-hidden="true" />
-                        Lepas
                     </Button>
                 </div>
             </article>

@@ -12,6 +12,7 @@ final readonly class CreateOrderData
     /** @param list<CreateOrderItemData> $items */
     public function __construct(
         public int $customerId,
+        public ?int $customerAddressId,
         public array $items,
         public ?float $customerLatitude,
         public ?float $customerLongitude,
@@ -41,6 +42,9 @@ final readonly class CreateOrderData
             customerId: $actor->hasRole(RoleName::Customer->value)
                 ? $actor->id
                 : $request->integer('customer_id'),
+            customerAddressId: $request->filled('customer_address_id')
+                ? $request->integer('customer_address_id')
+                : null,
             items: $items,
             customerLatitude: $hasDelivery ? $request->float('delivery.latitude') : null,
             customerLongitude: $hasDelivery ? $request->float('delivery.longitude') : null,

@@ -15,6 +15,8 @@ type Props = {
     processing?: boolean;
     title?: string;
     description?: string;
+    emptyTitle?: string;
+    emptyDescription?: string;
     paymentActions?: MobilePaymentActions;
     paymentProcessing?: boolean;
     pricingProcessing?: boolean;
@@ -25,6 +27,9 @@ withDefaults(defineProps<Props>(), {
     processing: false,
     title: 'Pesanan laundry',
     description: 'Status terbaru dan riwayat proses ada di satu tempat.',
+    emptyTitle: 'Belum ada pesanan',
+    emptyDescription:
+        'Pesanan baru akan langsung muncul di sini dan dapat dilacak dari status pertama.',
     paymentActions: undefined,
     paymentProcessing: false,
     pricingProcessing: false,
@@ -80,9 +85,9 @@ const onConfirmPricing = (orderId: number, payload: ConfirmOrderPricingPayload):
             <span class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
                 <Inbox class="size-6" aria-hidden="true" />
             </span>
-            <h3 class="mt-4 font-display text-lg font-semibold text-ink-950">Belum ada pesanan</h3>
+            <h3 class="mt-4 font-display text-lg font-semibold text-ink-950">{{ emptyTitle }}</h3>
             <p class="mt-1 text-sm leading-6 text-ink-500">
-                Pesanan baru akan langsung muncul di sini dan dapat dilacak dari status pertama.
+                {{ emptyDescription }}
             </p>
         </div>
     </section>

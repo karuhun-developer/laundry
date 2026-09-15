@@ -15,7 +15,29 @@ const encodeBase64 = (bytes: Uint8Array): string => {
     return btoa(chunks.join(''));
 };
 
+const nativeTransportErrorCodes = new Set([
+    'bluetooth_disabled',
+    'permission_denied',
+    'bluetooth_unavailable',
+] as const);
+
 const transportError = (code: 'discovery_failed' | 'print_failed', error: unknown): never => {
+    const nativeCode =
+        typeof error === 'object' && error !== null ? Reflect.get(error, 'code') : undefined;
+
+    if (
+        code === 'discovery_failed' &&
+        typeof nativeCode === 'string' &&
+        nativeTransportErrorCodes.has(
+            nativeCode as 'bluetooth_disabled' | 'permission_denied' | 'bluetooth_unavailable',
+        )
+    ) {
+        throw new PrinterTransportError(
+            nativeCode as 'bluetooth_disabled' | 'permission_denied' | 'bluetooth_unavailable',
+            error instanceof Error ? error : undefined,
+        );
+    }
+
     if (error instanceof Error) {
         throw new PrinterTransportError(code, error);
     }

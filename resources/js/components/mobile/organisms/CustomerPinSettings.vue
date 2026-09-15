@@ -2,6 +2,7 @@
 import { useHttp } from '@inertiajs/vue3';
 import { KeyRound, LoaderCircle } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { toast } from 'vue-sonner';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +98,7 @@ const submitPinChange = async (): Promise<void> => {
         });
     } catch {
         pinRequestError.value ??= 'PIN tidak dapat diperbarui. Silakan coba lagi.';
+        toast.error(pinRequestError.value);
 
         return;
     }
@@ -106,11 +108,14 @@ const submitPinChange = async (): Promise<void> => {
             pinRequestError.value = 'PIN tidak dapat diperbarui. Silakan coba lagi.';
         }
 
+        toast.error(pinRequestError.value ?? 'PIN tidak dapat diperbarui.');
+
         return;
     }
 
     temporaryPinResolved.value = !response.data.must_change_pin;
     pinStatus.value = response.message;
+    toast.success(response.message);
     pinForm.reset();
 };
 </script>

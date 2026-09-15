@@ -1,7 +1,6 @@
 import { useHttp } from '@inertiajs/vue3';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
 import {
-    destroy as destroyCustomerRoute,
     resetPin as resetCustomerPinRoute,
     store as storeCustomerRoute,
     update as updateCustomerRoute,
@@ -79,7 +78,6 @@ export type MobileCustomerApi = {
         payload: MobileCustomerProfilePayload,
     ) => Promise<MobileCustomer>;
     resetCustomerPin: (customerId: number) => Promise<MobileCustomerCredentialResult>;
-    detachCustomer: (customerId: number) => Promise<void>;
 };
 
 export const useMobileCustomerApi = (): MobileCustomerApi => {
@@ -92,7 +90,6 @@ export const useMobileCustomerApi = (): MobileCustomerApi => {
         whatsapp_phone: '',
     });
     const resetPinRequest = useHttp<EmptyRequest, ResetCustomerPinResponse>({});
-    const detachRequest = useHttp<EmptyRequest, unknown>({});
 
     const createCustomer = async (
         payload: MobileCustomerProfilePayload,
@@ -201,31 +198,5 @@ export const useMobileCustomerApi = (): MobileCustomerApi => {
         }
     };
 
-    const detachCustomer = async (customerId: number): Promise<void> => {
-        detachRequest.clearErrors();
-        const { exception, onHttpException } = requestException(
-            'Pelanggan tidak dapat dilepas dari organisasi.',
-        );
-
-        try {
-            await detachRequest.delete(destroyCustomerRoute(customerId).url, { onHttpException });
-        } catch (error: unknown) {
-            if (exception.value) {
-                throw exception.value;
-            }
-
-            throw error;
-        }
-
-        if (detachRequest.hasErrors) {
-            throw new Error(
-                firstRequestError(
-                    detachRequest.errors,
-                    'Pelanggan tidak dapat dilepas dari organisasi.',
-                ),
-            );
-        }
-    };
-
-    return { createCustomer, updateCustomer, resetCustomerPin, detachCustomer };
+    return { createCustomer, updateCustomer, resetCustomerPin };
 };

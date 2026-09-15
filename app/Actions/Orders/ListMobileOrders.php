@@ -2,6 +2,7 @@
 
 namespace App\Actions\Orders;
 
+use App\Data\ListMobileOrdersData;
 use App\Enums\RoleName;
 use App\Models\Order;
 use App\Models\Organization;
@@ -13,8 +14,11 @@ use Illuminate\Support\Collection;
 final class ListMobileOrders
 {
     /** @return Collection<int, Order> */
-    public function handle(Organization $organization, User $user): Collection
-    {
+    public function handle(
+        Organization $organization,
+        User $user,
+        ListMobileOrdersData $data,
+    ): Collection {
         $query = $this->query()
             ->where('organization_id', $organization->id)
             ->latest('id')
@@ -26,6 +30,25 @@ final class ListMobileOrders
             $query->whereIn('branch_id', $user->branches()->select('branches.id'));
         } else {
             throw new AuthorizationException;
+        }
+
+        if ($data->search !== null) {
+            $term = $data->search;
+            $phone = preg_replace('/\D+/', '', $term) ?? '';
+
+            if (str_starts_with($phone, '0')) {
+                $phone = '62'.substr($phone, 1);
+            }
+
+            $query->where(function (Builder $searchQuery) use ($term, $phone): void {
+                $searchQuery
+                    ->where('order_number', 'like', "%{$term}%")
+                    ->orWhere('customer_name_snapshot', 'like', "%{$term}%");
+
+                if ($phone !== '') {
+                    $searchQuery->orWhere('customer_whatsapp_phone_snapshot', 'like', "%{$phone}%");
+                }
+            });
         }
 
         return $query->get();

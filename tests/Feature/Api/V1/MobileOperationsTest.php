@@ -172,6 +172,46 @@ it('filters branch admin orders to assigned branches', function (): void {
         ->assertJsonPath('data.0.id', $visibleOrder->id);
 });
 
+it('searches assigned branch orders by number customer name and normalized phone', function (): void {
+    $organization = Organization::factory()->create();
+    $assignedBranch = Branch::factory()->for($organization)->create();
+    $unassignedBranch = Branch::factory()->for($organization)->create();
+    $otherOrganization = Organization::factory()->create();
+    $otherBranch = Branch::factory()->for($otherOrganization)->create();
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($assignedBranch);
+    $visibleOrder = Order::factory()->for($organization)->for($assignedBranch)->create([
+        'order_number' => 'LDR-SEARCH-0001',
+        'customer_name_snapshot' => 'Ratna Kusuma',
+        'customer_whatsapp_phone_snapshot' => '6281234567890',
+    ]);
+    Order::factory()->for($organization)->for($assignedBranch)->create([
+        'order_number' => 'LDR-OTHER-0002',
+        'customer_name_snapshot' => 'Pelanggan Lain',
+        'customer_whatsapp_phone_snapshot' => '6287777777777',
+    ]);
+    Order::factory()->for($organization)->for($unassignedBranch)->create([
+        'order_number' => 'LDR-SEARCH-HIDDEN',
+        'customer_name_snapshot' => 'Ratna Kusuma',
+        'customer_whatsapp_phone_snapshot' => '6281234567890',
+    ]);
+    Order::factory()->for($otherOrganization)->for($otherBranch)->create([
+        'order_number' => 'LDR-SEARCH-TENANT',
+        'customer_name_snapshot' => 'Ratna Kusuma',
+        'customer_whatsapp_phone_snapshot' => '6281234567890',
+    ]);
+    Sanctum::actingAs($branchAdmin);
+    $route = route('api.v1.organizations.orders.index', $organization);
+
+    foreach (['SEARCH-0001', 'Ratna', '0812-3456-7890'] as $search) {
+        $this->getJson($route.'?search='.urlencode($search))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $visibleOrder->id);
+    }
+});
+
 it('denies cross-tenant and unsupported role order lists', function (): void {
     $organization = Organization::factory()->create();
     $otherOrganization = Organization::factory()->create();

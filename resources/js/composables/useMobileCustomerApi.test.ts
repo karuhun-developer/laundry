@@ -10,7 +10,6 @@ const mockedUseHttp = vi.hoisted(() => vi.fn());
 
 vi.mock('@inertiajs/vue3', () => ({ useHttp: mockedUseHttp }));
 vi.mock('@/routes/api/v1/mobile/customers', () => ({
-    destroy: (customerId: number) => ({ url: `/sentinel/customers/${customerId}/destroy` }),
     resetPin: (customerId: number) => ({ url: `/sentinel/customers/${customerId}/reset-pin` }),
     store: () => ({ url: '/sentinel/customers/store' }),
     update: (customerId: number) => ({ url: `/sentinel/customers/${customerId}/update` }),
@@ -92,12 +91,10 @@ describe('mobile customer API', () => {
         const create = createRequest();
         const update = updateRequest();
         const reset = emptyRequest();
-        const detach = emptyRequest();
         mockedUseHttp
             .mockReturnValueOnce(create)
             .mockReturnValueOnce(update)
-            .mockReturnValueOnce(reset)
-            .mockReturnValueOnce(detach);
+            .mockReturnValueOnce(reset);
         create.post.mockImplementationOnce(async () => {
             const response = { data: credentialResult };
             create.response = response;
@@ -134,16 +131,14 @@ describe('mobile customer API', () => {
         expect(create.response).toBeNull();
     });
 
-    it('uses generated Wayfinder endpoints for update, reset PIN, and detach', async () => {
+    it('uses generated Wayfinder endpoints for update and reset PIN', async () => {
         const create = createRequest();
         const update = updateRequest();
         const reset = emptyRequest();
-        const detach = emptyRequest();
         mockedUseHttp
             .mockReturnValueOnce(create)
             .mockReturnValueOnce(update)
-            .mockReturnValueOnce(reset)
-            .mockReturnValueOnce(detach);
+            .mockReturnValueOnce(reset);
         update.patch.mockResolvedValue({ data: customer });
         reset.post.mockImplementation(async () => {
             const response = { data: credentialResult };
@@ -151,7 +146,6 @@ describe('mobile customer API', () => {
 
             return response;
         });
-        detach.delete.mockResolvedValue(undefined);
         const api = useMobileCustomerApi();
 
         await api.updateCustomer(customer.id, {
@@ -159,7 +153,6 @@ describe('mobile customer API', () => {
             whatsapp_phone: customer.whatsapp_phone ?? '',
         });
         await api.resetCustomerPin(customer.id);
-        await api.detachCustomer(customer.id);
 
         expect(update.patch).toHaveBeenCalledWith(`/sentinel/customers/${customer.id}/update`, {
             onHttpException: expect.any(Function),
@@ -167,40 +160,13 @@ describe('mobile customer API', () => {
         expect(reset.post).toHaveBeenCalledWith(`/sentinel/customers/${customer.id}/reset-pin`, {
             onHttpException: expect.any(Function),
         });
-        expect(detach.delete).toHaveBeenCalledWith(`/sentinel/customers/${customer.id}/destroy`, {
-            onHttpException: expect.any(Function),
-        });
         expect(reset.response).toBeNull();
-    });
-
-    it('returns the backend validation message when detach is blocked by order history', async () => {
-        const create = createRequest();
-        const update = updateRequest();
-        const reset = emptyRequest();
-        const detach = emptyRequest();
-        mockedUseHttp
-            .mockReturnValueOnce(create)
-            .mockReturnValueOnce(update)
-            .mockReturnValueOnce(reset)
-            .mockReturnValueOnce(detach);
-        detach.delete.mockImplementation(async () => {
-            detach.errors = {
-                customer: 'Customer dengan riwayat pesanan tidak dapat dilepas dari organisasi.',
-            };
-            detach.hasErrors = true;
-        });
-        const api = useMobileCustomerApi();
-
-        await expect(api.detachCustomer(customer.id)).rejects.toThrow(
-            'Customer dengan riwayat pesanan tidak dapat dilepas dari organisasi.',
-        );
     });
 
     it('preserves field validation details after clearing errors from a previous request', async () => {
         const create = createRequest();
         const update = updateRequest();
         const reset = emptyRequest();
-        const detach = emptyRequest();
         create.errors = { name: 'Kesalahan lama.' };
         create.hasErrors = true;
         create.post.mockImplementation(async () => {
@@ -215,8 +181,7 @@ describe('mobile customer API', () => {
         mockedUseHttp
             .mockReturnValueOnce(create)
             .mockReturnValueOnce(update)
-            .mockReturnValueOnce(reset)
-            .mockReturnValueOnce(detach);
+            .mockReturnValueOnce(reset);
         const api = useMobileCustomerApi();
 
         const request = api.createCustomer({ name: '', whatsapp_phone: 'invalid' });
@@ -235,7 +200,6 @@ describe('mobile customer API', () => {
         const create = createRequest();
         const update = updateRequest();
         const reset = emptyRequest();
-        const detach = emptyRequest();
         update.patch.mockImplementation(
             async (
                 _url: string,
@@ -253,8 +217,7 @@ describe('mobile customer API', () => {
         mockedUseHttp
             .mockReturnValueOnce(create)
             .mockReturnValueOnce(update)
-            .mockReturnValueOnce(reset)
-            .mockReturnValueOnce(detach);
+            .mockReturnValueOnce(reset);
         const api = useMobileCustomerApi();
 
         await expect(

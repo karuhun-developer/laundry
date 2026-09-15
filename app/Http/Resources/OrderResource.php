@@ -56,6 +56,16 @@ class OrderResource extends JsonResource
                 : [
                     'customer_latitude' => $this->customer_latitude,
                     'customer_longitude' => $this->customer_longitude,
+                    'address' => $this->pickup_address_snapshot === null
+                        ? null
+                        : [
+                            'id' => $this->customer_address_id,
+                            'label' => $this->pickup_label_snapshot,
+                            'recipient_name' => $this->pickup_recipient_name_snapshot,
+                            'whatsapp_phone' => $this->pickup_whatsapp_phone_snapshot,
+                            'address' => $this->pickup_address_snapshot,
+                            'notes' => $this->pickup_notes_snapshot,
+                        ],
                     'distance_meters' => $this->delivery_distance_meters,
                     'free_radius_meters_snapshot' => $this->delivery_free_radius_meters_snapshot,
                     'fee_per_km_rupiah_snapshot' => $this->delivery_fee_per_km_rupiah_snapshot,

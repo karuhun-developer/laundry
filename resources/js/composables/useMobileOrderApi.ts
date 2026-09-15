@@ -26,6 +26,7 @@ export const useMobileOrderApi = () => {
     const detailRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrder>>({});
     const createRequest = useHttp<CreateOrderPayload, ApiEnvelope<MobileOrder>>({
         customer_id: undefined,
+        customer_address_id: undefined,
         items: [],
         delivery: undefined,
     });
@@ -39,11 +40,16 @@ export const useMobileOrderApi = () => {
     });
     const whatsAppSuggestionRequest = useHttp<EmptyRequest, ApiEnvelope<WhatsAppSuggestion>>({});
 
-    const loadOrders = async (organizationSlug?: string): Promise<MobileOrder[]> => {
+    const loadOrders = async (
+        organizationSlug?: string,
+        search?: string,
+    ): Promise<MobileOrder[]> => {
         ordersRequest.cancel();
         const response = await ordersRequest.get(
             organizationSlug
-                ? orderIndexRoute(organizationSlug).url
+                ? orderIndexRoute(organizationSlug, {
+                      query: search?.trim() ? { search: search.trim() } : {},
+                  }).url
                 : customerOrderIndexRoute().url,
         );
 
@@ -60,11 +66,34 @@ export const useMobileOrderApi = () => {
         payload: CreateOrderPayload,
     ): Promise<MobileOrder> => {
         createRequest.customer_id = payload.customer_id;
+        createRequest.customer_address_id = payload.customer_address_id;
         createRequest.items = payload.items;
         createRequest.delivery = payload.delivery;
-        const response = await createRequest.post(
-            storeOrderRoute({ organization: organizationSlug, branch: branchId }).url,
-        );
+        const httpException = { value: null as MobileHttpError | null };
+        let response: ApiEnvelope<MobileOrder> | undefined;
+
+        try {
+            response = await createRequest.post(
+                storeOrderRoute({ organization: organizationSlug, branch: branchId }).url,
+                {
+                    onHttpException: (exceptionResponse) => {
+                        httpException.value = new MobileHttpError(
+                            messageFromResponseData(
+                                exceptionResponse.data,
+                                'Pesanan tidak dapat dibuat.',
+                            ),
+                            exceptionResponse.status,
+                        );
+                    },
+                },
+            );
+        } catch (error: unknown) {
+            if (httpException.value) {
+                throw httpException.value;
+            }
+
+            throw error;
+        }
 
         if (!response) {
             throw new Error(

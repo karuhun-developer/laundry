@@ -3,6 +3,7 @@
 use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use App\Models\Branch;
+use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\PriceOption;
@@ -34,12 +35,17 @@ function createOrderPricingContext(): array
         'whatsapp_phone' => '6281234567890',
     ]);
     $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create([
+        'latitude' => 0.1,
+        'longitude' => 0,
+    ]);
     Sanctum::actingAs($customer);
 
     $orderId = test()->postJson(route('api.v1.organizations.branches.orders.store', [
         'organization' => $organization,
         'branch' => $branch,
     ]), [
+        'customer_address_id' => $address->id,
         'items' => [['price_option_id' => $priceOption->id]],
         'delivery' => ['latitude' => 0.1, 'longitude' => 0],
     ])->assertCreated()->json('data.id');

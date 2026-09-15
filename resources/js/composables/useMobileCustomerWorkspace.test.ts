@@ -27,19 +27,16 @@ const createApi = (): {
     createCustomer: ReturnType<typeof vi.fn<MobileCustomerApi['createCustomer']>>;
     updateCustomer: ReturnType<typeof vi.fn<MobileCustomerApi['updateCustomer']>>;
     resetCustomerPin: ReturnType<typeof vi.fn<MobileCustomerApi['resetCustomerPin']>>;
-    detachCustomer: ReturnType<typeof vi.fn<MobileCustomerApi['detachCustomer']>>;
 } => {
     const createCustomer = vi.fn<MobileCustomerApi['createCustomer']>();
     const updateCustomer = vi.fn<MobileCustomerApi['updateCustomer']>();
     const resetCustomerPin = vi.fn<MobileCustomerApi['resetCustomerPin']>();
-    const detachCustomer = vi.fn<MobileCustomerApi['detachCustomer']>();
 
     return {
-        api: { createCustomer, updateCustomer, resetCustomerPin, detachCustomer },
+        api: { createCustomer, updateCustomer, resetCustomerPin },
         createCustomer,
         updateCustomer,
         resetCustomerPin,
-        detachCustomer,
     };
 };
 
@@ -249,35 +246,5 @@ describe('mobile customer workspace', () => {
         await updateRequest;
 
         expect(customers.value).toEqual([resetCustomer]);
-    });
-
-    it('removes a customer only after detach succeeds and preserves it on a blocked detach', async () => {
-        const customers = ref<MobileCustomer[]>([existingCustomer]);
-        const { api, detachCustomer } = createApi();
-        let resolveDetach: () => void = () => undefined;
-        detachCustomer.mockReturnValue(
-            new Promise((resolve) => {
-                resolveDetach = resolve;
-            }),
-        );
-        const workspace = useMobileCustomerWorkspace(customers, api);
-        workspace.selectCustomer(existingCustomer.id);
-        const pendingDetach = workspace.detachCustomer(existingCustomer.id);
-
-        expect(customers.value).toEqual([existingCustomer]);
-        resolveDetach();
-        await pendingDetach;
-        expect(customers.value).toEqual([]);
-        expect(workspace.selectedCustomerId.value).toBeNull();
-
-        customers.value = [existingCustomer];
-        detachCustomer.mockRejectedValueOnce(
-            new Error('Customer dengan riwayat pesanan tidak dapat dilepas dari organisasi.'),
-        );
-
-        await expect(workspace.detachCustomer(existingCustomer.id)).rejects.toThrow(
-            'riwayat pesanan',
-        );
-        expect(customers.value).toEqual([existingCustomer]);
     });
 });

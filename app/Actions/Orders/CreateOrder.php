@@ -10,6 +10,7 @@ use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use App\Exceptions\OrderCannotBeCreated;
 use App\Models\Branch;
+use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\PriceOption;
@@ -51,6 +52,28 @@ final readonly class CreateOrder
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            if ($isCustomer) {
+                $pendingPickup = Order::query()
+                    ->where('customer_id', $customer->id)
+                    ->where('status', OrderStatus::PickupRequested)
+                    ->latest('id')
+                    ->first();
+
+                if ($pendingPickup !== null) {
+                    throw OrderCannotBeCreated::pickupAlreadyRequested($pendingPickup);
+                }
+            }
+
+            $pickupAddress = null;
+            $customerLatitude = $data->customerLatitude;
+            $customerLongitude = $data->customerLongitude;
+
+            if ($isCustomer) {
+                $pickupAddress = $this->pickupAddress($customer, $data);
+                $customerLatitude = $pickupAddress->latitude;
+                $customerLongitude = $pickupAddress->longitude;
+            }
+
             $customer->customerOrganizations()->syncWithoutDetaching([$organization->id]);
 
             /** @var list<PriceQuoteData> $quotedItems */
@@ -83,7 +106,7 @@ final readonly class CreateOrder
                 );
             }
 
-            $deliveryQuote = $this->deliveryQuote($branch, $data);
+            $deliveryQuote = $this->deliveryQuote($branch, $customerLatitude, $customerLongitude);
             $itemsSubtotalRupiah = array_sum(array_map(
                 static fn (PriceQuoteData $quote): int => $quote->totalRupiah,
                 $quotedItems,
@@ -95,12 +118,18 @@ final readonly class CreateOrder
                 'organization_id' => $organization->id,
                 'branch_id' => $branch->id,
                 'customer_id' => $customer->id,
+                'customer_address_id' => $pickupAddress?->id,
                 'created_by_id' => $actor->id,
                 'status' => $initialStatus,
                 'customer_name_snapshot' => $customer->name,
                 'customer_whatsapp_phone_snapshot' => $customer->whatsapp_phone,
-                'customer_latitude' => $data->customerLatitude,
-                'customer_longitude' => $data->customerLongitude,
+                'customer_latitude' => $customerLatitude,
+                'customer_longitude' => $customerLongitude,
+                'pickup_label_snapshot' => $pickupAddress?->label,
+                'pickup_recipient_name_snapshot' => $pickupAddress?->recipient_name,
+                'pickup_whatsapp_phone_snapshot' => $pickupAddress?->whatsapp_phone,
+                'pickup_address_snapshot' => $pickupAddress?->address,
+                'pickup_notes_snapshot' => $pickupAddress?->notes,
                 'delivery_distance_meters' => $deliveryQuote?->distanceMeters,
                 'delivery_free_radius_meters_snapshot' => $deliveryQuote === null
                     ? null
@@ -213,9 +242,17 @@ final readonly class CreateOrder
         }
     }
 
-    private function deliveryQuote(Branch $branch, CreateOrderData $data): ?DeliveryQuoteData
+    private function pickupAddress(User $customer, CreateOrderData $data): CustomerAddress
     {
-        if ($data->customerLatitude === null || $data->customerLongitude === null) {
+        return CustomerAddress::query()
+            ->where('customer_id', $customer->id)
+            ->whereKey($data->customerAddressId)
+            ->firstOrFail();
+    }
+
+    private function deliveryQuote(Branch $branch, ?float $latitude, ?float $longitude): ?DeliveryQuoteData
+    {
+        if ($latitude === null || $longitude === null) {
             return null;
         }
 
@@ -225,8 +262,8 @@ final readonly class CreateOrder
 
         return $this->deliveryRouteCalculator->quote(
             $branch,
-            $data->customerLatitude,
-            $data->customerLongitude,
+            $latitude,
+            $longitude,
         );
     }
 }

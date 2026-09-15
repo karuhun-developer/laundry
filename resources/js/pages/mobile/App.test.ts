@@ -1,4 +1,4 @@
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
@@ -20,7 +20,9 @@ const mobileWorkspace = vi.hoisted(() => ({
     loading: { value: false },
     requestError: { value: null },
     rollbackMessage: { value: null },
+    queueLoading: { value: false },
     orders: { value: [] },
+    addresses: { value: [] },
     customers: { value: [] },
     nearestBranches: { value: [] },
     deliveryCoordinates: { value: null },
@@ -28,6 +30,8 @@ const mobileWorkspace = vi.hoisted(() => ({
     selectedBranch: { value: null },
     selectedBranchId: { value: null },
     selectedBranchDeliveryFee: { value: 0 },
+    selectedAddress: { value: null },
+    selectedAddressId: { value: null },
     selectedCustomerId: { value: null },
     whatsAppSuggestion: { value: null as WhatsAppSuggestion | null },
     whatsAppSuggestionError: { value: null as string | null },
@@ -60,7 +64,12 @@ const mobileWorkspace = vi.hoisted(() => ({
     createCustomer: vi.fn(),
     updateCustomer: vi.fn(),
     resetCustomerPin: vi.fn(),
-    detachCustomer: vi.fn(),
+    searchOrders: vi.fn(),
+    createAddress: vi.fn(),
+    updateAddress: vi.fn(),
+    deleteAddress: vi.fn(),
+    setDefaultAddress: vi.fn(),
+    selectAddress: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -101,6 +110,15 @@ const whatsAppDialogStub = defineComponent({
     emits: ['update:open'],
     template: '<section data-test="whatsapp-dialog" />',
 });
+const dialogStub = defineComponent({
+    name: 'DialogStub',
+    props: { open: Boolean },
+    emits: ['update:open'],
+    template: '<div v-if="open"><slot /></div>',
+});
+const passThroughStub = defineComponent({
+    template: '<div><slot /></div>',
+});
 
 const mountMobileApp = (): VueWrapper =>
     mount(MobileApp, {
@@ -108,9 +126,14 @@ const mountMobileApp = (): VueWrapper =>
             stubs: {
                 BranchExplorer: true,
                 CustomerCredentialDialog: true,
-                CustomerDetachDialog: true,
+                CustomerAddressDialog: true,
                 CustomerFormDialog: true,
                 CustomerResetPinDialog: true,
+                Dialog: dialogStub,
+                DialogContent: passThroughStub,
+                DialogDescription: passThroughStub,
+                DialogHeader: passThroughStub,
+                DialogTitle: passThroughStub,
                 MobileWorkspaceSwitcher: true,
                 WhatsAppSuggestionDialog: whatsAppDialogStub,
             },
@@ -158,6 +181,7 @@ beforeEach(() => {
 
 afterEach(() => {
     document.body.innerHTML = '';
+    vi.useRealTimers();
     vi.clearAllMocks();
 });
 
@@ -193,12 +217,13 @@ describe('branch-admin mobile tab rendering', () => {
         expectNoAccountContent(wrapper);
     });
 
-    it('renders the real order composer on New Order without account leakage', async () => {
+    it('opens the real order composer from Queue without account leakage', async () => {
         const wrapper = mountMobileApp();
 
-        await selectTab(wrapper, 'new-order');
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="open-order-composer"]').trigger('click');
 
-        expect(wrapper.findComponent(OrderListPanel).exists()).toBe(false);
+        expect(wrapper.findComponent(OrderListPanel).exists()).toBe(true);
         expect(wrapper.findComponent(OrderComposer).exists()).toBe(true);
         expect(wrapper.get('#new-order-title').text()).toBe('Catat laundry masuk');
         expect(wrapper.find('[data-test="customer-select"]').exists()).toBe(true);
@@ -207,6 +232,55 @@ describe('branch-admin mobile tab rendering', () => {
         expect(wrapper.text()).toContain('Rincian harga server');
         expect(wrapper.findComponent(CustomerDirectory).exists()).toBe(false);
         expectNoAccountContent(wrapper);
+    });
+
+    it('closes the new-order dialog after the order is created', async () => {
+        mobileWorkspace.createOrder.mockResolvedValue(true);
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="open-order-composer"]').trigger('click');
+        wrapper.findComponent(OrderComposer).vm.$emit(
+            'submit',
+            {
+                customer_id: 21,
+                items: [{ price_option_id: 31, weight_grams: 1000 }],
+            },
+            null,
+        );
+        await flushPromises();
+
+        expect(mobileWorkspace.createOrder).toHaveBeenCalledOnce();
+        expect(wrapper.findComponent(OrderComposer).exists()).toBe(false);
+    });
+
+    it('debounces and trims queue search requests', async () => {
+        vi.useFakeTimers();
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="queue-search"]').setValue('  Waki  ');
+        await vi.advanceTimersByTimeAsync(299);
+        expect(mobileWorkspace.searchOrders).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect(mobileWorkspace.searchOrders).toHaveBeenCalledWith('Waki');
+    });
+
+    it('clears queue search immediately and renders the filtered empty state', async () => {
+        vi.useFakeTimers();
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="queue-search"]').setValue('Tidak ada');
+
+        expect(wrapper.text()).toContain('Pesanan tidak ditemukan');
+        await wrapper.get('[data-test="clear-queue-search"]').trigger('click');
+
+        expect(mobileWorkspace.searchOrders).toHaveBeenCalledWith('');
+        expect(wrapper.text()).toContain('Belum ada pesanan');
+        await vi.advanceTimersByTimeAsync(300);
+        expect(mobileWorkspace.searchOrders).toHaveBeenCalledTimes(1);
     });
 
     it('renders the real customer directory on Customers without account leakage', async () => {

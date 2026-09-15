@@ -69,6 +69,12 @@ class User extends Authenticatable implements PasskeyUser
             ->withTimestamps();
     }
 
+    /** @return HasMany<CustomerAddress, $this> */
+    public function customerAddresses(): HasMany
+    {
+        return $this->hasMany(CustomerAddress::class, 'customer_id');
+    }
+
     public function setCustomerPin(string $pin, ?CarbonInterface $expiresAt = null, bool $mustChange = false): void
     {
         $this->forceFill([

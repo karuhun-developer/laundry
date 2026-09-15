@@ -5,8 +5,10 @@ namespace App\Http\Requests\Api\V1;
 use App\Enums\RoleName;
 use App\Models\Organization;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\Attributes\FailOnUnknownFields;
 use Illuminate\Foundation\Http\FormRequest;
 
+#[FailOnUnknownFields]
 class ListMobileOrdersRequest extends FormRequest
 {
     /**
@@ -37,6 +39,8 @@ class ListMobileOrdersRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [];
+        return [
+            'search' => ['sometimes', 'string', 'max:100'],
+        ];
     }
 }

@@ -1,8 +1,6 @@
 <?php
 
 use App\Enums\RoleName;
-use App\Models\Branch;
-use App\Models\Order;
 use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -231,12 +229,12 @@ it('rejects malformed customer create and update input', function (string $metho
     'update invalid phone' => ['PATCH', ['whatsapp_phone' => 'not-a-phone'], ['whatsapp_phone']],
 ]);
 
-it('rejects unknown fields on PIN reset and detach', function (string $method, string $suffix): void {
+it('rejects unknown fields on PIN reset', function (): void {
     $organization = Organization::factory()->create();
     $customer = customerManagementCustomer($organization);
     Sanctum::actingAs(customerManagementBranchAdmin($organization));
 
-    $this->json($method, "/api/v1/mobile/customers/{$customer->id}{$suffix}", [
+    $this->postJson("/api/v1/mobile/customers/{$customer->id}/reset-pin", [
         'unexpected' => true,
     ])->assertUnprocessable()
         ->assertJsonValidationErrors('unexpected');
@@ -245,10 +243,7 @@ it('rejects unknown fields on PIN reset and detach', function (string $method, s
         'customer_id' => $customer->id,
         'organization_id' => $organization->id,
     ]);
-})->with([
-    ['POST', '/reset-pin'],
-    ['DELETE', ''],
-]);
+});
 
 it('resets the temporary PIN once and invalidates every customer session', function (): void {
     $this->travelTo('2026-09-15 10:45:00');
@@ -337,7 +332,7 @@ it('never stores plaintext PIN values in customer activity properties', function
         ->and($activityProperties)->not->toContain('pin_hash');
 });
 
-it('hides cross-tenant customers from update reset and detach operations', function (string $method, string $suffix): void {
+it('hides cross-tenant customers from update and reset operations', function (string $method, string $suffix): void {
     $organization = Organization::factory()->create();
     $otherOrganization = Organization::factory()->create();
     $customer = customerManagementCustomer($otherOrganization, [
@@ -362,27 +357,20 @@ it('hides cross-tenant customers from update reset and detach operations', funct
 })->with([
     ['PATCH', ''],
     ['POST', '/reset-pin'],
-    ['DELETE', ''],
 ]);
 
-it('detaches only the actor organization and never deletes the global customer', function (): void {
+it('does not expose an endpoint for removing a customer from an organization', function (): void {
     $organization = Organization::factory()->create();
-    $otherOrganization = Organization::factory()->create();
     $customer = customerManagementCustomer($organization);
-    $customer->customerOrganizations()->attach($otherOrganization);
     Sanctum::actingAs(customerManagementBranchAdmin($organization));
 
     $this->deleteJson("/api/v1/mobile/customers/{$customer->id}")
-        ->assertNoContent();
+        ->assertMethodNotAllowed();
 
     $this->assertDatabaseHas('users', ['id' => $customer->id]);
-    $this->assertDatabaseMissing('customer_organization', [
-        'customer_id' => $customer->id,
-        'organization_id' => $organization->id,
-    ]);
     $this->assertDatabaseHas('customer_organization', [
         'customer_id' => $customer->id,
-        'organization_id' => $otherOrganization->id,
+        'organization_id' => $organization->id,
     ]);
 });
 
@@ -414,48 +402,6 @@ it('denies global profile and PIN changes for a customer shared by organizations
     ['POST', '/reset-pin'],
 ]);
 
-it('rejects detach when the customer has order history in the actor organization', function (): void {
-    $organization = Organization::factory()->create();
-    $branch = Branch::factory()->for($organization)->create();
-    $customer = customerManagementCustomer($organization);
-    Order::factory()->for($organization)->for($branch)->create([
-        'customer_id' => $customer->id,
-        'created_by_id' => $customer->id,
-    ]);
-    Sanctum::actingAs(customerManagementBranchAdmin($organization));
-
-    $this->deleteJson("/api/v1/mobile/customers/{$customer->id}")
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('customer');
-
-    $this->assertDatabaseHas('customer_organization', [
-        'customer_id' => $customer->id,
-        'organization_id' => $organization->id,
-    ]);
-});
-
-it('allows detach when order history belongs only to another organization', function (): void {
-    $organization = Organization::factory()->create();
-    $otherOrganization = Organization::factory()->create();
-    $otherBranch = Branch::factory()->for($otherOrganization)->create();
-    $customer = customerManagementCustomer($organization);
-    $customer->customerOrganizations()->attach($otherOrganization);
-    Order::factory()->for($otherOrganization)->for($otherBranch)->create([
-        'customer_id' => $customer->id,
-        'created_by_id' => $customer->id,
-    ]);
-    Sanctum::actingAs(customerManagementBranchAdmin($organization));
-
-    $this->deleteJson("/api/v1/mobile/customers/{$customer->id}")
-        ->assertNoContent();
-
-    $this->assertDatabaseCount('orders', 1);
-    $this->assertDatabaseMissing('customer_organization', [
-        'customer_id' => $customer->id,
-        'organization_id' => $organization->id,
-    ]);
-});
-
 it('requires authentication for every customer management endpoint', function (string $method, string $path, array $payload): void {
     $organization = Organization::factory()->create();
     $customer = customerManagementCustomer($organization);
@@ -472,7 +418,6 @@ it('requires authentication for every customer management endpoint', function (s
     ['POST', '/api/v1/mobile/customers', ['name' => 'Unauthorized', 'whatsapp_phone' => '081234567890']],
     ['PATCH', '/api/v1/mobile/customers/{customer}', ['name' => 'Unauthorized']],
     ['POST', '/api/v1/mobile/customers/{customer}/reset-pin', []],
-    ['DELETE', '/api/v1/mobile/customers/{customer}', []],
 ]);
 
 it('denies unsupported actors across customer management endpoints', function (?RoleName $role, bool $hasOrganization, string $method, string $path, array $payload): void {
@@ -521,20 +466,16 @@ it('denies unsupported actors across customer management endpoints', function (?
     'owner create' => [RoleName::Owner, true, 'POST', '/api/v1/mobile/customers', ['name' => 'Forbidden', 'whatsapp_phone' => '081211111111']],
     'owner update' => [RoleName::Owner, true, 'PATCH', '/api/v1/mobile/customers/{customer}', ['name' => 'Forbidden']],
     'owner reset' => [RoleName::Owner, true, 'POST', '/api/v1/mobile/customers/{customer}/reset-pin', []],
-    'owner detach' => [RoleName::Owner, true, 'DELETE', '/api/v1/mobile/customers/{customer}', []],
     'customer list' => [RoleName::Customer, false, 'GET', '/api/v1/organizations/{organization}/customers', []],
     'customer create' => [RoleName::Customer, false, 'POST', '/api/v1/mobile/customers', ['name' => 'Forbidden', 'whatsapp_phone' => '081211111111']],
     'customer update' => [RoleName::Customer, false, 'PATCH', '/api/v1/mobile/customers/{customer}', ['name' => 'Forbidden']],
     'customer reset' => [RoleName::Customer, false, 'POST', '/api/v1/mobile/customers/{customer}/reset-pin', []],
-    'customer detach' => [RoleName::Customer, false, 'DELETE', '/api/v1/mobile/customers/{customer}', []],
     'roleless list' => [null, true, 'GET', '/api/v1/organizations/{organization}/customers', []],
     'roleless create' => [null, true, 'POST', '/api/v1/mobile/customers', ['name' => 'Forbidden', 'whatsapp_phone' => '081211111111']],
     'roleless update' => [null, true, 'PATCH', '/api/v1/mobile/customers/{customer}', ['name' => 'Forbidden']],
     'roleless reset' => [null, true, 'POST', '/api/v1/mobile/customers/{customer}/reset-pin', []],
-    'roleless detach' => [null, true, 'DELETE', '/api/v1/mobile/customers/{customer}', []],
     'branch admin without organization list' => [RoleName::BranchAdmin, false, 'GET', '/api/v1/organizations/{organization}/customers', []],
     'branch admin without organization create' => [RoleName::BranchAdmin, false, 'POST', '/api/v1/mobile/customers', ['name' => 'Forbidden', 'whatsapp_phone' => '081211111111']],
     'branch admin without organization update' => [RoleName::BranchAdmin, false, 'PATCH', '/api/v1/mobile/customers/{customer}', ['name' => 'Forbidden']],
     'branch admin without organization reset' => [RoleName::BranchAdmin, false, 'POST', '/api/v1/mobile/customers/{customer}/reset-pin', []],
-    'branch admin without organization detach' => [RoleName::BranchAdmin, false, 'DELETE', '/api/v1/mobile/customers/{customer}', []],
 ]);

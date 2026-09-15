@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PriceType;
 use App\Enums\RoleName;
 use App\Models\Branch;
+use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\PriceOption;
@@ -35,18 +36,28 @@ it('lets a customer request pickup for one service without entering weight or se
         'whatsapp_phone' => '6281234567890',
     ]);
     $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create([
+        'label' => 'Rumah',
+        'recipient_name' => 'Budi',
+        'whatsapp_phone' => '6281234567890',
+        'address' => 'Jl. Melati No. 10',
+        'notes' => 'Pagar biru',
+        'latitude' => 0.1,
+        'longitude' => 0,
+    ]);
     Sanctum::actingAs($customer);
 
     $response = $this->postJson(route('api.v1.organizations.branches.orders.store', [
         'organization' => $organization,
         'branch' => $branch,
     ]), [
+        'customer_address_id' => $address->id,
         'items' => [[
             'price_option_id' => $priceOption->id,
         ]],
         'delivery' => [
-            'latitude' => 0.1,
-            'longitude' => 0,
+            'latitude' => -6.2,
+            'longitude' => 106.8,
         ],
     ]);
 
@@ -64,10 +75,14 @@ it('lets a customer request pickup for one service without entering weight or se
         ->assertJsonPath('data.pricing.total_rupiah', 0)
         ->assertJsonPath('data.delivery.free_radius_meters_snapshot', 10000)
         ->assertJsonPath('data.delivery.fee_per_km_rupiah_snapshot', 3000)
+        ->assertJsonPath('data.delivery.customer_latitude', 0.1)
+        ->assertJsonPath('data.delivery.address.label', 'Rumah')
+        ->assertJsonPath('data.delivery.address.address', 'Jl. Melati No. 10')
         ->assertJsonPath('data.status_history.0.status', OrderStatus::PickupRequested->value);
 
     $this->assertDatabaseHas('orders', [
         'customer_id' => $customer->id,
+        'customer_address_id' => $address->id,
         'created_by_id' => $customer->id,
         'customer_whatsapp_phone_snapshot' => '6281234567890',
         'status' => OrderStatus::PickupRequested->value,
@@ -75,6 +90,8 @@ it('lets a customer request pickup for one service without entering weight or se
         'delivery_fee_rupiah' => 6000,
         'total_rupiah' => 0,
         'priced_at' => null,
+        'pickup_label_snapshot' => 'Rumah',
+        'pickup_address_snapshot' => 'Jl. Melati No. 10',
     ]);
 
     $customer->update(['whatsapp_phone' => '6289876543210']);
@@ -212,6 +229,10 @@ it('rejects unauthenticated and unassigned branch-admin order creation', functio
     $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
     $customer = User::factory()->create();
     $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create([
+        'latitude' => -6.2,
+        'longitude' => 106.8,
+    ]);
     $route = route('api.v1.organizations.branches.orders.store', [
         'organization' => $organization,
         'branch' => $branch,
@@ -337,12 +358,17 @@ it('does not create orders from inactive tenant or catalog records', function ()
     $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
     $customer = User::factory()->create();
     $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create([
+        'latitude' => -6.2,
+        'longitude' => 106.8,
+    ]);
     Sanctum::actingAs($customer);
     $route = route('api.v1.organizations.branches.orders.store', [
         'organization' => $organization,
         'branch' => $branch,
     ]);
     $payload = [
+        'customer_address_id' => $address->id,
         'items' => [['price_option_id' => $priceOption->id]],
         'delivery' => ['latitude' => -6.2, 'longitude' => 106.8],
     ];
@@ -372,6 +398,7 @@ it('rejects customer weight, missing pickup location, multiple services, and ser
     $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
     $customer = User::factory()->create();
     $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create();
     Sanctum::actingAs($customer);
     $route = route('api.v1.organizations.branches.orders.store', [
         'organization' => $organization,
@@ -379,11 +406,13 @@ it('rejects customer weight, missing pickup location, multiple services, and ser
     ]);
 
     $this->postJson($route, [])->assertUnprocessable()
-        ->assertJsonValidationErrors(['items', 'delivery'])
+        ->assertJsonValidationErrors(['items', 'customer_address_id'])
+        ->assertJsonPath('errors.customer_address_id.0', 'Alamat penjemputan wajib dipilih.')
         ->assertJsonPath('errors.items.0', 'Minimal satu item laundry wajib diisi.');
 
     $this->postJson($route, [
         'customer_id' => User::factory()->create()->id,
+        'customer_address_id' => $address->id,
         'total_rupiah' => 1,
         'items' => [
             ['price_option_id' => $priceOption->id, 'weight_grams' => 1000],
@@ -413,12 +442,17 @@ it('requires branch coordinates when delivery is requested', function (): void {
     $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
     $customer = User::factory()->create();
     $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create([
+        'latitude' => -6.2,
+        'longitude' => 106.8,
+    ]);
     Sanctum::actingAs($customer);
 
     $this->postJson(route('api.v1.organizations.branches.orders.store', [
         'organization' => $organization,
         'branch' => $branch,
     ]), [
+        'customer_address_id' => $address->id,
         'items' => [['price_option_id' => $priceOption->id]],
         'delivery' => ['latitude' => -6.2, 'longitude' => 106.8],
     ])->assertUnprocessable()
@@ -429,4 +463,108 @@ it('requires branch coordinates when delivery is requested', function (): void {
         );
 
     $this->assertDatabaseCount('orders', 0);
+});
+
+it('prevents duplicate active pickup requests and permits another request after processing starts', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create();
+    Sanctum::actingAs($customer);
+    $route = route('api.v1.organizations.branches.orders.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+    ]);
+    $payload = [
+        'customer_address_id' => $address->id,
+        'items' => [['price_option_id' => $priceOption->id]],
+    ];
+
+    $firstOrderId = $this->postJson($route, $payload)
+        ->assertCreated()
+        ->json('data.id');
+
+    $this->postJson($route, $payload)
+        ->assertConflict()
+        ->assertJsonPath('code', 'PICKUP_ALREADY_REQUESTED')
+        ->assertJsonPath(
+            'message',
+            'Penjemputan untuk pesanan '.Order::query()->findOrFail($firstOrderId)->order_number.' masih diproses.',
+        );
+
+    Order::query()->findOrFail($firstOrderId)->update(['status' => OrderStatus::Received]);
+
+    $this->postJson($route, $payload)->assertCreated();
+    $this->assertDatabaseCount('orders', 2);
+});
+
+it('keeps pickup address snapshots after the customer changes and removes the saved address', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create([
+        'label' => 'Rumah Lama',
+        'recipient_name' => 'Budi Lama',
+        'whatsapp_phone' => '6281234567890',
+        'address' => 'Jl. Lama No. 1',
+        'notes' => 'Pagar biru',
+    ]);
+    Sanctum::actingAs($customer);
+
+    $orderId = $this->postJson(route('api.v1.organizations.branches.orders.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+    ]), [
+        'customer_address_id' => $address->id,
+        'items' => [['price_option_id' => $priceOption->id]],
+    ])->assertCreated()->json('data.id');
+
+    $address->update([
+        'label' => 'Rumah Baru',
+        'address' => 'Jl. Baru No. 2',
+    ]);
+    $address->delete();
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $orderId,
+        'customer_address_id' => null,
+        'pickup_label_snapshot' => 'Rumah Lama',
+        'pickup_recipient_name_snapshot' => 'Budi Lama',
+        'pickup_whatsapp_phone_snapshot' => '6281234567890',
+        'pickup_address_snapshot' => 'Jl. Lama No. 1',
+        'pickup_notes_snapshot' => 'Pagar biru',
+    ]);
+});
+
+it('allows branch staff to create multiple orders for the same customer', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create();
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $customer->customerOrganizations()->attach($organization);
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+    Sanctum::actingAs($branchAdmin);
+    $route = route('api.v1.organizations.branches.orders.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+    ]);
+    $payload = [
+        'customer_id' => $customer->id,
+        'items' => [['price_option_id' => $priceOption->id, 'weight_grams' => 1000]],
+    ];
+
+    $this->postJson($route, $payload)->assertCreated();
+    $this->postJson($route, $payload)->assertCreated();
+
+    $this->assertDatabaseCount('orders', 2);
 });

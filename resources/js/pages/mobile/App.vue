@@ -1,19 +1,37 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, Building2, MessageCircle, RefreshCw, Shirt } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import {
+    AlertTriangle,
+    Building2,
+    MessageCircle,
+    Plus,
+    RefreshCw,
+    Search,
+    Shirt,
+    X,
+} from '@lucide/vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import CustomerCredentialDialog from '@/components/mobile/molecules/CustomerCredentialDialog.vue';
-import CustomerDetachDialog from '@/components/mobile/molecules/CustomerDetachDialog.vue';
 import CustomerFormDialog from '@/components/mobile/molecules/CustomerFormDialog.vue';
 import CustomerResetPinDialog from '@/components/mobile/molecules/CustomerResetPinDialog.vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import MobileWorkspaceSwitcher from '@/components/mobile/molecules/MobileWorkspaceSwitcher.vue';
 import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSuggestionDialog.vue';
 import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
+import CustomerAddressDialog from '@/components/mobile/organisms/CustomerAddressDialog.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Toaster } from '@/components/ui/sonner';
 import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
 import { orderStatusLabels } from '@/lib/mobileOrders';
 import type {
@@ -37,15 +55,24 @@ const customerFormOpen = ref(false);
 const customerFormMode = ref<'create' | 'edit'>('create');
 const activeCustomer = ref<MobileCustomer | null>(null);
 const resetPinDialogOpen = ref(false);
-const detachDialogOpen = ref(false);
+const addressDialogOpen = ref(false);
+const orderComposerOpen = ref(false);
+const queueSearch = ref('');
 const credentialDialogOpen = ref(false);
 const revealedCredential = ref<{
     customerName: string;
     credential: MobileCustomerCredential;
 } | null>(null);
 const customerStatusMessage = ref('');
+let queueSearchTimer: ReturnType<typeof setTimeout> | null = null;
+let queueSearchClearedSynchronously = false;
 
 const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
+const activePickupOrderNumber = computed(
+    () =>
+        workspace.orders.value.find((order) => order.status === 'pickup_requested')?.order_number ??
+        null,
+);
 
 watch(
     () => workspace.context.value?.role,
@@ -57,6 +84,61 @@ watch(
 watch(credentialDialogOpen, (isOpen) => {
     if (!isOpen) {
         revealedCredential.value = null;
+    }
+});
+
+watch(queueSearch, (search) => {
+    if (queueSearchClearedSynchronously) {
+        queueSearchClearedSynchronously = false;
+        return;
+    }
+
+    if (queueSearchTimer) {
+        clearTimeout(queueSearchTimer);
+    }
+
+    queueSearchTimer = setTimeout(() => void workspace.searchOrders(search.trim()), 300);
+});
+
+watch(
+    () => workspace.requestError.value,
+    (message) => {
+        if (message) {
+            toast.error(message);
+        }
+    },
+);
+
+watch(
+    () => workspace.rollbackMessage.value,
+    (message) => {
+        if (message) {
+            toast.error(message);
+        }
+    },
+);
+
+watch(
+    () => workspace.printer.message.value,
+    (message) => {
+        if (message) {
+            toast.success(message);
+        }
+    },
+);
+
+watch(
+    () => workspace.printer.error.value,
+    (message) => {
+        if (message) {
+            toast.error(message);
+        }
+    },
+);
+
+onBeforeUnmount(() => {
+    if (queueSearchTimer) {
+        clearTimeout(queueSearchTimer);
     }
 });
 
@@ -77,11 +159,6 @@ const openResetCustomerPin = (customer: MobileCustomer): void => {
     resetPinDialogOpen.value = true;
 };
 
-const openDetachCustomer = (customer: MobileCustomer): void => {
-    activeCustomer.value = customer;
-    detachDialogOpen.value = true;
-};
-
 const saveCustomer = (
     payload: MobileCustomerProfilePayload,
 ): Promise<MobileCustomerMutationResult> => {
@@ -99,19 +176,14 @@ const onCustomerSaved = (result: MobileCustomerMutationResult): void => {
             : result.credential
               ? `Pelanggan ${result.customer.name} berhasil dibuat.`
               : `Pelanggan ${result.customer.name} berhasil dihubungkan.`;
+    toast.success(customerStatusMessage.value);
     revealTemporaryPin(result);
 };
 
 const onCustomerPinReset = (result: MobileCustomerCredentialResult): void => {
     customerStatusMessage.value = `PIN pelanggan ${result.customer.name} berhasil direset.`;
+    toast.success(customerStatusMessage.value);
     revealTemporaryPin(result);
-};
-
-const onCustomerDetached = (customerId: number): void => {
-    const customerName = activeCustomer.value?.id === customerId ? activeCustomer.value.name : '';
-    customerStatusMessage.value = customerName
-        ? `Pelanggan ${customerName} berhasil dilepas dari organisasi.`
-        : 'Pelanggan berhasil dilepas dari organisasi.';
 };
 
 const revealTemporaryPin = (
@@ -128,8 +200,8 @@ const revealTemporaryPin = (
     credentialDialogOpen.value = true;
 };
 
-const onBranchSelected = (branchId: number): void => {
-    void workspace.selectBranch(branchId);
+const onBranchSelected = async (branchId: number): Promise<void> => {
+    await workspace.selectBranch(branchId);
 };
 
 const updateDeliveryLocation = async (latitude: number, longitude: number): Promise<void> => {
@@ -140,8 +212,22 @@ const onLocationFound = (latitude: number, longitude: number): void => {
     void updateDeliveryLocation(latitude, longitude);
 };
 
-const onCreateOrder = (payload: CreateOrderPayload, quote: MobilePriceQuote | null): void => {
-    void workspace.createOrder(payload, quote);
+const onCreateOrder = async (
+    payload: CreateOrderPayload,
+    quote: MobilePriceQuote | null,
+): Promise<void> => {
+    const created = await workspace.createOrder(payload, quote);
+
+    if (!created) {
+        return;
+    }
+
+    if (workspace.context.value?.role === 'customer') {
+        toast.success('Permintaan penjemputan berhasil dibuat dan menunggu verifikasi cabang.');
+    } else {
+        orderComposerOpen.value = false;
+        toast.success('Pesanan baru berhasil dibuat.');
+    }
 };
 
 const onConfirmPricing = async (
@@ -149,6 +235,7 @@ const onConfirmPricing = async (
     payload: ConfirmOrderPricingPayload,
 ): Promise<void> => {
     if (await workspace.confirmOrderPricing(orderId, payload)) {
+        toast.success('Berat dan harga pesanan berhasil dikonfirmasi.');
         whatsAppDialogOpen.value = true;
     }
 };
@@ -163,8 +250,20 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
     });
 
     if (saved) {
+        toast.success(`Status pesanan berhasil diperbarui menjadi ${orderStatusLabels[status]}.`);
         whatsAppDialogOpen.value = true;
     }
+};
+
+const clearQueueSearch = (): void => {
+    if (queueSearchTimer) {
+        clearTimeout(queueSearchTimer);
+        queueSearchTimer = null;
+    }
+
+    queueSearchClearedSynchronously = true;
+    queueSearch.value = '';
+    void workspace.searchOrders('');
 };
 </script>
 
@@ -225,7 +324,7 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                     :context="workspace.context.value"
                     :nearest-branches="workspace.nearestBranches.value"
                     :selected-branch-id="workspace.selectedBranchId.value"
-                    @branch-change="workspace.selectBranch"
+                    @branch-change="onBranchSelected"
                 />
 
                 <p
@@ -254,9 +353,12 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                             :services="workspace.services.value"
                             :customers="workspace.customers.value"
                             :delivery-coordinates="workspace.deliveryCoordinates.value"
+                            :selected-address="workspace.selectedAddress.value"
+                            :active-pickup-order-number="activePickupOrderNumber"
                             :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
                             :quote-order="workspace.quoteOrder"
                             :processing="workspace.createProcessing.value"
+                            @manage-addresses="addressDialogOpen = true"
                             @submit="onCreateOrder"
                         />
                         <button
@@ -321,12 +423,64 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
 
                 <template v-else>
                     <template v-if="activeTab === 'queue'">
+                        <div class="mb-5 space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-low">
+                            <button
+                                type="button"
+                                class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 text-sm font-semibold text-white transition hover:bg-brand-600 motion-safe:active:scale-[0.98]"
+                                data-test="open-order-composer"
+                                @click="orderComposerOpen = true"
+                            >
+                                <Plus class="size-5" aria-hidden="true" />
+                                Buat pesanan baru
+                            </button>
+                            <label class="relative block">
+                                <span class="sr-only">Cari antrean</span>
+                                <Search
+                                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-500"
+                                    aria-hidden="true"
+                                />
+                                <input
+                                    v-model="queueSearch"
+                                    type="search"
+                                    inputmode="search"
+                                    autocomplete="off"
+                                    placeholder="Cari nomor pesanan, pelanggan, atau WhatsApp"
+                                    class="min-h-11 w-full rounded-xl border border-line bg-canvas pr-11 pl-10 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
+                                    data-test="queue-search"
+                                />
+                                <button
+                                    v-if="queueSearch"
+                                    type="button"
+                                    class="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-500 hover:bg-brand-100 hover:text-brand-700"
+                                    aria-label="Hapus pencarian antrean"
+                                    data-test="clear-queue-search"
+                                    @click="clearQueueSearch"
+                                >
+                                    <X class="size-4" aria-hidden="true" />
+                                </button>
+                            </label>
+                            <p
+                                v-if="workspace.queueLoading.value"
+                                class="flex items-center gap-2 text-xs text-ink-500"
+                                role="status"
+                            >
+                                <RefreshCw class="size-3.5 animate-spin" aria-hidden="true" />
+                                Memuat hasil pencarian…
+                            </p>
+                        </div>
+
                         <OrderListPanel
                             :orders="workspace.orders.value"
                             role="branch_admin"
                             :processing="workspace.transitionProcessing.value"
                             title="Antrean cabang"
                             description="Lanjutkan status satu tahap atau batalkan pesanan yang masih aktif."
+                            :empty-title="queueSearch ? 'Pesanan tidak ditemukan' : 'Belum ada pesanan'"
+                            :empty-description="
+                                queueSearch
+                                    ? `Tidak ada antrean yang cocok dengan “${queueSearch}”.`
+                                    : 'Pesanan baru akan langsung muncul di sini dan dapat diproses dari status pertama.'
+                            "
                             :payment-actions="workspace.paymentActions"
                             :payment-processing="workspace.paymentProcessing.value"
                             :pricing-processing="workspace.pricingProcessing.value"
@@ -350,27 +504,10 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                         </button>
                     </template>
 
-                    <OrderComposer
-                        v-else-if="activeTab === 'new-order'"
-                        role="branch_admin"
-                        :branch="workspace.selectedBranch.value"
-                        :services="workspace.services.value"
-                        :customers="workspace.customers.value"
-                        :delivery-coordinates="workspace.deliveryCoordinates.value"
-                        :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
-                        :quote-order="workspace.quoteOrder"
-                        :processing="workspace.createProcessing.value"
-                        :selected-customer-id="workspace.selectedCustomerId.value"
-                        @create-customer="openCreateCustomer"
-                        @submit="onCreateOrder"
-                        @update:selected-customer-id="workspace.selectCustomer"
-                    />
-
                     <CustomerDirectory
                         v-else-if="activeTab === 'customers'"
                         :customers="workspace.customers.value"
                         @create="openCreateCustomer"
-                        @detach="openDetachCustomer"
                         @edit="openEditCustomer"
                         @reset-pin="openResetCustomerPin"
                     />
@@ -404,11 +541,51 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
             :role="workspace.context.value.role"
         />
 
+        <Toaster position="top-center" />
+
         <WhatsAppSuggestionDialog
             v-model:open="whatsAppDialogOpen"
             :suggestion="workspace.whatsAppSuggestion.value"
             :load-error="workspace.whatsAppSuggestionError.value"
         />
+
+        <CustomerAddressDialog
+            v-if="workspace.context.value?.role === 'customer'"
+            v-model:open="addressDialogOpen"
+            :addresses="workspace.addresses.value"
+            :selected-address-id="workspace.selectedAddressId.value"
+            :customer-name="page.props.auth.user.name"
+            :customer-phone="page.props.auth.user.whatsapp_phone"
+            :create-address="workspace.createAddress"
+            :update-address="workspace.updateAddress"
+            :delete-address="workspace.deleteAddress"
+            :set-default-address="workspace.setDefaultAddress"
+            :select-address="workspace.selectAddress"
+            @success="toast.success"
+        />
+
+        <Dialog v-if="workspace.context.value?.role === 'branch_admin'" v-model:open="orderComposerOpen">
+            <DialogContent class="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl border-0 bg-transparent p-0 shadow-none">
+                <DialogHeader class="sr-only">
+                    <DialogTitle>Buat pesanan baru</DialogTitle>
+                    <DialogDescription>Catat pesanan laundry baru untuk pelanggan.</DialogDescription>
+                </DialogHeader>
+                <OrderComposer
+                    role="branch_admin"
+                    :branch="workspace.selectedBranch.value"
+                    :services="workspace.services.value"
+                    :customers="workspace.customers.value"
+                    :delivery-coordinates="workspace.deliveryCoordinates.value"
+                    :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
+                    :quote-order="workspace.quoteOrder"
+                    :processing="workspace.createProcessing.value"
+                    :selected-customer-id="workspace.selectedCustomerId.value"
+                    @create-customer="openCreateCustomer"
+                    @submit="onCreateOrder"
+                    @update:selected-customer-id="workspace.selectCustomer"
+                />
+            </DialogContent>
+        </Dialog>
 
         <template v-if="workspace.context.value?.role === 'branch_admin'">
             <CustomerFormDialog
@@ -423,12 +600,6 @@ const onTransition = async (orderId: number, status: MobileOrderStatus): Promise
                 :customer="activeCustomer"
                 :reset="workspace.resetCustomerPin"
                 @reset="onCustomerPinReset"
-            />
-            <CustomerDetachDialog
-                v-model:open="detachDialogOpen"
-                :customer="activeCustomer"
-                :detach="workspace.detachCustomer"
-                @detached="onCustomerDetached"
             />
             <CustomerCredentialDialog
                 v-model:open="credentialDialogOpen"

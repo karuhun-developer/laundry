@@ -57,4 +57,24 @@ describe('Capacitor thermal printer transport', () => {
             }),
         );
     });
+
+    it.each([
+        ['bluetooth_disabled', 'Bluetooth belum aktif. Aktifkan Bluetooth lalu cari printer lagi.'],
+        [
+            'permission_denied',
+            'Izin Bluetooth atau USB ditolak. Izinkan akses printer di pengaturan Android.',
+        ],
+        ['bluetooth_unavailable', 'Perangkat ini tidak memiliki Bluetooth.'],
+    ] as const)('preserves native discovery error %s', async (code, message) => {
+        const plugin: NativeThermalPrinterPlugin = {
+            listBluetooth: vi.fn().mockRejectedValue({ code }),
+            listUsb: vi.fn().mockResolvedValue({ printers: [] }),
+            print: vi.fn().mockResolvedValue(undefined),
+        };
+        const transport = createCapacitorPrinterTransport(plugin);
+
+        await expect(transport.list('bluetooth')).rejects.toEqual(
+            expect.objectContaining<Partial<PrinterTransportError>>({ code, message }),
+        );
+    });
 });

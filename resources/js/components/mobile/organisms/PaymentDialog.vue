@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CheckCircle2, QrCode, ReceiptText } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import DigitalReceiptPanel from '@/components/mobile/molecules/DigitalReceiptPanel.vue';
 import PaymentEntryForm from '@/components/mobile/molecules/PaymentEntryForm.vue';
 import PaymentHistory from '@/components/mobile/molecules/PaymentHistory.vue';
@@ -176,9 +177,11 @@ const submitPayment = async (): Promise<void> => {
                     : method.value === 'gateway'
                       ? 'Instruksi pembayaran online berhasil dibuat.'
                       : 'Pembayaran tunai berhasil dicatat.';
+            toast.success(message.value);
             note.value = '';
         } else {
             error.value = 'Pembayaran belum tersimpan. Perubahan sementara sudah dibatalkan.';
+            toast.error(error.value);
         }
     } finally {
         actionProcessing.value = false;
@@ -201,8 +204,10 @@ const reconcile = async (payment: MobilePayment, status: 'paid' | 'failed'): Pro
         if (saved) {
             message.value =
                 status === 'paid' ? 'Pembayaran sudah lunas.' : 'Pembayaran ditandai gagal.';
+            toast.success(message.value);
         } else {
             error.value = 'Status pembayaran gagal diperbarui dan sudah dikembalikan.';
+            toast.error(error.value);
         }
     } finally {
         actionProcessing.value = false;
@@ -216,9 +221,11 @@ const loadReceipt = async (): Promise<void> => {
     try {
         receipt.value = await props.actions.loadReceipt(props.order.id);
         message.value = 'Struk digital berhasil dimuat.';
+        toast.success(message.value);
     } catch (loadError: unknown) {
         error.value =
             loadError instanceof Error ? loadError.message : 'Struk digital tidak dapat dimuat.';
+        toast.error(error.value);
     } finally {
         actionProcessing.value = false;
     }
@@ -233,8 +240,10 @@ const printReceipt = async (): Promise<void> => {
 
         if (printed) {
             message.value = 'Struk dikirim ke printer.';
+            toast.success(message.value);
         } else {
             error.value = 'Struk belum dapat dicetak. Periksa profil dan koneksi printer.';
+            toast.error(error.value);
         }
     } finally {
         actionProcessing.value = false;

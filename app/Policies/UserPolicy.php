@@ -26,11 +26,6 @@ class UserPolicy
         return $this->globalCustomerManagementResponse($user, $customer);
     }
 
-    public function detachCustomer(User $user, User $customer): Response
-    {
-        return $this->customerManagementResponse($user, $customer);
-    }
-
     /**
      * Determine whether the user can view any models.
      */
