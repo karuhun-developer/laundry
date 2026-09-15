@@ -157,6 +157,7 @@ const mountMobileApp = (): VueWrapper =>
                 DialogDescription: passThroughStub,
                 DialogHeader: passThroughStub,
                 DialogTitle: passThroughStub,
+                MobileAppUpdateSettings: true,
                 MobileWorkspaceSwitcher: true,
                 WhatsAppSuggestionDialog: whatsAppDialogStub,
             },

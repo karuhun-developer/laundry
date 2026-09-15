@@ -87,7 +87,21 @@ const confirmPricing = (): void => {
                         {{ order.order_number }}
                     </h3>
                 </div>
-                <MobileStatusBadge :status="order.status" :pending="order.pending" />
+                <div class="flex shrink-0 flex-col items-end gap-1.5">
+                    <MobileStatusBadge :status="order.status" :pending="order.pending" />
+                    <span
+                        v-if="role === 'branch_admin' && !isPricingPending"
+                        class="inline-flex min-h-6 items-center rounded-full px-2.5 text-xs font-semibold"
+                        :class="
+                            order.payment_summary.is_paid
+                                ? 'bg-mint-500/15 text-mint-500'
+                                : 'bg-amber-500/15 text-amber-700'
+                        "
+                        data-test="payment-status-badge"
+                    >
+                        {{ order.payment_summary.is_paid ? 'Lunas' : 'Belum lunas' }}
+                    </span>
+                </div>
             </div>
 
             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -112,6 +126,7 @@ const confirmPricing = (): void => {
             <div
                 v-if="!isPricingPending"
                 class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-canvas px-3 py-2 text-sm"
+                data-test="payment-summary"
             >
                 <span class="text-ink-500">Pembayaran</span>
                 <span
@@ -120,6 +135,20 @@ const confirmPricing = (): void => {
                 >
                     {{ order.payment_summary.is_paid ? 'Lunas' : `Sisa ${formatRupiah(order.payment_summary.outstanding_rupiah)}` }}
                 </span>
+            </div>
+
+            <div
+                v-if="!isPricingPending && paymentActions"
+                class="mt-3"
+                data-test="payment-actions"
+            >
+                <PaymentDialog
+                    :order="order"
+                    :actions="paymentActions"
+                    :role="role"
+                    :processing="paymentProcessing"
+                    :printer-configured="printerConfigured"
+                />
             </div>
 
             <div class="mt-4 border-t border-dashed border-line pt-4">
@@ -288,19 +317,6 @@ const confirmPricing = (): void => {
                 <X class="size-4" aria-hidden="true" />
                 Batalkan
             </button>
-        </div>
-
-        <div
-            v-if="!isPricingPending && paymentActions"
-            class="border-t border-line bg-surface px-4 py-3"
-        >
-            <PaymentDialog
-                :order="order"
-                :actions="paymentActions"
-                :role="role"
-                :processing="paymentProcessing"
-                :printer-configured="printerConfigured"
-            />
         </div>
 
         <div v-if="order.delivery" class="flex items-center gap-2 bg-surface-blue px-5 py-3 text-xs text-brand-700">
