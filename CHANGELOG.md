@@ -4,6 +4,13 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-09-15
+
+- Added a Canvas and `jsQR` fallback so CMS branch management can decode QRIS images in browsers without native `BarcodeDetector` support.
+- Added visible success and failure toasts for CMS create, update, and delete actions.
+- Fixed branch deletion confirmation to require the exact branch name expected by server validation.
+- Replaced the remaining Laravel mark on the public landing page and shared application logo with the LaundryHub washing-machine identity.
+
 ## [1.0.10] - 2026-09-15
 
 - Added native Firebase Cloud Messaging registration, encrypted device-token storage, foreground and notification-tap refresh behavior, and account-level notification controls.
