@@ -53,9 +53,8 @@ class OrderReceiptResource extends JsonResource
             'payments' => PaymentResource::collection($this->payments),
             'issued_at' => now()->toISOString(),
             'ordered_at' => $this->created_at->toISOString(),
-            'share_url' => URL::temporarySignedRoute(
+            'share_url' => URL::signedRoute(
                 'receipts.public.show',
-                now()->addDays(7),
                 ['order' => $this->id],
             ),
         ];

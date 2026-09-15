@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
@@ -71,11 +72,18 @@ it('prefers a branch template and returns a normalized RFC3986 wa.me suggestion'
 
     $message = $response->json('data.message');
     $url = $response->json('data.url');
+    $trackingUrl = URL::signedRoute('orders.public.show', [
+        'order' => $order->order_number,
+    ]);
 
     expect($message)->toContain('Halo Budi Santoso')
         ->toContain('LDR-20260913-00000001')
         ->toContain('Siap diambil')
         ->toContain('Cabang Dago')
+        ->toContain($trackingUrl)
+        ->not->toContain('/app?order=')
+        ->not->toContain('/pesanan/'.$order->id.'?')
+        ->not->toContain('expires=')
         ->and($url)->toStartWith('https://wa.me/6281234567890?text=')
         ->toContain('%20')
         ->not->toContain('+');

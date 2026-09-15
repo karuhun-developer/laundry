@@ -93,7 +93,7 @@
                 </dl>
 
                 <p class="text-center text-xs leading-5 text-ink-500">
-                    Tautan struk ini bersifat sementara dan hanya dapat dibuka selama signature masih berlaku.
+                    Simpan tautan ini untuk membuka kembali struk digital tanpa perlu masuk ke aplikasi.
                 </p>
             </div>
         </main>

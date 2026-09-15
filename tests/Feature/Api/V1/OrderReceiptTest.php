@@ -67,7 +67,8 @@ it('returns a stable digital receipt with a signed public share URL', function (
     $shareUrl = $response->json('data.share_url');
 
     expect($shareUrl)->toBeString();
-    expect(URL::hasValidSignature(Request::create($shareUrl)))->toBeTrue();
+    expect(URL::hasValidSignature(Request::create($shareUrl)))->toBeTrue()
+        ->and($shareUrl)->not->toContain('expires=');
 });
 
 it('prevents a customer from reading another customer receipt', function (): void {

@@ -13,6 +13,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MobileAppController;
 use App\Http\Controllers\PublicOrderReceiptController;
+use App\Http\Controllers\PublicOrderTrackingController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RoleRedirectController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,9 @@ Route::post('login/customer', CustomerLoginController::class)
 Route::get('struk/{order}', PublicOrderReceiptController::class)
     ->middleware(['signed', 'throttle:60,1'])
     ->name('receipts.public.show');
+Route::get('pesanan/{order:order_number}', PublicOrderTrackingController::class)
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('orders.public.show');
 Route::get('app-updates/{asset}/{filename}', AppUpdateDownloadController::class)
     ->whereNumber('asset')
     ->where('filename', 'laundryhub-v[0-9]+\.[0-9]+\.[0-9]+\.apk')
