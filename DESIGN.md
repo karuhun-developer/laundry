@@ -2,14 +2,14 @@
 
 Status: Active product contract
 
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 ## 0. Research Log
 
-- Live reference: Kireiwash service page inspected at 375, 768, and 1280 px. Harvested deep royal-blue trust cues, Poppins-led hierarchy, service segmentation, city/outlet grouping, medium radii, and blue-tinted depth shadows.
-- Live reference: LaundryGO mobile app page inspected at 375, 768, and 1280 px. Harvested pale-blue operational surfaces, sky-blue accents, mobile-first cards, and feature taxonomy covering orders, customers, reports, roles, QRIS, printer, receipts, tracking, and WhatsApp.
+- Live reference: Kireiwash service page inspected at 375, 768, and 1280 px. Harvested Poppins-led hierarchy, service segmentation, city/outlet grouping, medium radii, and restrained depth shadows.
+- Live reference: LaundryGO mobile app page inspected at 375, 768, and 1280 px. Harvested mobile-first cards and feature taxonomy covering orders, customers, reports, roles, QRIS, printer, receipts, tracking, and WhatsApp.
 - Local product reference: `../pos-kacaw` printer capability and QRIS modules inspected for future transport boundaries. No source code is copied in Phase 1.
-- Direction: a **clean garment-care command center**. The atmosphere is bright, reassuring, and operational; royal blue carries trust, pale blue carries calm workspace depth, and a receipt-like order ticket is the memorable product object.
+- Direction: a **clean garment-care command center**. The atmosphere is bright, natural, reassuring, and operational; forest green carries trust, soft leaf tones create workspace depth, and a receipt-like order ticket is the memorable product object.
 - Personas considered: customer in a hurry on a phone; branch admin working with wet hands and intermittent attention; owner comparing branches on desktop; superadmin investigating access and audit history.
 
 ## 1. Foundations
@@ -18,22 +18,22 @@ Last updated: 2026-09-14
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `ink-950` | `#0B1220` | Primary text |
-| `ink-700` | `#344054` | Secondary text |
-| `ink-500` | `#667085` | Muted text |
-| `canvas` | `#F7FAFF` | Application background |
+| `ink-950` | `#1F2A1C` | Primary text |
+| `ink-700` | `#40513B` | Secondary text |
+| `ink-500` | `#687663` | Muted text |
+| `canvas` | `#F7F9EF` | Application background |
 | `surface` | `#FFFFFF` | Primary surface |
-| `surface-blue` | `#EAF4FF` | Operational grouping |
-| `line` | `#D7E2F0` | Borders and separators |
-| `brand-700` | `#0943A9` | Primary actions and selected state |
-| `brand-600` | `#1559C7` | Hover and emphasis |
-| `brand-100` | `#DDEBFF` | Soft selected background |
-| `sky-400` | `#69C3F6` | Informational highlight |
-| `mint-500` | `#17A673` | Success and completed state |
+| `surface-blue` | `#F1F5DF` | Soft operational grouping |
+| `line` | `#DCE5CF` | Borders and separators |
+| `brand-700` | `#40513B` | Primary actions and selected state |
+| `brand-600` | `#52764A` | Hover and emphasis |
+| `brand-100` | `#EDF1D6` | Soft selected background |
+| `sky-400` | `#9DC08B` | Informational highlight |
+| `mint-500` | `#609966` | Success and completed state |
 | `amber-500` | `#E98A15` | Warning and in-progress emphasis |
 | `red-600` | `#D92D20` | Destructive and error state |
 
-All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds only; semantic text uses the corresponding dark tone.
+All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds only; semantic text uses the corresponding dark tone. The legacy token names `surface-blue` and `sky-400` remain stable for component compatibility, but now resolve to soft green semantics.
 
 ### Typography
 
@@ -47,8 +47,8 @@ All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds onl
 
 - Base spacing unit: 4 px. Product spacing uses 4, 8, 12, 16, 20, 24, 32, and 48 px.
 - Radius: 8 px controls, 12 px compact cards, 16 px content cards, 20 px feature/ticket surfaces, and full pills only for tags or segmented controls.
-- Shadow low: `0 8px 24px rgba(9, 67, 169, 0.08)`.
-- Shadow raised: `0 18px 48px rgba(9, 67, 169, 0.14)`.
+- Shadow low: `0 8px 24px rgba(64, 81, 59, 0.10)`.
+- Shadow raised: `0 18px 48px rgba(64, 81, 59, 0.16)`.
 - Map marker shadow: `0 4px 14px rgba(15, 23, 42, 0.35)`, exposed as `--laundry-map-marker-shadow`.
 - Focus ring: 3 px translucent `brand-600` halo plus visible 1 px edge.
 
@@ -246,7 +246,7 @@ Every primitive must be demonstrated in a development showcase before product sc
 
 ### `SurfaceCard`
 
-- Variants: plain, blue-tinted, interactive, and raised.
+- Variants: plain, soft-tinted, interactive, and raised.
 - Interactive cards expose one clear primary action and a visible focus state.
 
 ### `OrderTicket`
@@ -284,7 +284,7 @@ Every primitive must be demonstrated in a development showcase before product sc
 - Default auth inputs, buttons, links, and password visibility controls expose a minimum 44 px interaction target and retain natural DOM tab order.
 - Customer mode uses normalized WhatsApp phone and six-digit PIN fields and links to public customer registration. Staff mode uses the Fortify email/password form and may offer a passkey action only to staff accounts.
 - Demo shortcuts, when enabled by environment configuration, must respect the selected customer or staff credential mode. Production hides demo credentials.
-- The branded favicon uses a blue background with the washing-machine mark.
+- The branded favicon, Apple touch icon, and browser theme color use the forest-green field with the washing-machine mark.
 
 ### QRIS payment surface
 
@@ -316,10 +316,18 @@ Every primitive must be demonstrated in a development showcase before product sc
 
 ### Android shell and external links
 
-- The launcher uses the brand-700 field with a high-contrast washing-machine mark, sky-blue water, and mint completion accent. Adaptive foreground artwork stays inside the Android safe zone.
-- Splash resources use the canvas and surface-blue palette in both portrait and landscape orientations.
+- The launcher uses the brand-700 field with a high-contrast washing-machine mark, leaf-green water, and mint completion accent. Adaptive foreground artwork stays inside the Android safe zone.
+- Splash resources use the canvas and soft-green `surface-blue` palette in both portrait and landscape orientations.
 - The native external-link bridge accepts only exact `https://wa.me` destinations without credentials or custom ports. All other external navigation is rejected before an Android intent is created.
 - External applications open only from an explicit user action. The web fallback follows the same validation contract before calling `window.open`.
+
+### Android push notifications and session continuity
+
+- Native Android may register an FCM device token only after authentication and notification permission. Browser sessions do not expose the native notification control.
+- Tokens are encrypted at rest, identified by a one-way hash for reassignment/removal, omitted from API resources, and removed when Firebase reports an invalid or unregistered destination.
+- Pickup requests notify only branch admins assigned to the selected branch. Pricing confirmation and later status changes notify only the order customer. Foreground notifications and notification taps refresh the canonical mobile workspace.
+- FCM delivery is queued. Missing Firebase server configuration disables delivery without failing the order mutation that emitted the event.
+- Web sessions use a 30-day idle lifetime. Logout removes the current native token before ending the session, while customer PIN changes or resets increment the session version so stale customer sessions are rejected even before their idle expiry.
 
 ## 6. Interaction and Motion
 

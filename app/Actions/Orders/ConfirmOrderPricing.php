@@ -3,8 +3,10 @@
 namespace App\Actions\Orders;
 
 use App\Actions\Catalog\QuotePriceOption;
+use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\ConfirmOrderPricingData;
 use App\Enums\OrderStatus;
+use App\Enums\PushNotificationEvent;
 use App\Exceptions\OrderPricingCannotBeConfirmed;
 use App\Models\Branch;
 use App\Models\Order;
@@ -15,7 +17,10 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class ConfirmOrderPricing
 {
-    public function __construct(private QuotePriceOption $quotePriceOption) {}
+    public function __construct(
+        private QuotePriceOption $quotePriceOption,
+        private DispatchOrderPushNotification $dispatchOrderPushNotification,
+    ) {}
 
     public function handle(
         Organization $organization,
@@ -24,7 +29,7 @@ final readonly class ConfirmOrderPricing
         User $actor,
         ConfirmOrderPricingData $data,
     ): Order {
-        return DB::transaction(function () use (
+        $confirmedOrder = DB::transaction(function () use (
             $organization,
             $branch,
             $order,
@@ -111,5 +116,12 @@ final readonly class ConfirmOrderPricing
                 'payments.statusEvents',
             ]);
         });
+
+        $this->dispatchOrderPushNotification->handle(
+            $confirmedOrder,
+            PushNotificationEvent::PricingConfirmed,
+        );
+
+        return $confirmedOrder;
     }
 }

@@ -108,22 +108,22 @@
 }
 
 :root {
-    --laundry-ink-950: #0b1220;
-    --laundry-ink-700: #344054;
-    --laundry-ink-500: #667085;
-    --laundry-canvas: #f7faff;
+    --laundry-ink-950: #1f2a1c;
+    --laundry-ink-700: #40513b;
+    --laundry-ink-500: #687663;
+    --laundry-canvas: #f7f9ef;
     --laundry-surface: #ffffff;
-    --laundry-surface-blue: #eaf4ff;
-    --laundry-line: #d7e2f0;
-    --laundry-brand-700: #0943a9;
-    --laundry-brand-600: #1559c7;
-    --laundry-brand-100: #ddebff;
-    --laundry-sky-400: #69c3f6;
-    --laundry-mint-500: #17a673;
+    --laundry-surface-blue: #f1f5df;
+    --laundry-line: #dce5cf;
+    --laundry-brand-700: #40513b;
+    --laundry-brand-600: #52764a;
+    --laundry-brand-100: #edf1d6;
+    --laundry-sky-400: #9dc08b;
+    --laundry-mint-500: #609966;
     --laundry-amber-500: #e98a15;
     --laundry-red-600: #d92d20;
-    --laundry-shadow-low: 0 8px 24px rgb(9 67 169 / 8%);
-    --laundry-shadow-raised: 0 18px 48px rgb(9 67 169 / 14%);
+    --laundry-shadow-low: 0 8px 24px rgb(64 81 59 / 10%);
+    --laundry-shadow-raised: 0 18px 48px rgb(64 81 59 / 16%);
     --laundry-map-marker-shadow: 0 4px 14px rgb(15 23 42 / 35%);
 
     --background: var(--laundry-surface);
@@ -158,7 +158,7 @@
     --sidebar-accent: hsl(0 0% 94%);
     --sidebar-accent-foreground: hsl(0 0% 30%);
     --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+    --sidebar-ring: var(--laundry-brand-600);
     --sidebar: hsl(0 0% 98%);
 }
 
@@ -244,7 +244,7 @@
     :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
         outline: 1px solid var(--laundry-brand-600);
         outline-offset: 2px;
-        box-shadow: 0 0 0 3px rgb(21 89 199 / 24%);
+        box-shadow: 0 0 0 3px rgb(82 118 74 / 24%);
     }
 }
 

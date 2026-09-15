@@ -3,10 +3,12 @@
 namespace App\Actions\Orders;
 
 use App\Actions\Catalog\QuotePriceOption;
+use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\CreateOrderData;
 use App\Data\DeliveryQuoteData;
 use App\Data\PriceQuoteData;
 use App\Enums\OrderStatus;
+use App\Enums\PushNotificationEvent;
 use App\Enums\RoleName;
 use App\Exceptions\OrderCannotBeCreated;
 use App\Models\Branch;
@@ -27,6 +29,7 @@ final readonly class CreateOrder
     public function __construct(
         private QuotePriceOption $quotePriceOption,
         private DeliveryRouteCalculator $deliveryRouteCalculator,
+        private DispatchOrderPushNotification $dispatchOrderPushNotification,
     ) {}
 
     public function handle(
@@ -35,9 +38,9 @@ final readonly class CreateOrder
         User $actor,
         CreateOrderData $data,
     ): Order {
-        return DB::transaction(function () use ($organization, $branch, $actor, $data): Order {
+        $isCustomer = $actor->hasRole(RoleName::Customer->value);
+        $order = DB::transaction(function () use ($organization, $branch, $actor, $data, $isCustomer): Order {
             $this->ensureActiveTenant($organization, $branch);
-            $isCustomer = $actor->hasRole(RoleName::Customer->value);
 
             if ($isCustomer && $actor->id !== $data->customerId) {
                 throw new AuthorizationException;
@@ -215,6 +218,15 @@ final readonly class CreateOrder
 
             return $order->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
         });
+
+        if ($isCustomer) {
+            $this->dispatchOrderPushNotification->handle(
+                $order,
+                PushNotificationEvent::PickupRequested,
+            );
+        }
+
+        return $order;
     }
 
     private function availablePriceOption(

@@ -176,4 +176,59 @@ describe('branch-admin account', () => {
         expect(wrapper.get('[data-test="thermal-printer"]').text()).toBe('Printer termal');
         expect(wrapper.text()).toContain('Keluar');
     });
+
+    it('keeps notification controls hidden in the browser', () => {
+        const wrapper = mount(MobileAccount, {
+            props: {
+                name: 'Admin Cabang',
+                role: 'branch_admin',
+                notificationAvailable: false,
+            },
+        });
+
+        expect(wrapper.find('[data-test="notification-settings"]').exists()).toBe(false);
+    });
+
+    it.each([
+        ['prompt', 'Aktifkan pemberitahuan', true],
+        ['denied', 'Izin notifikasi ditolak', true],
+        ['enabled', 'Pembaruan pesanan akan muncul', false],
+    ] as const)(
+        'renders the %s notification state',
+        (notificationStatus, expectedText, hasEnableButton) => {
+            const wrapper = mount(MobileAccount, {
+                props: {
+                    name: 'Admin Cabang',
+                    role: 'branch_admin',
+                    notificationAvailable: true,
+                    notificationStatus,
+                },
+            });
+
+            expect(wrapper.get('[data-test="notification-settings"]').text()).toContain(
+                expectedText,
+            );
+            expect(wrapper.find('[data-test="enable-notifications"]').exists()).toBe(
+                hasEnableButton,
+            );
+        },
+    );
+
+    it('shows notification errors and emits the enable action', async () => {
+        const wrapper = mount(MobileAccount, {
+            props: {
+                name: 'Admin Cabang',
+                role: 'branch_admin',
+                notificationAvailable: true,
+                notificationStatus: 'error',
+                notificationError: 'Firebase belum siap.',
+            },
+        });
+
+        expect(wrapper.get('[data-test="notification-settings"]').text()).toContain(
+            'Firebase belum siap.',
+        );
+        await wrapper.get('[data-test="enable-notifications"]').trigger('click');
+        expect(wrapper.emitted('enableNotifications')).toHaveLength(1);
+    });
 });

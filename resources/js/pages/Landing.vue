@@ -66,7 +66,7 @@ const features = [
 </script>
 
 <template>
-    <div class="min-h-screen overflow-hidden bg-[#f4f8ff] text-ink-950">
+    <div class="min-h-screen overflow-hidden bg-canvas text-ink-950">
         <header class="relative z-20 border-b border-white/70 bg-white/85 backdrop-blur">
             <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10" aria-label="Navigasi utama">
                 <a href="#beranda" class="flex items-center gap-3" aria-label="LaundryHub beranda">
@@ -92,7 +92,7 @@ const features = [
 
         <main id="beranda">
             <section class="relative isolate">
-                <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_20%,rgba(105,195,246,0.3),transparent_34%),radial-gradient(circle_at_88%_12%,rgba(21,89,199,0.18),transparent_30%)]" />
+                <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_20%,rgba(157,192,139,0.32),transparent_34%),radial-gradient(circle_at_88%_12%,rgba(96,153,102,0.2),transparent_30%)]" />
                 <div class="mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:px-10 lg:py-28">
                     <div>
                         <div class="inline-flex items-center gap-2 rounded-full border border-brand-600/15 bg-white px-3 py-2 text-xs font-semibold text-brand-700 shadow-low">
@@ -125,7 +125,7 @@ const features = [
 
                     <div class="relative mx-auto w-full max-w-xl">
                         <div class="absolute -inset-8 -z-10 rounded-[3rem] bg-brand-100/70 blur-2xl" />
-                        <div class="rounded-[2rem] border border-white/80 bg-white p-4 shadow-[0_28px_80px_rgba(9,67,169,0.18)] sm:p-6">
+                        <div class="rounded-[2rem] border border-white/80 bg-white p-4 shadow-[0_28px_80px_rgba(64,81,59,0.18)] sm:p-6">
                             <div class="rounded-3xl bg-brand-700 p-6 text-white">
                                 <div class="flex items-center justify-between">
                                     <div>
@@ -150,7 +150,7 @@ const features = [
                                     <p class="mt-4 text-xs text-ink-500">Pembayaran</p>
                                     <p class="mt-1 font-semibold">QRIS dinamis</p>
                                 </div>
-                                <div class="rounded-2xl bg-[#e9f8f2] p-4">
+                                <div class="rounded-2xl bg-brand-100 p-4">
                                     <MessageCircle class="size-5 text-mint-500" aria-hidden="true" />
                                     <p class="mt-4 text-xs text-ink-500">Pembaruan</p>
                                     <p class="mt-1 font-semibold">Siap via WhatsApp</p>
@@ -169,7 +169,7 @@ const features = [
                         <p class="mt-4 leading-7 text-ink-500">Petugas fokus menyelesaikan cucian, pelanggan mendapat pengalaman yang jelas, dan owner tetap memegang kendali.</p>
                     </div>
                     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <article v-for="feature in features" :key="feature.title" class="rounded-2xl border border-line bg-[#fbfdff] p-5 shadow-low">
+                        <article v-for="feature in features" :key="feature.title" class="rounded-2xl border border-line bg-surface p-5 shadow-low">
                             <span class="flex size-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700"><component :is="feature.icon" class="size-5" aria-hidden="true" /></span>
                             <h3 class="mt-5 font-display text-lg font-semibold">{{ feature.title }}</h3>
                             <p class="mt-2 text-sm leading-6 text-ink-500">{{ feature.description }}</p>

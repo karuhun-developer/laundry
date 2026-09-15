@@ -6,6 +6,11 @@ const config = {
     appId: 'com.karuhundeveloper.laundryhub',
     appName: 'LaundryHub',
     webDir: 'capacitor-web',
+    plugins: {
+        PushNotifications: {
+            presentationOptions: ['badge', 'sound', 'alert'],
+        },
+    },
     ...(serverUrl
         ? {
               server: {

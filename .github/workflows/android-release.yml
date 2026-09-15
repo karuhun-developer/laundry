@@ -16,6 +16,7 @@ jobs:
   release:
     name: Build signed Android release
     runs-on: ubuntu-latest
+    environment: android-release
     timeout-minutes: 45
 
     defaults:
@@ -40,6 +41,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           app_url="${PRODUCTION_APP_URL%/}"
 
@@ -57,7 +59,8 @@ jobs:
               ANDROID_KEYSTORE_BASE64 \
               ANDROID_KEYSTORE_PASSWORD \
               ANDROID_KEY_ALIAS \
-              ANDROID_KEY_PASSWORD; do
+              ANDROID_KEY_PASSWORD \
+              ANDROID_GOOGLE_SERVICES_JSON_BASE64; do
               if [[ -z "${!variable_name}" ]]; then
                   echo "Missing required GitHub Actions secret: $variable_name" >&2
                   exit 1
@@ -104,6 +107,13 @@ jobs:
       - name: Generate Wayfinder types
         run: php artisan wayfinder:generate --with-form --no-interaction
 
+      - name: Configure Firebase Android credentials
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+
       - name: Build and sync Capacitor application
         env:
           APP_URL: ${{ steps.android_config.outputs.app_url }}
@@ -144,7 +154,7 @@ jobs:
 
       - name: Remove decoded keystore
         if: ${{ always() }}
-        run: rm -f "$RUNNER_TEMP/laundryhub-upload.jks"
+        run: rm -f "$RUNNER_TEMP/laundryhub-upload.jks" android/app/google-services.json
 
       - name: Prepare release artifacts
         env:

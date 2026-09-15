@@ -409,6 +409,64 @@ describe('mobile workspace automatic nearest branch selection', () => {
     });
 });
 
+describe('mobile workspace refresh', () => {
+    it('preserves the selected branch, address, and delivery coordinates', async () => {
+        customerAddressApi.loadAddresses.mockResolvedValue([defaultCustomerAddress]);
+        const { workspace, unmount } = mountWorkspace();
+
+        await vi.waitFor(() => expect(workspace.selectedBranchId.value).toBe(dagoBranch.id));
+        await workspace.selectBranch(kemangBranch.id);
+
+        const refreshed = await workspace.refresh();
+
+        expect(refreshed).toBe(true);
+        expect(workspace.refreshing.value).toBe(false);
+        expect(workspace.selectedBranchId.value).toBe(kemangBranch.id);
+        expect(workspace.selectedAddressId.value).toBe(defaultCustomerAddress.id);
+        expect(workspace.deliveryCoordinates.value).toEqual({
+            latitude: defaultCustomerAddress.latitude,
+            longitude: defaultCustomerAddress.longitude,
+        });
+
+        unmount();
+    });
+
+    it('resets refreshing and exposes a useful error when refresh fails', async () => {
+        const { workspace, unmount } = mountWorkspace();
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        catalogApi.loadContext.mockRejectedValueOnce(new Error('Jaringan terputus.'));
+
+        const refreshed = await workspace.refresh();
+
+        expect(refreshed).toBe(false);
+        expect(workspace.refreshing.value).toBe(false);
+        expect(workspace.requestError.value).toBe('Jaringan terputus.');
+
+        unmount();
+    });
+
+    it('rejects a concurrent refresh while the first request is still running', async () => {
+        const { workspace, unmount } = mountWorkspace();
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        let resolveContext: (context: MobileContext) => void = () => undefined;
+        catalogApi.loadContext.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveContext = resolve;
+            }),
+        );
+
+        const firstRefresh = workspace.refresh();
+        expect(workspace.refreshing.value).toBe(true);
+        await expect(workspace.refresh()).resolves.toBe(false);
+
+        resolveContext(customerContext);
+        await expect(firstRefresh).resolves.toBe(true);
+        expect(workspace.refreshing.value).toBe(false);
+
+        unmount();
+    });
+});
+
 describe('mobile nearest branch component render QA', () => {
     it('renders automatic nearest ordering and preserves authoritative coverage after manual selection', async () => {
         const { workspace, wrapper } = mountWorkspaceUi();

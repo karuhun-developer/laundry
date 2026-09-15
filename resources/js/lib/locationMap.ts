@@ -100,8 +100,8 @@ export const createLocationMap = async (
             const selectBranch = (): void => options.onBranchSelect(branch.id);
             const coverageCircle = leaflet.circle([branch.latitude, branch.longitude], {
                 bubblingMouseEvents: false,
-                color: branch.selected ? '#1559c7' : '#69c3f6',
-                fillColor: branch.selected ? '#1559c7' : '#69c3f6',
+                color: branch.selected ? '#40513b' : '#9dc08b',
+                fillColor: branch.selected ? '#40513b' : '#9dc08b',
                 fillOpacity: branch.selected ? 0.12 : 0.07,
                 radius: branch.freeRadiusMeters,
                 weight: branch.selected ? 2 : 1,

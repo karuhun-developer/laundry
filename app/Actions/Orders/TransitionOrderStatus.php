@@ -2,7 +2,9 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\TransitionOrderStatusData;
+use App\Enums\PushNotificationEvent;
 use App\Exceptions\InvalidOrderStatusTransition;
 use App\Models\Order;
 use App\Models\User;
@@ -10,12 +12,16 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class TransitionOrderStatus
 {
+    public function __construct(
+        private DispatchOrderPushNotification $dispatchOrderPushNotification,
+    ) {}
+
     public function handle(
         Order $order,
         User $actor,
         TransitionOrderStatusData $data,
     ): Order {
-        return DB::transaction(function () use ($order, $actor, $data): Order {
+        $updatedOrder = DB::transaction(function () use ($order, $actor, $data): Order {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
                 ->lockForUpdate()
@@ -46,5 +52,12 @@ final readonly class TransitionOrderStatus
 
             return $lockedOrder->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
         });
+
+        $this->dispatchOrderPushNotification->handle(
+            $updatedOrder,
+            PushNotificationEvent::StatusUpdated,
+        );
+
+        return $updatedOrder;
     }
 }

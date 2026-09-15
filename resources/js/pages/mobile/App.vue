@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     Building2,
@@ -33,7 +33,9 @@ import {
 } from '@/components/ui/dialog';
 import { Toaster } from '@/components/ui/sonner';
 import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
+import { usePushNotifications } from '@/composables/usePushNotifications';
 import { orderStatusLabels } from '@/lib/mobileOrders';
+import { logout } from '@/routes';
 import type {
     ConfirmOrderPricingPayload,
     CreateOrderPayload,
@@ -66,6 +68,34 @@ const revealedCredential = ref<{
 const customerStatusMessage = ref('');
 let queueSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let queueSearchClearedSynchronously = false;
+
+const refreshApp = async (showSuccess = true): Promise<void> => {
+    const refreshed = await workspace.refresh();
+
+    if (!refreshed) {
+        return;
+    }
+
+    if (workspace.context.value?.role === 'branch_admin' && queueSearch.value.trim()) {
+        await workspace.searchOrders(queueSearch.value.trim());
+    }
+
+    if (showSuccess && !workspace.requestError.value) {
+        toast.success('Data aplikasi berhasil disegarkan.');
+    }
+};
+
+const pushNotifications = usePushNotifications({
+    onRefresh: () => refreshApp(false),
+});
+
+const handleLogout = async (): Promise<void> => {
+    try {
+        await pushNotifications.unregisterDevice();
+    } finally {
+        router.post(logout().url);
+    }
+};
 
 const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
 const activePickupOrderNumber = computed(
@@ -288,9 +318,26 @@ const clearQueueSearch = (): void => {
                         </p>
                     </div>
                 </div>
-                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
-                    {{ page.props.auth.user.name.slice(0, 1).toUpperCase() }}
-                </span>
+                <div class="flex shrink-0 items-center gap-2">
+                    <button
+                        v-if="workspace.context.value"
+                        type="button"
+                        class="flex size-10 items-center justify-center rounded-xl border border-line bg-surface text-brand-700 shadow-low transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60 motion-safe:active:scale-95"
+                        :disabled="workspace.refreshing.value"
+                        aria-label="Segarkan data aplikasi"
+                        data-test="refresh-mobile-app"
+                        @click="refreshApp()"
+                    >
+                        <RefreshCw
+                            class="size-4"
+                            :class="{ 'animate-spin': workspace.refreshing.value }"
+                            aria-hidden="true"
+                        />
+                    </button>
+                    <span class="flex size-10 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
+                        {{ page.props.auth.user.name.slice(0, 1).toUpperCase() }}
+                    </span>
+                </div>
             </div>
         </header>
 
@@ -418,6 +465,11 @@ const clearQueueSearch = (): void => {
                         :printer-printing="workspace.printer.printing.value"
                         :printer-message="workspace.printer.message.value"
                         :printer-error="workspace.printer.error.value"
+                        :notification-available="pushNotifications.available"
+                        :notification-status="pushNotifications.status.value"
+                        :notification-error="pushNotifications.error.value"
+                        @enable-notifications="pushNotifications.enable"
+                        @logout="handleLogout"
                     />
                 </template>
 
@@ -526,10 +578,15 @@ const clearQueueSearch = (): void => {
                         :printer-printing="workspace.printer.printing.value"
                         :printer-message="workspace.printer.message.value"
                         :printer-error="workspace.printer.error.value"
+                        :notification-available="pushNotifications.available"
+                        :notification-status="pushNotifications.status.value"
+                        :notification-error="pushNotifications.error.value"
                         @discover-printer="workspace.printer.discover"
                         @save-printer="workspace.printer.saveProfile"
                         @clear-printer="workspace.printer.clearProfile"
                         @test-printer="workspace.printer.testPrint"
+                        @enable-notifications="pushNotifications.enable"
+                        @logout="handleLogout"
                     />
                 </template>
             </template>

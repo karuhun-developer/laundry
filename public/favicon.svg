@@ -4,15 +4,15 @@
             <circle cx="32" cy="36" r="9" />
         </clipPath>
     </defs>
-    <rect width="64" height="64" rx="14" fill="#1559c7" />
-    <path d="M0 42c10-9 21-9 32 0 10 8 21 8 32-1v23H0Z" fill="#0943a9" />
-    <circle cx="52" cy="8" r="19" fill="#2b6bd1" />
+    <rect width="64" height="64" rx="14" fill="#40513b" />
+    <path d="M0 42c10-9 21-9 32 0 10 8 21 8 32-1v23H0Z" fill="#609966" />
+    <circle cx="52" cy="8" r="19" fill="#52764a" />
     <rect x="15" y="9" width="34" height="48" rx="8" fill="#fff" />
-    <circle cx="22" cy="17" r="2.5" fill="#69c3f6" />
-    <rect x="28" y="15" width="14" height="4" rx="2" fill="#0943a9" />
-    <circle cx="32" cy="36" r="13" fill="#ddebff" />
-    <circle cx="32" cy="36" r="10" fill="#0943a9" />
-    <circle cx="32" cy="36" r="8" fill="#69c3f6" />
-    <path d="M22 37c3-3 6-3 9 0s6 3 11-1v11H22Z" fill="#17a673" clip-path="url(#drum)" />
+    <circle cx="22" cy="17" r="2.5" fill="#9dc08b" />
+    <rect x="28" y="15" width="14" height="4" rx="2" fill="#40513b" />
+    <circle cx="32" cy="36" r="13" fill="#edf1d6" />
+    <circle cx="32" cy="36" r="10" fill="#52764a" />
+    <circle cx="32" cy="36" r="8" fill="#9dc08b" />
+    <path d="M22 37c3-3 6-3 9 0s6 3 11-1v11H22Z" fill="#609966" clip-path="url(#drum)" />
     <circle cx="41" cy="27" r="2" fill="#fff" />
 </svg>

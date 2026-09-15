@@ -37,7 +37,7 @@ describe('public landing page', () => {
         expect(router.visit).not.toHaveBeenCalled();
         expect(wrapper.get('h1').text()).toContain('Kelola laundry lebih cepat');
         expect(wrapper.text()).toContain('QRIS dinamis');
-        expect(wrapper.classes()).toContain('bg-[#f4f8ff]');
+        expect(wrapper.classes()).toContain('bg-canvas');
     });
 
     it('redirects the native Android shell directly to the authenticated mobile app', async () => {

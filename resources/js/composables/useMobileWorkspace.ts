@@ -30,6 +30,7 @@ export const useMobileWorkspace = () => {
     const deliveryCoordinates = ref<Coordinates | null>(null);
     const selectedBranchId = ref<number | null>(null);
     const loading = ref(true);
+    const refreshing = ref(false);
     const queueLoading = ref(false);
     const requestError = ref<string | null>(null);
     const catalogApi = useMobileCatalogApi();
@@ -137,6 +138,7 @@ export const useMobileWorkspace = () => {
         latitude: number,
         longitude: number,
         requestContext?: NearestRequestContext,
+        selectNearest = true,
     ): Promise<boolean> => {
         const currentContext = context.value;
         const currentRequest = requestContext ?? {
@@ -174,6 +176,7 @@ export const useMobileWorkspace = () => {
             const nearestBranch = rankedBranches[0];
 
             if (
+                selectNearest &&
                 nearestBranch &&
                 currentRequest.branchSelectionGeneration === branchSelectionGeneration
             ) {
@@ -308,6 +311,76 @@ export const useMobileWorkspace = () => {
             await loadCatalog();
         } catch (error: unknown) {
             requestError.value = errorMessage(error, 'Katalog cabang tidak dapat dimuat.');
+        }
+    };
+
+    const refresh = async (): Promise<boolean> => {
+        if (refreshing.value) {
+            return false;
+        }
+
+        const previousContext = context.value;
+        const previousBranchId = selectedBranchId.value;
+        const previousAddressId = selectedAddressId.value;
+        const previousCoordinates = deliveryCoordinates.value;
+        const requestGeneration = ++loadGeneration;
+
+        refreshing.value = true;
+        requestError.value = null;
+        orderSearchGeneration += 1;
+
+        try {
+            const response = await catalogApi.loadContext(
+                previousContext?.role === 'branch_admin'
+                    ? previousContext.organization.slug
+                    : undefined,
+            );
+
+            if (requestGeneration !== loadGeneration) {
+                return false;
+            }
+
+            context.value = response;
+            selectedBranchId.value = response.branches.some(
+                (branch) => branch.id === previousBranchId,
+            )
+                ? previousBranchId
+                : (response.branches[0]?.id ?? null);
+            selectedAddressId.value = previousAddressId;
+            nearestGeneration += 1;
+            await loadOrganizationData(requestGeneration);
+
+            const coordinates = selectedAddress.value
+                ? {
+                      latitude: selectedAddress.value.latitude,
+                      longitude: selectedAddress.value.longitude,
+                  }
+                : previousCoordinates;
+
+            if (response.role === 'customer' && coordinates) {
+                const nearestRefreshed = await findNearestBranches(
+                    coordinates.latitude,
+                    coordinates.longitude,
+                    undefined,
+                    false,
+                );
+
+                if (!nearestRefreshed) {
+                    return false;
+                }
+            }
+
+            return true;
+        } catch (error: unknown) {
+            if (requestGeneration === loadGeneration) {
+                requestError.value = errorMessage(error, 'Data aplikasi tidak dapat disegarkan.');
+            }
+
+            return false;
+        } finally {
+            if (requestGeneration === loadGeneration) {
+                refreshing.value = false;
+            }
         }
     };
 
@@ -472,6 +545,7 @@ export const useMobileWorkspace = () => {
         selectedBranchId: readonly(selectedBranchId),
         selectedBranchDeliveryFee,
         loading: readonly(loading),
+        refreshing: readonly(refreshing),
         queueLoading: readonly(queueLoading),
         requestError: readonly(requestError),
         orders: orderWorkspace.orders,
@@ -492,6 +566,7 @@ export const useMobileWorkspace = () => {
         createOrder: orderWorkspace.createOrder,
         deleteAddress,
         load,
+        refresh,
         resetCustomerPin: customerWorkspace.resetCustomerPin,
         searchOrders,
         selectAddress,

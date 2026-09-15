@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { Building2, LogOut, Mail, Phone, ShieldCheck, UserRound } from '@lucide/vue';
+import {
+    BellRing,
+    Building2,
+    LoaderCircle,
+    LogOut,
+    Mail,
+    Phone,
+    ShieldCheck,
+    UserRound,
+} from '@lucide/vue';
 import CustomerPinSettings from '@/components/mobile/organisms/CustomerPinSettings.vue';
 import MobilePrinterSettings from '@/components/mobile/organisms/MobilePrinterSettings.vue';
+import type { PushNotificationStatus } from '@/composables/usePushNotifications';
 import type { PrinterConnection, PrinterDevice, PrinterProfile } from '@/lib/printer/types';
-import { logout } from '@/routes';
 import type { MobileOrganization, MobileRole } from '@/types/mobile';
 
 withDefaults(
@@ -23,6 +31,9 @@ withDefaults(
         printerPrinting?: boolean;
         printerMessage?: string | null;
         printerError?: string | null;
+        notificationAvailable?: boolean;
+        notificationStatus?: PushNotificationStatus;
+        notificationError?: string | null;
     }>(),
     {
         email: null,
@@ -37,6 +48,9 @@ withDefaults(
         printerPrinting: false,
         printerMessage: null,
         printerError: null,
+        notificationAvailable: false,
+        notificationStatus: 'unavailable',
+        notificationError: null,
     },
 );
 
@@ -45,6 +59,8 @@ defineEmits<{
     savePrinter: [profile: PrinterProfile];
     clearPrinter: [];
     testPrinter: [];
+    enableNotifications: [];
+    logout: [];
 }>();
 </script>
 
@@ -98,6 +114,52 @@ defineEmits<{
             </div>
         </dl>
 
+        <section
+            v-if="notificationAvailable"
+            class="mt-5 rounded-2xl border border-line bg-surface p-5 shadow-low"
+            aria-labelledby="notification-settings-title"
+            data-test="notification-settings"
+        >
+            <div class="flex items-start gap-3">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+                    <BellRing class="size-5" aria-hidden="true" />
+                </span>
+                <div class="min-w-0">
+                    <h3 id="notification-settings-title" class="font-display text-base font-semibold text-ink-950">
+                        Notifikasi perangkat
+                    </h3>
+                    <p v-if="notificationStatus === 'enabled'" class="mt-1 text-sm leading-6 text-mint-500">
+                        Aktif. Pembaruan pesanan akan muncul di perangkat ini.
+                    </p>
+                    <p v-else-if="notificationStatus === 'denied'" class="mt-1 text-sm leading-6 text-amber-500">
+                        Izin notifikasi ditolak. Izinkan notifikasi LaundryHub dari pengaturan perangkat, lalu coba lagi.
+                    </p>
+                    <p v-else-if="notificationStatus === 'error'" class="mt-1 text-sm leading-6 text-red-600">
+                        {{ notificationError ?? 'Notifikasi belum dapat diaktifkan.' }}
+                    </p>
+                    <p v-else class="mt-1 text-sm leading-6 text-ink-500">
+                        Aktifkan pemberitahuan untuk status penjemputan, harga, dan proses laundry.
+                    </p>
+                </div>
+            </div>
+            <button
+                v-if="notificationStatus !== 'enabled'"
+                type="button"
+                class="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60 motion-safe:active:scale-[0.98]"
+                :disabled="notificationStatus === 'registering'"
+                data-test="enable-notifications"
+                @click="$emit('enableNotifications')"
+            >
+                <LoaderCircle
+                    v-if="notificationStatus === 'registering'"
+                    class="size-4 animate-spin"
+                    aria-hidden="true"
+                />
+                <BellRing v-else class="size-4" aria-hidden="true" />
+                {{ notificationStatus === 'registering' ? 'Mengaktifkan…' : 'Aktifkan notifikasi' }}
+            </button>
+        </section>
+
         <CustomerPinSettings
             v-if="role === 'customer'"
             :must-change-pin="mustChangePin"
@@ -119,14 +181,14 @@ defineEmits<{
             @test-print="$emit('testPrinter')"
         />
 
-        <Link
-            :href="logout()"
-            method="post"
-            as="button"
+        <button
+            type="button"
             class="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-600/25 bg-surface px-4 text-sm font-semibold text-red-600 transition hover:bg-red-600/5 motion-safe:active:scale-[0.98]"
+            data-test="logout-mobile"
+            @click="$emit('logout')"
         >
             <LogOut class="size-5" aria-hidden="true" />
             Keluar
-        </Link>
+        </button>
     </section>
 </template>

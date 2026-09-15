@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CustomerIndexController;
 use App\Http\Controllers\Api\V1\CustomerNearestBranchController;
 use App\Http\Controllers\Api\V1\CustomerOrderIndexController;
 use App\Http\Controllers\Api\V1\DeleteCustomerAddressController;
+use App\Http\Controllers\Api\V1\DeletePushNotificationDeviceController;
 use App\Http\Controllers\Api\V1\MobileContextController;
 use App\Http\Controllers\Api\V1\MobileOrderIndexController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Api\V1\ResetCustomerPinController;
 use App\Http\Controllers\Api\V1\SetDefaultCustomerAddressController;
 use App\Http\Controllers\Api\V1\StoreCustomerAddressController;
 use App\Http\Controllers\Api\V1\StoreCustomerController;
+use App\Http\Controllers\Api\V1\StorePushNotificationDeviceController;
 use App\Http\Controllers\Api\V1\UpdateCustomerAddressController;
 use App\Http\Controllers\Api\V1\UpdateCustomerController;
 use App\Http\Controllers\Api\V1\UpdateCustomerPinController;
@@ -49,6 +51,12 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     Route::put('mobile/account/pin', UpdateCustomerPinController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.account.pin.update');
+    Route::post('mobile/push-notifications/devices', StorePushNotificationDeviceController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.push-notifications.devices.store');
+    Route::delete('mobile/push-notifications/devices', DeletePushNotificationDeviceController::class)
+        ->middleware('auth:sanctum')
+        ->name('mobile.push-notifications.devices.destroy');
     Route::get('mobile/account/addresses', CustomerAddressIndexController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.account.addresses.index');

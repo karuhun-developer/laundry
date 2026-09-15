@@ -75,6 +75,12 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(CustomerAddress::class, 'customer_id');
     }
 
+    /** @return HasMany<PushNotificationDevice, $this> */
+    public function pushNotificationDevices(): HasMany
+    {
+        return $this->hasMany(PushNotificationDevice::class);
+    }
+
     public function setCustomerPin(string $pin, ?CarbonInterface $expiresAt = null, bool $mustChange = false): void
     {
         $this->forceFill([

@@ -18,6 +18,7 @@ const mobileWorkspace = vi.hoisted(() => ({
         },
     },
     loading: { value: false },
+    refreshing: { value: false },
     requestError: { value: null },
     rollbackMessage: { value: null },
     queueLoading: { value: false },
@@ -54,6 +55,7 @@ const mobileWorkspace = vi.hoisted(() => ({
     },
     paymentActions: {},
     load: vi.fn(),
+    refresh: vi.fn(),
     selectBranch: vi.fn(),
     selectCustomer: vi.fn(),
     findNearestBranches: vi.fn(),
@@ -71,6 +73,13 @@ const mobileWorkspace = vi.hoisted(() => ({
     setDefaultAddress: vi.fn(),
     selectAddress: vi.fn(),
 }));
+const pushNotificationMocks = vi.hoisted(() => ({
+    enable: vi.fn(),
+    unregisterDevice: vi.fn(),
+}));
+const routerMocks = vi.hoisted(() => ({
+    post: vi.fn(),
+}));
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: defineComponent({ template: '<span />' }),
@@ -84,6 +93,7 @@ vi.mock('@inertiajs/vue3', () => ({
         template: '<button type="button"><slot /></button>',
     }),
     useHttp: vi.fn(),
+    router: routerMocks,
     usePage: () => ({
         props: {
             auth: {
@@ -98,6 +108,15 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 vi.mock('@/composables/useMobileWorkspace', () => ({
     useMobileWorkspace: () => mobileWorkspace,
+}));
+vi.mock('@/composables/usePushNotifications', () => ({
+    usePushNotifications: () => ({
+        available: true,
+        status: { value: 'enabled' },
+        error: { value: null },
+        enable: pushNotificationMocks.enable,
+        unregisterDevice: pushNotificationMocks.unregisterDevice,
+    }),
 }));
 
 const whatsAppDialogStub = defineComponent({
@@ -177,6 +196,9 @@ beforeEach(() => {
     };
     mobileWorkspace.whatsAppSuggestion.value = null;
     mobileWorkspace.whatsAppSuggestionError.value = null;
+    mobileWorkspace.refreshing.value = false;
+    mobileWorkspace.refresh.mockResolvedValue(true);
+    pushNotificationMocks.unregisterDevice.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -186,6 +208,21 @@ afterEach(() => {
 });
 
 describe('customer mobile navigation', () => {
+    it('refreshes the customer workspace from the global header action', async () => {
+        mobileWorkspace.context.value = {
+            role: 'customer',
+            organization: { id: 1, name: 'LaundryHub Demo', slug: 'laundryhub-demo' },
+            organizations: [],
+            branches: [],
+        };
+        const wrapper = mountMobileApp();
+
+        await wrapper.get('[data-test="refresh-mobile-app"]').trigger('click');
+        await flushPromises();
+
+        expect(mobileWorkspace.refresh).toHaveBeenCalledOnce();
+    });
+
     it('shows the exact Home shortcut and opens the branch list', async () => {
         mobileWorkspace.context.value = {
             role: 'customer',
@@ -204,6 +241,41 @@ describe('customer mobile navigation', () => {
 });
 
 describe('branch-admin mobile tab rendering', () => {
+    it('disables the global refresh action while data is being refreshed', () => {
+        mobileWorkspace.refreshing.value = true;
+        const wrapper = mountMobileApp();
+        const refreshButton = wrapper.get<HTMLButtonElement>('[data-test="refresh-mobile-app"]');
+
+        expect(refreshButton.element.disabled).toBe(true);
+        expect(refreshButton.get('svg').classes()).toContain('animate-spin');
+    });
+
+    it('reapplies the active queue search after a successful global refresh', async () => {
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="queue-search"]').setValue('  Waki  ');
+        await wrapper.get('[data-test="refresh-mobile-app"]').trigger('click');
+        await flushPromises();
+
+        expect(mobileWorkspace.refresh).toHaveBeenCalledOnce();
+        expect(mobileWorkspace.searchOrders).toHaveBeenCalledWith('Waki');
+    });
+
+    it('unregisters push notifications before logging out', async () => {
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'more');
+        await wrapper.get('[data-test="logout-mobile"]').trigger('click');
+        await flushPromises();
+
+        expect(pushNotificationMocks.unregisterDevice).toHaveBeenCalledOnce();
+        expect(routerMocks.post).toHaveBeenCalledOnce();
+        expect(pushNotificationMocks.unregisterDevice.mock.invocationCallOrder[0]).toBeLessThan(
+            routerMocks.post.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
+        );
+    });
+
     it('never renders account, device, or logout content on Queue without a WhatsApp suggestion', async () => {
         const wrapper = mountMobileApp();
 

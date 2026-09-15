@@ -10,12 +10,13 @@ Repository variable:
 
 - `PRODUCTION_APP_URL`: the hosted Laravel base URL over HTTPS without a trailing `/app`. The production repository uses `https://laundry.karuhundeveloper.com`. The workflow uses `${PRODUCTION_APP_URL}/app` as the Android server URL, and the application uses same-origin API routes, so a separate API base URL is not required.
 
-Repository secrets:
+Repository secrets, except where noted:
 
 - `ANDROID_KEYSTORE_BASE64`: the upload keystore encoded as one-line Base64.
 - `ANDROID_KEYSTORE_PASSWORD`: the keystore password.
 - `ANDROID_KEY_ALIAS`: the upload key alias.
 - `ANDROID_KEY_PASSWORD`: the upload key password.
+- `ANDROID_GOOGLE_SERVICES_JSON_BASE64`: the Firebase Android `google-services.json` for package `com.karuhundeveloper.laundryhub`, encoded as one-line Base64. Store this in the `android-release` GitHub Actions environment; it is required for release builds and FCM delivery.
 
 Generate the Base64 value without committing it:
 
@@ -24,6 +25,14 @@ base64 -w 0 /secure/path/laundryhub-upload.jks
 ```
 
 On macOS, use `base64 < /secure/path/laundryhub-upload.jks | tr -d '\n'`. Keep the keystore and all four values in the team's secret manager.
+
+Encode the Firebase Android configuration separately and store the result in `ANDROID_GOOGLE_SERVICES_JSON_BASE64`:
+
+```bash
+base64 -w 0 /secure/path/google-services.json
+```
+
+On macOS, use `base64 < /secure/path/google-services.json | tr -d '\n'`. Save the result as the `ANDROID_GOOGLE_SERVICES_JSON_BASE64` secret in the `android-release` GitHub Actions environment. Never commit `google-services.json`; CI writes it to `android/app/google-services.json` only for the build and removes it afterward. The backend Firebase Admin SDK service-account JSON is a different credential and must not be used here.
 
 ## Prepare the web bundle
 
@@ -96,6 +105,8 @@ Then verify on representative physical Android devices:
 7. Verify file downloads on Android 9 or older and scoped-storage downloads on newer Android versions.
 8. Verify QRIS display, safe-area layout, launcher icon, splash screen, app resume, and network error recovery.
 9. Confirm the release build points to the production HTTPS API and contains no demo credentials or development server URL.
+10. Enable notifications from the Account tab, confirm the device registration succeeds, then verify pickup requests notify only assigned branch admins.
+11. Confirm pricing and status changes notify only the matching customer, and tapping a notification opens `/app` with refreshed order data.
 
 ## Artifacts
 
