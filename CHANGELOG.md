@@ -4,6 +4,15 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-09-15
+
+- Added customer self-service dynamic QRIS payments for the exact outstanding order balance, including scannable SVG display and download.
+- Added branch QRIS configuration in CMS with image decoding, manual payload fallback, EMV/CRC validation, encrypted storage, and activation status in the branch directory.
+- Changed WhatsApp template management so superadmins manage organization-wide defaults while owners see inherited templates per branch and create or update branch-specific overrides when editing.
+- Fixed owner template controls so organization-wide scope is unavailable and inherited organization templates cannot be deleted by owners.
+- Fixed customer pickup requests so selected delivery coordinates are included in the serialized order request.
+- Added regression coverage for dynamic QRIS authorization and rendering, QRIS branch configuration, customer pickup coordinates, and inherited WhatsApp template behavior.
+
 ## [1.0.7] - 2026-09-14
 
 - Added normalized customer WhatsApp-phone and six-digit-PIN identity, nullable staff credentials for customer accounts, and global customer organization memberships with legacy membership backfill.
