@@ -424,8 +424,8 @@ describe('mobile customer surfaces', () => {
         expect(wrapper.emitted('create-customer')).toHaveLength(1);
 
         await wrapper.setProps({ selectedCustomerId: customer.id });
-        expect(wrapper.get<HTMLSelectElement>('[data-test="customer-select"]').element.value).toBe(
-            String(customer.id),
+        expect(wrapper.get<HTMLInputElement>('[data-test="customer-search"]').element.value).toBe(
+            customer.name,
         );
     });
 });
