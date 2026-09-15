@@ -4,6 +4,10 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.16] - 2026-09-15
+
+- Fixed Android update checks returning HTTP 500 when the configured cache store is unavailable, while preserving direct GitHub checks and controlled failure responses.
+
 ## [1.0.15] - 2026-09-15
 
 - Added permanent signed public order-tracking links so customers can monitor an order in the browser without signing in.

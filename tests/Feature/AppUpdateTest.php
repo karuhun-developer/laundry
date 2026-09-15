@@ -121,6 +121,85 @@ it('reuses cached GitHub release metadata for different installed versions', fun
     Http::assertSentCount(1);
 });
 
+it('returns the GitHub release when the configured cache store is unavailable', function (): void {
+    config()->set([
+        'cache.default' => 'broken-app-update-cache',
+        'cache.stores.broken-app-update-cache' => [
+            'driver' => 'database',
+            'connection' => 'broken-app-update-cache',
+            'table' => 'cache',
+            'lock_connection' => null,
+            'lock_table' => null,
+        ],
+        'database.connections.broken-app-update-cache' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+    ]);
+    Http::fake([
+        'https://api.github.com/repos/acme/laundryhub/releases/latest' => Http::response([
+            'tag_name' => 'v1.0.16',
+            'body' => '- Fixed update checks when cache storage is unavailable.',
+            'assets' => [
+                [
+                    'id' => 160,
+                    'name' => 'laundryhub-v1.0.16.apk',
+                    'size' => 24_000_000,
+                    'digest' => 'sha256:'.str_repeat('c', 64),
+                ],
+            ],
+        ]),
+    ]);
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.15']))
+        ->assertOk()
+        ->assertJsonPath('data.latest_version', '1.0.16')
+        ->assertJsonPath('data.update_available', true)
+        ->assertJsonPath('data.check_available', true);
+
+    Http::assertSentCount(1);
+});
+
+it('returns a controlled unavailable state when both cache and GitHub are unavailable', function (): void {
+    config()->set([
+        'cache.default' => 'broken-app-update-cache',
+        'cache.stores.broken-app-update-cache' => [
+            'driver' => 'database',
+            'connection' => 'broken-app-update-cache',
+            'table' => 'cache',
+            'lock_connection' => null,
+            'lock_table' => null,
+        ],
+        'database.connections.broken-app-update-cache' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+    ]);
+    Http::fake([
+        'https://api.github.com/repos/acme/laundryhub/releases/latest' => Http::response([], 503),
+    ]);
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.15']))
+        ->assertOk()
+        ->assertJsonPath('data.check_available', false)
+        ->assertJsonPath(
+            'data.unavailable_reason',
+            'Layanan GitHub sedang bermasalah. Coba lagi nanti.',
+        );
+
+    Http::assertSentCount(1);
+});
+
 it('uses the last successful release when GitHub is temporarily unavailable', function (): void {
     config()->set([
         'services.github_releases.repository' => 'acme/laundryhub',
@@ -173,7 +252,7 @@ it('returns controlled unavailable states without exposing server errors', funct
 
     $this->getJson(route('api.v1.mobile.app-update.show'))
         ->assertOk()
-        ->assertJsonPath('data.current_version', '1.0.15')
+        ->assertJsonPath('data.current_version', '1.0.16')
         ->assertJsonPath('data.check_available', false)
         ->assertJsonPath(
             'data.unavailable_reason',

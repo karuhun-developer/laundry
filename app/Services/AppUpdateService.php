@@ -210,46 +210,102 @@ class AppUpdateService
      */
     private function latestRelease(): array
     {
-        /** @var array{release: array<string, mixed>|null, unavailable_reason: string|null} $lookup */
-        $lookup = Cache::remember(
+        $cachedLookup = $this->cachedReleaseLookup();
+        if ($cachedLookup !== null) {
+            return $cachedLookup;
+        }
+
+        try {
+            $release = $this->githubRequest()
+                ->get($this->repositoryApiUrl('/releases/latest'))
+                ->throw()
+                ->json();
+
+            if (! is_array($release)) {
+                throw new RuntimeException('Respons rilis GitHub tidak valid.');
+            }
+
+            $this->releaseVersion($release);
+            $lookup = ['release' => $release, 'unavailable_reason' => null];
+            $this->putCachedValue(
+                $this->lastSuccessfulReleaseCacheKey(),
+                $release,
+                self::LAST_SUCCESSFUL_RELEASE_CACHE_SECONDS,
+            );
+        } catch (Throwable $exception) {
+            $this->logReleaseFailure($exception);
+            $lastSuccessfulRelease = $this->cachedLastSuccessfulRelease();
+            $lookup = $lastSuccessfulRelease !== null
+                ? ['release' => $lastSuccessfulRelease, 'unavailable_reason' => null]
+                : [
+                    'release' => null,
+                    'unavailable_reason' => $this->releaseFailureReason($exception),
+                ];
+        }
+
+        $this->putCachedValue(
             $this->releaseCacheKey(),
+            $lookup,
             $this->releaseCacheSeconds(),
-            function (): array {
-                try {
-                    $release = $this->githubRequest()
-                        ->get($this->repositoryApiUrl('/releases/latest'))
-                        ->throw()
-                        ->json();
-
-                    if (! is_array($release)) {
-                        throw new RuntimeException('Respons rilis GitHub tidak valid.');
-                    }
-
-                    $this->releaseVersion($release);
-                    Cache::put(
-                        $this->lastSuccessfulReleaseCacheKey(),
-                        $release,
-                        self::LAST_SUCCESSFUL_RELEASE_CACHE_SECONDS,
-                    );
-
-                    return ['release' => $release, 'unavailable_reason' => null];
-                } catch (Throwable $exception) {
-                    $this->logReleaseFailure($exception);
-                    $lastSuccessfulRelease = Cache::get($this->lastSuccessfulReleaseCacheKey());
-
-                    if (is_array($lastSuccessfulRelease)) {
-                        return ['release' => $lastSuccessfulRelease, 'unavailable_reason' => null];
-                    }
-
-                    return [
-                        'release' => null,
-                        'unavailable_reason' => $this->releaseFailureReason($exception),
-                    ];
-                }
-            },
         );
 
         return $lookup;
+    }
+
+    /**
+     * @return array{release: array<string, mixed>|null, unavailable_reason: string|null}|null
+     */
+    private function cachedReleaseLookup(): ?array
+    {
+        $lookup = $this->cachedValue($this->releaseCacheKey());
+        if (! is_array($lookup)
+            || ! array_key_exists('release', $lookup)
+            || ! array_key_exists('unavailable_reason', $lookup)
+        ) {
+            return null;
+        }
+
+        $release = $lookup['release'];
+        $unavailableReason = $lookup['unavailable_reason'];
+
+        if (($release !== null && ! is_array($release))
+            || ($unavailableReason !== null && ! is_string($unavailableReason))
+        ) {
+            return null;
+        }
+
+        return [
+            'release' => $release,
+            'unavailable_reason' => $unavailableReason,
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function cachedLastSuccessfulRelease(): ?array
+    {
+        $release = $this->cachedValue($this->lastSuccessfulReleaseCacheKey());
+
+        return is_array($release) ? $release : null;
+    }
+
+    private function cachedValue(string $key): mixed
+    {
+        try {
+            return Cache::get($key);
+        } catch (Throwable $exception) {
+            $this->logCacheFailure('read', $exception);
+
+            return null;
+        }
+    }
+
+    private function putCachedValue(string $key, mixed $value, int $seconds): void
+    {
+        try {
+            Cache::put($key, $value, $seconds);
+        } catch (Throwable $exception) {
+            $this->logCacheFailure('write', $exception);
+        }
     }
 
     private function releaseCacheKey(): string
@@ -297,6 +353,15 @@ class AppUpdateService
             'status' => $exception instanceof RequestException
                 ? $exception->response->status()
                 : null,
+            'exception' => $exception::class,
+        ]);
+    }
+
+    private function logCacheFailure(string $operation, Throwable $exception): void
+    {
+        Log::warning('App update cache operation failed.', [
+            'repository' => $this->repository(),
+            'operation' => $operation,
             'exception' => $exception::class,
         ]);
     }
