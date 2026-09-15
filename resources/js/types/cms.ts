@@ -30,6 +30,8 @@ export type BranchSummary = {
     longitude: number | null;
     free_delivery_radius_meters: number;
     delivery_fee_per_km_rupiah: number;
+    qris_enabled: boolean;
+    qris_static_payload: string | null;
     is_active: boolean;
     city: Pick<CitySummary, 'id' | 'name' | 'province'>;
     organization: OrganizationOption;
@@ -78,6 +80,7 @@ export type OrderStatusOption = {
 
 export type MessageTemplateSummary = {
     id: number;
+    row_key: string;
     organization_id: number;
     branch_id: number | null;
     scope_key: string;
@@ -86,6 +89,7 @@ export type MessageTemplateSummary = {
     is_active: boolean;
     organization: OrganizationOption;
     branch: Pick<BranchSummary, 'id' | 'name'> | null;
+    is_inherited: boolean;
     pending?: boolean;
 };
 

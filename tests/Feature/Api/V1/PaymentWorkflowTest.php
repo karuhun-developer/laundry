@@ -116,6 +116,64 @@ it('creates and manually reconciles a dynamic QRIS payment with audit history', 
     ]);
 });
 
+it('allows a customer to create QRIS only for their own order', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create([
+        'qris_enabled' => true,
+        'qris_static_payload' => PAYMENT_TEST_STATIC_QRIS,
+    ]);
+    $customer = User::factory()->withCustomerPin()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $ownOrder = Order::factory()->for($organization)->for($branch)->for($customer, 'customer')->create([
+        'total_rupiah' => 27500,
+        'items_subtotal_rupiah' => 27500,
+    ]);
+    $otherOrder = Order::factory()->for($organization)->for($branch)->create();
+    Sanctum::actingAs($customer);
+
+    $ownOrderRoute = route('api.v1.organizations.branches.orders.payments.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'order' => $ownOrder,
+    ]);
+
+    $response = $this->postJson($ownOrderRoute, [
+        'method' => PaymentMethod::Qris->value,
+        'amount_rupiah' => 27500,
+    ])->assertCreated()
+        ->assertJsonPath('data.method', PaymentMethod::Qris->value)
+        ->assertJsonPath('data.status', PaymentStatus::Pending->value)
+        ->assertJsonPath('data.amount_rupiah', 27500);
+
+    expect($response->json('data.qris_payload'))
+        ->toBeString()
+        ->toContain('010212')
+        ->toContain('540527500');
+    expect($response->json('data.qris_image_data_uri'))
+        ->toBeString()
+        ->toStartWith('data:image/svg+xml;base64,');
+
+    $cashOrder = Order::factory()->for($organization)->for($branch)->for($customer, 'customer')->create();
+
+    $this->postJson(route('api.v1.organizations.branches.orders.payments.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'order' => $cashOrder,
+    ]), [
+        'method' => PaymentMethod::Cash->value,
+        'amount_rupiah' => 12000,
+    ])->assertForbidden();
+
+    $this->postJson(route('api.v1.organizations.branches.orders.payments.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'order' => $otherOrder,
+    ]), [
+        'method' => PaymentMethod::Qris->value,
+        'amount_rupiah' => 12000,
+    ])->assertForbidden();
+});
+
 it('records cash as paid immediately and rejects overpayment', function (): void {
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();

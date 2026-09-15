@@ -5,10 +5,16 @@ import { Button } from '@/components/ui/button';
 import { formatRupiah } from '@/lib/mobileOrders';
 import type { MobilePayment } from '@/types/mobile';
 
-const props = defineProps<{
-    payment: MobilePayment;
-    busy: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        payment: MobilePayment;
+        busy: boolean;
+        canReconcile?: boolean;
+    }>(),
+    {
+        canReconcile: true,
+    },
+);
 
 const copied = ref(false);
 const isGateway = computed(() => props.payment.gateway !== null);
@@ -57,11 +63,11 @@ const emit = defineEmits<{
             />
         </div>
         <a
-            v-if="isGatewayQris && payment.qris_image_data_uri"
+            v-if="payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
             :href="payment.qris_image_data_uri"
             :download="`${payment.payment_number}.svg`"
             class="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-600/25 px-4 text-sm font-semibold text-brand-700"
-            data-test="download-gateway-qris"
+            data-test="download-qris"
         >
             <Download class="size-4" aria-hidden="true" />
             Unduh QRIS
@@ -94,7 +100,7 @@ const emit = defineEmits<{
             QR sedang dibuat oleh server.
         </div>
 
-        <div v-if="!isGateway" class="mt-4 grid gap-2 sm:grid-cols-2">
+        <div v-if="!isGateway && canReconcile" class="mt-4 grid gap-2 sm:grid-cols-2">
             <Button
                 type="button"
                 class="bg-mint-500 text-white hover:bg-mint-500/90"

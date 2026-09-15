@@ -122,6 +122,7 @@ const submit = (): void => {
         };
     const pending: MessageTemplateSummary = {
         id: props.messageTemplate?.id ?? -Date.now(),
+        row_key: props.messageTemplate?.row_key ?? `pending:${Date.now()}`,
         organization_id: organizationId,
         branch_id: branch?.id ?? null,
         scope_key: branch ? `branch:${branch.id}` : 'organization',
@@ -130,13 +131,14 @@ const submit = (): void => {
         is_active: form.is_active,
         organization,
         branch: branch ? { id: branch.id, name: branch.name } : null,
+        is_inherited: false,
         pending: true,
     };
 
     if (props.messageTemplate) {
         form.optimistic<MessageTemplatesPageProps>((page) => ({
             messageTemplates: page.messageTemplates.map((template) =>
-                template.id === props.messageTemplate?.id ? pending : template,
+                template.row_key === props.messageTemplate?.row_key ? pending : template,
             ),
         })).submit(update(props.messageTemplate.id), {
             preserveScroll: true,
@@ -218,15 +220,16 @@ const submit = (): void => {
 
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-                <Label for="message-template-branch">Cakupan</Label>
+                <Label for="message-template-branch">{{ isSuperadmin ? 'Cakupan' : 'Cabang' }}</Label>
                 <select
                     id="message-template-branch"
                     v-model="form.branch_id"
                     class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-11 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-3"
                     :aria-invalid="Boolean(form.errors.branch_id)"
                     aria-describedby="message-template-branch-error"
+                    :disabled="isEditing && !isSuperadmin"
                 >
-                    <option value="">Seluruh organisasi</option>
+                    <option v-if="isSuperadmin" value="">Seluruh organisasi</option>
                     <option
                         v-for="branch in availableBranches"
                         :key="branch.id"
@@ -247,6 +250,7 @@ const submit = (): void => {
                     required
                     :aria-invalid="Boolean(form.errors.order_status)"
                     aria-describedby="message-template-status-error"
+                    :disabled="isEditing && !isSuperadmin"
                 >
                     <option
                         v-for="status in orderStatuses"

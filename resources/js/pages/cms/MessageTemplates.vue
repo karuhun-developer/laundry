@@ -29,7 +29,10 @@ const activeTemplates = computed(
     () => props.messageTemplates.filter((template) => template.is_active).length,
 );
 const branchTemplates = computed(
-    () => props.messageTemplates.filter((template) => template.branch_id !== null).length,
+    () =>
+        props.messageTemplates.filter(
+            (template) => template.branch_id !== null && !template.is_inherited,
+        ).length,
 );
 const statusLabel = (template: MessageTemplateSummary): string =>
     props.orderStatuses.find((status) => status.value === template.order_status)?.label ??
@@ -111,11 +114,12 @@ const deletionConfirmation = (template: MessageTemplateSummary): string =>
                             </tr>
                         </thead>
                         <tbody class="divide-line divide-y">
-                            <tr v-for="template in messageTemplates" :key="template.id">
+                            <tr v-for="template in messageTemplates" :key="template.row_key">
                                 <td class="px-5 py-4">
                                     <p class="text-ink-950 font-medium">{{ scopeLabel(template) }}</p>
                                     <p class="text-ink-500 mt-0.5 text-xs">
                                         {{ template.organization.name }}
+                                        <span v-if="template.is_inherited"> · Mewarisi template organisasi</span>
                                     </p>
                                 </td>
                                 <td class="px-5 py-4">{{ statusLabel(template) }}</td>
@@ -141,6 +145,7 @@ const deletionConfirmation = (template: MessageTemplateSummary): string =>
                                             :is-superadmin="isSuperadmin"
                                         />
                                         <CmsDeleteDialog
+                                            v-if="isSuperadmin || !template.is_inherited"
                                             title="Hapus template WhatsApp?"
                                             :description="`Template ${scopeLabel(template)} untuk status ${statusLabel(template)} akan dihapus permanen.`"
                                             :confirmation="deletionConfirmation(template)"
@@ -158,7 +163,7 @@ const deletionConfirmation = (template: MessageTemplateSummary): string =>
                 <div v-if="messageTemplates.length > 0" class="divide-line divide-y lg:hidden">
                     <article
                         v-for="template in messageTemplates"
-                        :key="template.id"
+                        :key="template.row_key"
                         class="space-y-3 p-5"
                     >
                         <div class="flex items-start justify-between gap-3">
@@ -166,6 +171,7 @@ const deletionConfirmation = (template: MessageTemplateSummary): string =>
                                 <h3 class="text-ink-950 font-semibold">{{ scopeLabel(template) }}</h3>
                                 <p class="text-ink-500 text-xs">
                                     {{ template.organization.name }} · {{ statusLabel(template) }}
+                                    <span v-if="template.is_inherited"> · Mewarisi template organisasi</span>
                                 </p>
                             </div>
                             <Badge :variant="template.is_active ? 'default' : 'secondary'">
@@ -186,6 +192,7 @@ const deletionConfirmation = (template: MessageTemplateSummary): string =>
                                 :is-superadmin="isSuperadmin"
                             />
                             <CmsDeleteDialog
+                                v-if="isSuperadmin || !template.is_inherited"
                                 title="Hapus template WhatsApp?"
                                 :description="`Template ${scopeLabel(template)} untuk status ${statusLabel(template)} akan dihapus permanen.`"
                                 :confirmation="deletionConfirmation(template)"

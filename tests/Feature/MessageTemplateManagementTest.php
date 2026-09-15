@@ -17,6 +17,11 @@ it('lets owners manage templates only inside their organization', function (): v
     $organization = Organization::factory()->create();
     $otherOrganization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();
+    $organizationTemplate = MessageTemplate::factory()->for($organization)->create([
+        'order_status' => OrderStatus::Washing,
+        'scope_key' => 'organization',
+        'branch_id' => null,
+    ]);
     $otherTemplate = MessageTemplate::factory()->for($otherOrganization)->create();
     $owner = User::factory()->for($organization)->create();
     $owner->assignRole(RoleName::Owner->value);
@@ -26,7 +31,11 @@ it('lets owners manage templates only inside their organization', function (): v
         ->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('cms/MessageTemplates')
-            ->has('messageTemplates', 0)
+            ->has('messageTemplates', 1)
+            ->where('messageTemplates.0.id', $organizationTemplate->id)
+            ->where('messageTemplates.0.branch_id', $branch->id)
+            ->where('messageTemplates.0.scope_key', 'branch:'.$branch->id)
+            ->where('messageTemplates.0.is_inherited', true)
             ->has('branches', 1)
             ->where('branches.0.id', $branch->id)
             ->has('organizations', 0)
@@ -35,30 +44,34 @@ it('lets owners manage templates only inside their organization', function (): v
             ->where('supportedVariables.5', '{weight}')
             ->where('supportedVariables.6', '{total}'));
 
-    $this->actingAs($owner)->post(route('cms.message-templates.store'), [
-        'organization_id' => $otherOrganization->id,
+    $this->actingAs($owner)->patch(route('cms.message-templates.update', $organizationTemplate), [
         'branch_id' => $branch->id,
         'order_status' => OrderStatus::Washing->value,
-        'body' => 'Halo {customer_name}, pesanan {order_number} sedang {status}.',
-        'is_active' => true,
-    ])->assertRedirect()->assertSessionHasNoErrors();
-
-    $template = MessageTemplate::query()->where('organization_id', $organization->id)->firstOrFail();
-
-    expect($template->branch_id)->toBe($branch->id)
-        ->and($template->scope_key)->toBe('branch:'.$branch->id)
-        ->and($template->order_status)->toBe(OrderStatus::Washing);
-
-    $this->actingAs($owner)->patch(route('cms.message-templates.update', $template), [
-        'branch_id' => null,
-        'order_status' => OrderStatus::ReadyForPickup->value,
-        'body' => 'Pesanan {order_number} milik {name} seberat {weight} total {total} siap diambil di {branch_name}.',
+        'body' => 'Halo {customer_name}, pesanan {order_number} sedang dicuci di {branch_name}.',
         'is_active' => false,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
-    expect($template->fresh()?->scope_key)->toBe('organization')
-        ->and($template->fresh()?->branch_id)->toBeNull()
-        ->and($template->fresh()?->is_active)->toBeFalse();
+    $template = MessageTemplate::query()
+        ->where('organization_id', $organization->id)
+        ->where('scope_key', 'branch:'.$branch->id)
+        ->firstOrFail();
+
+    expect($template->branch_id)->toBe($branch->id)
+        ->and($template->scope_key)->toBe('branch:'.$branch->id)
+        ->and($template->order_status)->toBe(OrderStatus::Washing)
+        ->and($template->is_active)->toBeFalse()
+        ->and($organizationTemplate->fresh()?->branch_id)->toBeNull();
+
+    $this->actingAs($owner)->patch(route('cms.message-templates.update', $template), [
+        'branch_id' => $branch->id,
+        'order_status' => OrderStatus::Washing->value,
+        'body' => 'Pesanan {order_number} milik {name} seberat {weight} total {total} siap diambil di {branch_name}.',
+        'is_active' => true,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($template->fresh()?->scope_key)->toBe('branch:'.$branch->id)
+        ->and($template->fresh()?->branch_id)->toBe($branch->id)
+        ->and($template->fresh()?->is_active)->toBeTrue();
 
     $this->actingAs($owner)->patch(route('cms.message-templates.update', $otherTemplate), [
         'branch_id' => null,
@@ -125,7 +138,8 @@ it('rejects duplicate scope status, cross-organization branches, and invalid var
 
 it('requires exact typed confirmation before deleting a template', function (): void {
     $organization = Organization::factory()->create();
-    $template = MessageTemplate::factory()->for($organization)->create([
+    $branch = Branch::factory()->for($organization)->create();
+    $template = MessageTemplate::factory()->forBranch($branch)->create([
         'order_status' => OrderStatus::Drying,
     ]);
     $owner = User::factory()->for($organization)->create();

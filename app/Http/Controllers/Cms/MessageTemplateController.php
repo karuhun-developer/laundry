@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Cms;
 
 use App\Actions\MessageTemplates\CreateMessageTemplate;
 use App\Actions\MessageTemplates\DeleteMessageTemplate;
+use App\Actions\MessageTemplates\ListMessageTemplates;
 use App\Actions\MessageTemplates\UpdateMessageTemplate;
 use App\Data\MessageTemplateData;
 use App\Enums\OrderStatus;
@@ -24,26 +25,21 @@ use Inertia\Response;
 
 class MessageTemplateController extends Controller
 {
-    public function index(): Response
+    public function index(ListMessageTemplates $listMessageTemplates): Response
     {
         Gate::authorize('viewAny', MessageTemplate::class);
 
         /** @var User $actor */
         $actor = request()->user();
         $isSuperadmin = $actor->hasRole(RoleName::Superadmin->value);
+        $branches = Branch::query()
+            ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
+            ->orderBy('name')
+            ->get(['id', 'organization_id', 'name']);
 
         return Inertia::render('cms/MessageTemplates', [
-            'messageTemplates' => MessageTemplate::query()
-                ->with(['organization:id,name', 'branch:id,name'])
-                ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
-                ->orderBy('organization_id')
-                ->orderBy('scope_key')
-                ->orderBy('order_status')
-                ->get(),
-            'branches' => Branch::query()
-                ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
-                ->orderBy('name')
-                ->get(['id', 'organization_id', 'name']),
+            'messageTemplates' => $listMessageTemplates->handle($actor, $branches),
+            'branches' => $branches,
             'organizations' => $isSuperadmin
                 ? Organization::query()->orderBy('name')->get(['id', 'name'])
                 : [],
@@ -75,7 +71,14 @@ class MessageTemplateController extends Controller
         MessageTemplate $messageTemplate,
         UpdateMessageTemplate $updateMessageTemplate,
     ): RedirectResponse {
-        $updateMessageTemplate->handle($messageTemplate, MessageTemplateData::fromRequest($request));
+        /** @var User $actor */
+        $actor = $request->user();
+
+        $updateMessageTemplate->handle(
+            $actor,
+            $messageTemplate,
+            MessageTemplateData::fromRequest($request),
+        );
 
         return back()->with('success', 'Template WhatsApp berhasil diperbarui.');
     }

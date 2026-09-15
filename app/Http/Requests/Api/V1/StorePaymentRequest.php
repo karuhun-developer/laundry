@@ -21,7 +21,10 @@ class StorePaymentRequest extends FormRequest
         $order = $this->route('order');
 
         return $order instanceof Order
-            && $this->user()?->can('updateStatus', $order) === true;
+            && $this->user()?->can('createPayment', [
+                $order,
+                (string) $this->input('method'),
+            ]) === true;
     }
 
     /**

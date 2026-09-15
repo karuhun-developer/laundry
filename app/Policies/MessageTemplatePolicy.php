@@ -50,7 +50,8 @@ class MessageTemplatePolicy
      */
     public function delete(User $user, MessageTemplate $messageTemplate): bool
     {
-        return $this->view($user, $messageTemplate);
+        return $this->view($user, $messageTemplate)
+            && ($user->hasRole(RoleName::Superadmin->value) || $messageTemplate->branch_id !== null);
     }
 
     /**

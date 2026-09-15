@@ -9,10 +9,21 @@ import type {
     MobileBranch,
     MobileCustomer,
     MobileOrder,
+    MobilePaymentActions,
     MobilePriceOption,
     MobilePriceQuote,
     MobileService,
 } from '@/types/mobile';
+
+const paymentActions: MobilePaymentActions = {
+    createPayment: vi.fn(async () => true),
+    loadPaymentGatewayMethods: vi.fn(async () => []),
+    transitionPaymentStatus: vi.fn(async () => true),
+    loadReceipt: vi.fn(async () => {
+        throw new Error('Not used in this test.');
+    }),
+    printReceipt: vi.fn(async () => false),
+};
 
 const branch: MobileBranch = {
     id: 7,
@@ -197,6 +208,17 @@ describe('mobile role-aware components', () => {
         expect(wrapper.find('[data-test="status-controls"]').exists()).toBe(false);
     });
 
+    it('shows dynamic QRIS access on a priced customer order', () => {
+        const wrapper = mount(OrderTicket, {
+            props: { order: makeOrder(), role: 'customer', paymentActions },
+        });
+
+        expect(wrapper.find('[data-test="open-payment-dialog"]').exists()).toBe(true);
+        expect(wrapper.find('[data-test="open-payment-dialog"]').text()).toContain(
+            'Bayar dengan QRIS',
+        );
+    });
+
     it('limits optimistic animation to the pending marker', () => {
         const pendingOrder = { ...makeOrder(), pending: true };
         const wrapper = mount(OrderTicket, {
@@ -305,6 +327,7 @@ describe('mobile role-aware components', () => {
 
         expect(wrapper.text()).toContain('Harga menunggu konfirmasi');
         expect(wrapper.text()).toContain('menunggu dijemput dan ditimbang');
+        expect(wrapper.text()).toContain('QRIS dinamis tersedia setelah total harga dikonfirmasi');
         expect(wrapper.text()).not.toContain('Total');
         expect(wrapper.find('[data-test="open-payment-dialog"]').exists()).toBe(false);
     });

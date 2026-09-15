@@ -28,15 +28,17 @@ class StoreMessageTemplateRequest extends FormRequest
     public function rules(): array
     {
         $organizationId = $this->organizationId();
+        $isSuperadmin = $this->user()?->hasRole(RoleName::Superadmin->value) === true;
 
         return [
             'organization_id' => [
-                Rule::requiredIf($this->user()?->hasRole(RoleName::Superadmin->value) === true),
+                Rule::requiredIf($isSuperadmin),
                 'nullable',
                 'integer',
                 'exists:organizations,id',
             ],
             'branch_id' => [
+                Rule::requiredIf(! $isSuperadmin),
                 'nullable',
                 'integer',
                 Rule::exists('branches', 'id')->where('organization_id', $organizationId),
@@ -76,6 +78,7 @@ class StoreMessageTemplateRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'branch_id.required' => 'Owner wajib memilih cabang.',
             'branch_id.exists' => 'Cabang harus berasal dari organisasi yang dipilih.',
             'order_status.unique' => 'Template untuk cakupan dan status ini sudah tersedia.',
         ];

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, ReceiptText } from '@lucide/vue';
+import { CheckCircle2, QrCode, ReceiptText } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import DigitalReceiptPanel from '@/components/mobile/molecules/DigitalReceiptPanel.vue';
 import PaymentEntryForm from '@/components/mobile/molecules/PaymentEntryForm.vue';
@@ -22,23 +22,26 @@ import type {
     MobilePaymentActions,
     MobilePaymentGatewayMethod,
     MobilePaymentMethod,
+    MobileRole,
 } from '@/types/mobile';
 
 const props = withDefaults(
     defineProps<{
         order: MobileOrder;
         actions: MobilePaymentActions;
+        role?: MobileRole;
         processing?: boolean;
         printerConfigured?: boolean;
     }>(),
     {
+        role: 'branch_admin',
         processing: false,
         printerConfigured: false,
     },
 );
 
 const open = ref(false);
-const method = ref<MobilePaymentMethod>('cash');
+const method = ref<MobilePaymentMethod>(props.role === 'customer' ? 'qris' : 'cash');
 const gatewayMethods = ref<readonly MobilePaymentGatewayMethod[]>([]);
 const selectedGatewayMethod = ref('');
 const amountInput = ref('');
@@ -56,6 +59,17 @@ const latestPendingPayment = computed<MobilePayment | null>(() => {
 });
 const amountRupiah = computed(() => Number(amountInput.value));
 const isBusy = computed(() => props.processing || actionProcessing.value);
+const paymentTriggerLabel = computed(() => {
+    if (props.role === 'branch_admin') {
+        return 'Pembayaran & struk';
+    }
+
+    if (latestPendingPayment.value?.qris_image_data_uri) {
+        return 'Lihat QRIS pembayaran';
+    }
+
+    return props.order.payment_summary.is_paid ? 'Lihat pembayaran' : 'Bayar dengan QRIS';
+});
 const selectedGateway = computed(
     () =>
         gatewayMethods.value.find(
@@ -72,6 +86,7 @@ const canCreatePayment = computed(() => {
         Number.isInteger(amount) &&
         amount > 0 &&
         amount <= props.order.payment_summary.outstanding_rupiah &&
+        (props.role !== 'customer' || method.value === 'qris') &&
         (method.value !== 'qris' || props.order.branch.qris_enabled) &&
         (method.value !== 'gateway' ||
             (selectedGateway.value !== null &&
@@ -112,10 +127,14 @@ watch(
     ([isOpen, outstandingRupiah]) => {
         if (isOpen) {
             amountInput.value = String(outstandingRupiah);
-            void loadGatewayMethods();
+            method.value = props.role === 'customer' ? 'qris' : 'cash';
+
+            if (props.role === 'branch_admin') {
+                void loadGatewayMethods();
+            }
         } else {
             gatewayLoadGeneration += 1;
-            method.value = 'cash';
+            method.value = props.role === 'customer' ? 'qris' : 'cash';
             gatewayMethods.value = [];
             selectedGatewayMethod.value = '';
         }
@@ -233,7 +252,7 @@ const printReceipt = async (): Promise<void> => {
                 data-test="open-payment-dialog"
             >
                 <ReceiptText class="size-4" aria-hidden="true" />
-                Pembayaran &amp; struk
+                {{ paymentTriggerLabel }}
             </Button>
         </DialogTrigger>
 
@@ -248,7 +267,11 @@ const printReceipt = async (): Promise<void> => {
                 </span>
                 <DialogTitle>Pembayaran {{ order.order_number }}</DialogTitle>
                 <DialogDescription>
-                    Catat tunai, tampilkan QRIS dinamis, rekonsiliasi pembayaran, lalu buka atau cetak struk.
+                    {{
+                        role === 'customer'
+                            ? 'Bayar sisa tagihan dengan QRIS dinamis sesuai nominal pesanan.'
+                            : 'Catat tunai, tampilkan QRIS dinamis, rekonsiliasi pembayaran, lalu buka atau cetak struk.'
+                    }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -281,10 +304,11 @@ const printReceipt = async (): Promise<void> => {
                 v-if="latestPendingPayment"
                 :payment="latestPendingPayment"
                 :busy="isBusy"
+                :can-reconcile="role === 'branch_admin'"
                 @reconcile="reconcile"
             />
             <PaymentEntryForm
-                v-else-if="order.payment_summary.outstanding_rupiah > 0"
+                v-else-if="role === 'branch_admin' && order.payment_summary.outstanding_rupiah > 0"
                 v-model:method="method"
                 v-model:amount-input="amountInput"
                 v-model:note="note"
@@ -295,6 +319,46 @@ const printReceipt = async (): Promise<void> => {
                 :gateway-methods="gatewayMethods"
                 @submit="submitPayment"
             />
+            <section
+                v-else-if="order.payment_summary.outstanding_rupiah > 0"
+                class="rounded-2xl border border-brand-600/20 bg-surface-blue p-4"
+                data-test="customer-qris-payment"
+            >
+                <div class="flex items-start gap-3">
+                    <span
+                        class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700 shadow-low"
+                    >
+                        <QrCode class="size-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                        <p class="font-semibold text-ink-950">
+                            Bayar {{ formatRupiah(order.payment_summary.outstanding_rupiah) }}
+                        </p>
+                        <p class="mt-1 text-sm leading-5 text-ink-500">
+                            QRIS dibuat khusus dengan nominal tagihan ini, jadi Anda tidak perlu
+                            mengetik jumlah pembayaran.
+                        </p>
+                    </div>
+                </div>
+                <Button
+                    v-if="order.branch.qris_enabled"
+                    type="button"
+                    class="mt-4 min-h-11 w-full bg-brand-700 text-white hover:bg-brand-700/90"
+                    data-test="customer-create-qris"
+                    :disabled="!canCreatePayment"
+                    @click="submitPayment"
+                >
+                    <QrCode class="size-4" aria-hidden="true" />
+                    {{ isBusy ? 'Membuat QRIS…' : 'Buat QRIS dinamis' }}
+                </Button>
+                <p
+                    v-else
+                    class="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-800"
+                >
+                    QRIS belum diaktifkan untuk cabang ini. Hubungi petugas untuk metode
+                    pembayaran lain.
+                </p>
+            </section>
             <section
                 v-else
                 class="rounded-2xl border border-mint-500/20 bg-mint-500/10 p-4 text-mint-500"
@@ -309,7 +373,7 @@ const printReceipt = async (): Promise<void> => {
             <DigitalReceiptPanel
                 :receipt="receipt"
                 :busy="isBusy"
-                :printer-configured="printerConfigured"
+                :printer-configured="printerConfigured && role === 'branch_admin'"
                 @load="loadReceipt"
                 @print="printReceipt"
             />

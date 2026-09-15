@@ -8,6 +8,8 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
+const CMS_BRANCH_STATIC_QRIS = '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
+
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
@@ -138,6 +140,44 @@ it('allows an owner to create global cities and use any city for their branches'
     ]);
 });
 
+it('validates and stores encrypted QRIS settings for a branch', function (): void {
+    $organization = Organization::factory()->create();
+    $city = City::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)->post(route('cms.branches.store'), [
+        'city_id' => $city->id,
+        'name' => 'Cabang QRIS',
+        'code' => 'QRS01',
+        'address' => 'Jl. Pembayaran No. 1',
+        'qris_enabled' => true,
+        'qris_static_payload' => '  '.CMS_BRANCH_STATIC_QRIS.'  ',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $branch = Branch::query()->where('code', 'QRS01')->firstOrFail();
+
+    expect($branch->qris_enabled)->toBeTrue()
+        ->and($branch->qris_static_payload)->toBe(CMS_BRANCH_STATIC_QRIS);
+
+    $this->actingAs($owner)->post(route('cms.branches.store'), [
+        'city_id' => $city->id,
+        'name' => 'Cabang QRIS Rusak',
+        'code' => 'QRS02',
+        'address' => 'Jl. Pembayaran No. 2',
+        'qris_enabled' => true,
+        'qris_static_payload' => substr(CMS_BRANCH_STATIC_QRIS, 0, -4).'FFFF',
+    ])->assertSessionHasErrors(['qris_static_payload' => 'Checksum QRIS tidak cocok.']);
+
+    $this->actingAs($owner)->post(route('cms.branches.store'), [
+        'city_id' => $city->id,
+        'name' => 'Cabang Tanpa QRIS',
+        'code' => 'QRS03',
+        'address' => 'Jl. Pembayaran No. 3',
+        'qris_enabled' => true,
+    ])->assertSessionHasErrors('qris_static_payload');
+});
+
 it('enforces city uniqueness globally by name and province', function (): void {
     $firstOrganization = Organization::factory()->create();
     $secondOrganization = Organization::factory()->create();
@@ -181,7 +221,10 @@ it('scopes the branch management page to an owner organization', function (): vo
     $organization = Organization::factory()->create();
     $city = City::factory()->create(['name' => 'A Jakarta']);
     $otherCity = City::factory()->create(['name' => 'Z Bandung']);
-    $branch = Branch::factory()->for($organization)->for($city)->create();
+    $branch = Branch::factory()->for($organization)->for($city)->create([
+        'qris_enabled' => true,
+        'qris_static_payload' => CMS_BRANCH_STATIC_QRIS,
+    ]);
     Branch::factory()->for($otherCity)->create();
 
     $owner = User::factory()->for($organization)->create();
@@ -194,6 +237,8 @@ it('scopes the branch management page to an owner organization', function (): vo
             ->component('cms/Branches')
             ->has('branches', 1)
             ->where('branches.0.id', $branch->id)
+            ->where('branches.0.qris_enabled', true)
+            ->where('branches.0.qris_static_payload', CMS_BRANCH_STATIC_QRIS)
             ->has('cities', 2)
             ->where('cities.0.id', $city->id)
             ->has('organizations', 0));

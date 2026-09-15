@@ -18,6 +18,8 @@ final readonly class BranchData
         public ?float $longitude,
         public int $freeDeliveryRadiusMeters,
         public int $deliveryFeePerKmRupiah,
+        public bool $qrisEnabled,
+        public ?string $qrisStaticPayload,
         public bool $isActive,
     ) {}
 
@@ -34,6 +36,10 @@ final readonly class BranchData
             longitude: $request->filled('longitude') ? $request->float('longitude') : null,
             freeDeliveryRadiusMeters: $request->integer('free_delivery_radius_meters', 10000),
             deliveryFeePerKmRupiah: $request->integer('delivery_fee_per_km_rupiah'),
+            qrisEnabled: $request->boolean('qris_enabled'),
+            qrisStaticPayload: $request->filled('qris_static_payload')
+                ? $request->string('qris_static_payload')->toString()
+                : null,
             isActive: $request->boolean('is_active', true),
         );
     }

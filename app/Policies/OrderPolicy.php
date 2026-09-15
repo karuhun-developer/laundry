@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\PaymentMethod;
 use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\Branch;
@@ -79,6 +80,16 @@ class OrderPolicy
 
     public function confirmPricing(User $user, Order $order): bool
     {
+        return $this->staffCanAccessOrder($user, $order, PermissionName::UpdateOrderStatus);
+    }
+
+    public function createPayment(User $user, Order $order, string $method): bool
+    {
+        if ($user->hasRole(RoleName::Customer->value)) {
+            return $method === PaymentMethod::Qris->value
+                && $order->customer_id === $user->id;
+        }
+
         return $this->staffCanAccessOrder($user, $order, PermissionName::UpdateOrderStatus);
     }
 

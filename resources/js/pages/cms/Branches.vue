@@ -112,6 +112,7 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                                 <th class="px-5 py-3 font-medium">Cabang</th>
                                 <th class="px-5 py-3 font-medium">Area</th>
                                 <th class="px-5 py-3 font-medium">Delivery</th>
+                                <th class="px-5 py-3 font-medium">QRIS</th>
                                 <th class="px-5 py-3 font-medium">Status</th>
                                 <th class="px-5 py-3 text-right font-medium">Aksi</th>
                             </tr>
@@ -129,6 +130,11 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                                 <td class="px-5 py-4">
                                     <p>Gratis {{ formatKilometers(branch.free_delivery_radius_meters) }}</p>
                                     <p class="text-ink-500 mt-0.5 text-xs">{{ formatRupiah(branch.delivery_fee_per_km_rupiah) }}/km berikutnya</p>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <Badge :variant="branch.qris_enabled ? 'default' : 'secondary'">
+                                        {{ branch.qris_enabled ? 'Aktif' : 'Nonaktif' }}
+                                    </Badge>
                                 </td>
                                 <td class="px-5 py-4">
                                     <Badge :variant="branch.is_active ? 'default' : 'secondary'">
@@ -171,7 +177,7 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                             </Badge>
                         </div>
                         <p class="text-ink-700 text-sm leading-6">{{ branch.address }}</p>
-                        <div class="bg-surface-blue grid grid-cols-2 gap-3 rounded-lg p-3 text-sm">
+                        <div class="bg-surface-blue grid grid-cols-3 gap-3 rounded-lg p-3 text-sm">
                             <div>
                                 <p class="text-ink-500 text-xs">Gratis sampai</p>
                                 <p class="font-medium">{{ formatKilometers(branch.free_delivery_radius_meters) }}</p>
@@ -179,6 +185,10 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                             <div>
                                 <p class="text-ink-500 text-xs">Tarif lanjutan</p>
                                 <p class="font-medium">{{ formatRupiah(branch.delivery_fee_per_km_rupiah) }}/km</p>
+                            </div>
+                            <div>
+                                <p class="text-ink-500 text-xs">QRIS</p>
+                                <p class="font-medium">{{ branch.qris_enabled ? 'Aktif' : 'Nonaktif' }}</p>
                             </div>
                         </div>
                         <div class="flex justify-end gap-1 border-t pt-3">

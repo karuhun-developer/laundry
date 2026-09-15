@@ -131,6 +131,8 @@ it('lets an owner update branches only inside their organization', function (): 
         'longitude' => 106.8136,
         'free_delivery_radius_meters' => 12000,
         'delivery_fee_per_km_rupiah' => 4000,
+        'qris_enabled' => true,
+        'qris_static_payload' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
         'is_active' => false,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -138,8 +140,12 @@ it('lets an owner update branches only inside their organization', function (): 
         'id' => $branch->id,
         'name' => 'Cabang Kemang',
         'code' => 'KMG01',
+        'qris_enabled' => true,
         'is_active' => false,
     ]);
+    expect($branch->refresh()->qris_static_payload)->toBe(
+        '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+    );
 
     $this->actingAs($owner)->patch(route('cms.branches.update', $otherBranch), [
         'city_id' => $otherBranch->city_id,

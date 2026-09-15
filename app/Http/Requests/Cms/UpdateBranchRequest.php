@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Cms;
 
 use App\Models\Branch;
+use App\Rules\ValidQrisPayload;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -43,6 +44,14 @@ class UpdateBranchRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'free_delivery_radius_meters' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'delivery_fee_per_km_rupiah' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
+            'qris_enabled' => ['sometimes', 'boolean'],
+            'qris_static_payload' => [
+                Rule::requiredIf($this->boolean('qris_enabled')),
+                'nullable',
+                'string',
+                'max:4096',
+                new ValidQrisPayload,
+            ],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -56,6 +65,14 @@ class UpdateBranchRequest extends FormRequest
     {
         if ($this->filled('code')) {
             $this->merge(['code' => Str::upper($this->string('code')->toString())]);
+        }
+
+        if ($this->has('qris_static_payload')) {
+            $payload = trim($this->string('qris_static_payload')->toString());
+
+            $this->merge([
+                'qris_static_payload' => $payload === '' ? null : $payload,
+            ]);
         }
     }
 

@@ -110,6 +110,53 @@ const makeActions = (): MobilePaymentActions => ({
 });
 
 describe('mobile payment dialog', () => {
+    it('lets a customer create dynamic QRIS for the full outstanding amount', async () => {
+        const actions = makeActions();
+        const order = makeOrder();
+        order.payments = [];
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions, role: 'customer' },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        expect(actions.loadPaymentGatewayMethods).not.toHaveBeenCalled();
+        expect(document.body.querySelector('[data-test="payment-form"]')).toBeNull();
+        expect(document.body.querySelector('[data-test="customer-qris-payment"]')).not.toBeNull();
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="customer-create-qris"]')
+            ?.click();
+
+        await vi.waitFor(() =>
+            expect(actions.createPayment).toHaveBeenCalledWith(21, {
+                method: 'qris',
+                amount_rupiah: 30000,
+                note: undefined,
+            }),
+        );
+
+        wrapper.unmount();
+    });
+
+    it('shows customer QRIS without staff reconciliation or printer actions', async () => {
+        const actions = makeActions();
+        const wrapper = mount(PaymentDialog, {
+            props: { order: makeOrder(), actions, role: 'customer', printerConfigured: true },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        expect(document.body.querySelector('[data-test="qris-image"]')).not.toBeNull();
+        expect(document.body.querySelector('[data-test="download-qris"]')).not.toBeNull();
+        expect(document.body.querySelector('[data-test="mark-payment-paid"]')).toBeNull();
+        expect(document.body.querySelector('[data-test="mark-payment-failed"]')).toBeNull();
+        expect(document.body.querySelector('[data-test="print-receipt"]')).toBeNull();
+
+        wrapper.unmount();
+    });
+
     it('shows a scannable QRIS image and reconciliation actions', async () => {
         const actions = makeActions();
         const wrapper = mount(PaymentDialog, {
@@ -262,7 +309,7 @@ describe('mobile payment dialog', () => {
 
         await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
 
-        expect(document.body.querySelector('[data-test="download-gateway-qris"]')).not.toBeNull();
+        expect(document.body.querySelector('[data-test="download-qris"]')).not.toBeNull();
         expect(document.body.querySelector('[data-test="mark-payment-paid"]')).toBeNull();
         expect(document.body.querySelector('[data-test="mark-payment-failed"]')).toBeNull();
         wrapper.unmount();

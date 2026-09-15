@@ -150,7 +150,7 @@ const confirmPricing = (): void => {
                 data-test="pricing-pending-summary"
             >
                 Harga menunggu konfirmasi. Pesanan Anda menunggu dijemput dan ditimbang oleh
-                petugas cabang.
+                petugas cabang. QRIS dinamis tersedia setelah total harga dikonfirmasi.
             </div>
         </div>
 
@@ -291,12 +291,13 @@ const confirmPricing = (): void => {
         </div>
 
         <div
-            v-if="role === 'branch_admin' && !isPricingPending && paymentActions"
+            v-if="!isPricingPending && paymentActions"
             class="border-t border-line bg-surface px-4 py-3"
         >
             <PaymentDialog
                 :order="order"
                 :actions="paymentActions"
+                :role="role"
                 :processing="paymentProcessing"
                 :printer-configured="printerConfigured"
             />

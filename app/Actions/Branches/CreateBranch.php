@@ -20,6 +20,8 @@ final class CreateBranch
             'longitude' => $data->longitude,
             'free_delivery_radius_meters' => $data->freeDeliveryRadiusMeters,
             'delivery_fee_per_km_rupiah' => $data->deliveryFeePerKmRupiah,
+            'qris_enabled' => $data->qrisEnabled,
+            'qris_static_payload' => $data->qrisStaticPayload,
             'is_active' => $data->isActive,
         ]);
     }

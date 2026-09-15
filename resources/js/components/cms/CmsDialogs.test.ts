@@ -9,7 +9,12 @@ import MessageTemplateFormDialog from '@/components/cms/MessageTemplateFormDialo
 import OrganizationFormDialog from '@/components/cms/OrganizationFormDialog.vue';
 import UserFormDialog from '@/components/cms/UserFormDialog.vue';
 import InputError from '@/components/InputError.vue';
-import type { MessageTemplateSummary, OrganizationSummary, UserSummary } from '@/types';
+import type {
+    BranchSummary,
+    MessageTemplateSummary,
+    OrganizationSummary,
+    UserSummary,
+} from '@/types';
 
 type SubmitOptions = {
     onSuccess?: () => void;
@@ -200,6 +205,7 @@ afterEach(() => {
     inertiaHarness.reset();
     leafletHarness.reset();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
 });
 
 describe('CMS dialogs', () => {
@@ -291,6 +297,7 @@ describe('CMS dialogs', () => {
     it('prefills a message template and renders its variable preview', () => {
         const messageTemplate: MessageTemplateSummary = {
             id: 20,
+            row_key: 'branch:7:ready_for_pickup',
             organization_id: 1,
             branch_id: 7,
             scope_key: 'branch:7',
@@ -299,6 +306,7 @@ describe('CMS dialogs', () => {
             is_active: true,
             organization: { id: 1, name: 'Kirei Wash Jakarta' },
             branch: { id: 7, name: 'Kemang' },
+            is_inherited: false,
         };
         const wrapper = mount(MessageTemplateFormDialog, {
             props: {
@@ -320,6 +328,10 @@ describe('CMS dialogs', () => {
         });
 
         expect(wrapper.get<HTMLSelectElement>('#message-template-branch').element.value).toBe('7');
+        expect(wrapper.get<HTMLSelectElement>('#message-template-branch').element.disabled).toBe(
+            true,
+        );
+        expect(wrapper.find('option[value=""]').exists()).toBe(false);
         expect(wrapper.get<HTMLSelectElement>('#message-template-status').element.value).toBe(
             messageTemplate.order_status,
         );
@@ -408,6 +420,89 @@ describe('CMS dialogs', () => {
         expect(wrapper.get('#branch-city').text()).toContain('Bogor');
         expect(wrapper.get('#branch-city').text()).toContain('Bandung');
         expect(wrapper.get('#branch-city').text()).toContain('Jakarta Selatan');
+    });
+
+    it('prefills and submits branch QRIS settings', async () => {
+        const qrisPayload =
+            '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
+        const branch: BranchSummary = {
+            id: 7,
+            organization_id: 1,
+            city_id: 1,
+            name: 'Cabang Kemang',
+            code: 'KMG01',
+            phone: '081234567890',
+            address: 'Jl. Kemang Raya No. 10',
+            latitude: -6.2607,
+            longitude: 106.8136,
+            free_delivery_radius_meters: 10000,
+            delivery_fee_per_km_rupiah: 3000,
+            qris_enabled: true,
+            qris_static_payload: qrisPayload,
+            is_active: true,
+            city: { id: 1, name: 'Jakarta Selatan', province: 'DKI Jakarta' },
+            organization: { id: 1, name: 'LaundryHub Demo' },
+        };
+        const wrapper = mount(BranchFormDialog, {
+            props: {
+                branch,
+                cities: [branch.city],
+                organizations: [],
+                currentOrganizationId: 1,
+                isSuperadmin: false,
+            },
+            global: { stubs: dialogStubs },
+        });
+
+        expect(wrapper.text()).toContain('QRIS dinamis');
+        expect(wrapper.get<HTMLTextAreaElement>('#branch-qris-payload').element.value).toBe(
+            qrisPayload,
+        );
+        expect(wrapper.get('#branch-qris-payload').attributes('required')).toBeDefined();
+
+        await wrapper.get('[data-test="branch-form"]').trigger('submit');
+
+        expect(inertiaHarness.submittedData()).toMatchObject({
+            qris_enabled: true,
+            qris_static_payload: qrisPayload,
+        });
+    });
+
+    it('imports a QRIS payload from an uploaded image', async () => {
+        const qrisPayload =
+            '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
+
+        vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ close: vi.fn() }));
+        vi.stubGlobal(
+            'BarcodeDetector',
+            class {
+                detect = vi.fn().mockResolvedValue([{ rawValue: qrisPayload }]);
+            },
+        );
+
+        const wrapper = mount(BranchFormDialog, {
+            props: {
+                cities: [{ id: 1, name: 'Jakarta Selatan', province: 'DKI Jakarta' }],
+                organizations: [],
+                currentOrganizationId: 1,
+                isSuperadmin: false,
+            },
+            global: { stubs: dialogStubs },
+        });
+        const imageInput = wrapper.get<HTMLInputElement>('#branch-qris-image');
+
+        Object.defineProperty(imageInput.element, 'files', {
+            configurable: true,
+            value: [new File(['qris'], 'merchant-qris.png', { type: 'image/png' })],
+        });
+        await imageInput.trigger('change');
+        await flushPromises();
+
+        expect(wrapper.get<HTMLTextAreaElement>('#branch-qris-payload').element.value).toBe(
+            qrisPayload,
+        );
+        expect(wrapper.text()).toContain('Payload QRIS berhasil dibaca dari gambar.');
+        expect(wrapper.get('#branch-qris-payload').attributes('required')).toBeDefined();
     });
 
     it('does not submit organization ownership from the global city form', () => {
