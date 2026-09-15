@@ -43,6 +43,7 @@ return [
     'github_releases' => [
         'repository' => env('GITHUB_RELEASE_REPOSITORY', 'karuhun-developer/laundry'),
         'token' => env('GITHUB_RELEASE_TOKEN'),
+        'cache_seconds' => env('GITHUB_RELEASE_CACHE_SECONDS', 900),
     ],
 
 ];
