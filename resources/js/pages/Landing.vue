@@ -10,12 +10,12 @@ import {
     MessageCircle,
     Printer,
     QrCode,
-    Shirt,
     Smartphone,
     Sparkles,
     Truck,
 } from '@lucide/vue';
 import { onMounted } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { login, register } from '@/routes';
 import { app as mobileApp } from '@/routes/mobile';
 
@@ -71,7 +71,7 @@ const features = [
             <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10" aria-label="Navigasi utama">
                 <a href="#beranda" class="flex items-center gap-3" aria-label="LaundryHub beranda">
                     <span class="flex size-11 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-low">
-                        <Shirt class="size-5" aria-hidden="true" />
+                        <AppLogoIcon class="size-6" />
                     </span>
                     <span>
                         <span class="block font-display text-lg font-semibold">LaundryHub</span>
