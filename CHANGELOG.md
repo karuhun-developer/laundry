@@ -4,6 +4,11 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.18] - 2026-09-15
+
+- Fixed Android QRIS downloads by saving the generated SVG through the native system document picker, while preserving browser downloads and showing clear save feedback.
+- Fixed signed Android update downloads so GitHub returns the APK binary instead of release-asset metadata.
+
 ## [1.0.17] - 2026-09-15
 
 - Prevented unexpected update-service or logging failures from returning HTTP 500, with update checks and downloads routed through dedicated application actions.
