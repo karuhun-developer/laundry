@@ -4,6 +4,14 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-09-15
+
+- Added native Firebase Cloud Messaging registration, encrypted device-token storage, foreground and notification-tap refresh behavior, and account-level notification controls.
+- Added queued pickup, pricing, and order-status notifications scoped to assigned branch administrators or the exact order customer, with automatic cleanup of invalid Firebase registrations.
+- Added a global refresh action throughout the mobile workspace and extended authenticated sessions to a 30-day idle lifetime while preserving logout and customer PIN session invalidation.
+- Changed the application palette, landing page, browser icons, and mobile surfaces to a cohesive nature-green visual system.
+- Added required Firebase Android configuration through the protected `android-release` GitHub Actions environment and documented server credentials, queue workers, CI setup, and physical-device verification.
+
 ## [1.0.9] - 2026-09-15
 
 - Added a public LaundryHub landing page with a fixed light background and Blade-owned title, canonical, robots, Open Graph, Twitter, favicon, and JSON-LD metadata while keeping Inertia SSR disabled and redirecting authenticated users by role.
