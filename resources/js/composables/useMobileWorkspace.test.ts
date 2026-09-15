@@ -412,6 +412,51 @@ describe('mobile workspace automatic nearest branch selection', () => {
 });
 
 describe('mobile workspace refresh', () => {
+    it('refreshes only customer orders silently and prevents overlapping requests', async () => {
+        const { workspace, unmount } = mountWorkspace();
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        vi.clearAllMocks();
+        let resolveOrders: (orders: []) => void = () => undefined;
+        orderApi.loadOrders.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveOrders = resolve;
+            }),
+        );
+        const filters = { search: 'KMG', date_from: '2026-09-01', date_to: '2026-09-15' };
+
+        const firstRefresh = workspace.refreshCustomerOrdersSilently(filters);
+        const overlappingRefresh = workspace.refreshCustomerOrdersSilently(filters);
+
+        expect(firstRefresh).toBe(overlappingRefresh);
+        expect(orderApi.loadOrders).toHaveBeenCalledOnce();
+        expect(orderApi.loadOrders).toHaveBeenCalledWith(undefined, filters);
+        expect(catalogApi.loadContext).not.toHaveBeenCalled();
+        expect(catalogApi.loadCatalog).not.toHaveBeenCalled();
+        expect(customerAddressApi.loadAddresses).not.toHaveBeenCalled();
+
+        resolveOrders([]);
+        await expect(firstRefresh).resolves.toBe(true);
+        expect(orderApi.setOrders).toHaveBeenCalledWith([]);
+
+        unmount();
+    });
+
+    it('keeps the last order data without exposing an error when silent refresh fails', async () => {
+        const { workspace, unmount } = mountWorkspace();
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        vi.clearAllMocks();
+        orderApi.loadOrders.mockRejectedValueOnce(new Error('Jaringan terputus.'));
+
+        await expect(
+            workspace.refreshCustomerOrdersSilently({ search: '', date_from: '', date_to: '' }),
+        ).resolves.toBe(false);
+
+        expect(orderApi.setOrders).not.toHaveBeenCalled();
+        expect(workspace.requestError.value).toBeNull();
+
+        unmount();
+    });
+
     it('preserves the selected branch, address, and delivery coordinates', async () => {
         customerAddressApi.loadAddresses.mockResolvedValue([defaultCustomerAddress]);
         const { workspace, unmount } = mountWorkspace();

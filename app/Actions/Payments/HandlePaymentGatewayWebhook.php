@@ -2,10 +2,12 @@
 
 namespace App\Actions\Payments;
 
+use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\Payments\PaymentGatewayWebhookData;
 use App\Data\Payments\PaymentGatewayWebhookResultData;
 use App\Enums\PaymentGatewayDriver;
 use App\Enums\PaymentStatus;
+use App\Enums\PushNotificationEvent;
 use App\Exceptions\PaymentGatewayException;
 use App\Models\Payment;
 use App\Models\PaymentGatewayDelivery;
@@ -16,6 +18,7 @@ final readonly class HandlePaymentGatewayWebhook
 {
     public function __construct(
         private PaymentGatewayManager $paymentGatewayManager,
+        private DispatchOrderPushNotification $dispatchOrderPushNotification,
     ) {}
 
     public function handle(
@@ -119,6 +122,16 @@ final readonly class HandlePaymentGatewayWebhook
                         'to_status' => $nextStatus->value,
                     ])
                     ->log('payment gateway status updated');
+            }
+
+            if (
+                $currentStatus !== PaymentStatus::Paid
+                && $nextStatus === PaymentStatus::Paid
+            ) {
+                $this->dispatchOrderPushNotification->handle(
+                    $payment->order,
+                    PushNotificationEvent::PaymentVerified,
+                );
             }
 
             return new PaymentGatewayWebhookResultData(

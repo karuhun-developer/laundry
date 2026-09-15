@@ -189,7 +189,7 @@ it('sends pickup notifications only to admins assigned to the requested branch',
         && $request['message']['data']['type'] === 'pickup_requested');
 });
 
-it('sends pricing and status notifications only to the order customer', function (): void {
+it('sends customer order notifications with the payment verified payload', function (): void {
     configureFirebaseCloudMessagingForTest();
     Http::preventStrayRequests();
     Http::fake(['https://fcm.googleapis.com/*' => Http::response(['name' => 'sent'], 200)]);
@@ -214,13 +214,24 @@ it('sends pricing and status notifications only to the order customer', function
         'customer_id' => $customer->id,
     ]);
 
-    foreach ([PushNotificationEvent::PricingConfirmed, PushNotificationEvent::StatusUpdated] as $event) {
+    foreach ([
+        PushNotificationEvent::PricingConfirmed,
+        PushNotificationEvent::PaymentVerified,
+        PushNotificationEvent::StatusUpdated,
+    ] as $event) {
         (new SendOrderPushNotification($order->id, $event))
             ->handle(app(FirebaseCloudMessaging::class));
     }
 
-    Http::assertSentCount(2);
+    Http::assertSentCount(3);
     Http::assertSent(fn (Request $request): bool => $request['message']['token'] === $customerToken);
+    Http::assertSent(fn (Request $request): bool => $request['message']['token'] === $customerToken
+        && $request['message']['data'] === [
+            'type' => 'payment_verified',
+            'order_id' => (string) $order->id,
+            'order_number' => $order->order_number,
+            'url' => '/app',
+        ]);
 });
 
 it('removes an invalid Firebase token after an unregistered response', function (): void {

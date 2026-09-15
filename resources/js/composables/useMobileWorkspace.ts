@@ -46,6 +46,7 @@ export const useMobileWorkspace = () => {
     let branchSelectionGeneration = 0;
     let orderSearchGeneration = 0;
     let customerOrderSearchGeneration = 0;
+    let customerOrderRefreshPromise: Promise<boolean> | null = null;
 
     const selectedBranch = computed<MobileBranch | null>(
         () =>
@@ -544,6 +545,47 @@ export const useMobileWorkspace = () => {
         }
     };
 
+    const refreshCustomerOrdersSilently = (filters: CustomerOrderFilters): Promise<boolean> => {
+        const currentContext = context.value;
+
+        if (currentContext?.role !== 'customer') {
+            return Promise.resolve(false);
+        }
+
+        if (customerOrderRefreshPromise) {
+            return customerOrderRefreshPromise;
+        }
+
+        const requestGeneration = ++customerOrderSearchGeneration;
+        const refreshPromise = (async (): Promise<boolean> => {
+            try {
+                const orders = await orderWorkspace.loadOrders(undefined, filters);
+
+                if (
+                    requestGeneration !== customerOrderSearchGeneration ||
+                    currentContext !== context.value
+                ) {
+                    return false;
+                }
+
+                orderWorkspace.setOrders(orders);
+
+                return true;
+            } catch {
+                return false;
+            }
+        })();
+
+        customerOrderRefreshPromise = refreshPromise;
+        void refreshPromise.finally(() => {
+            if (customerOrderRefreshPromise === refreshPromise) {
+                customerOrderRefreshPromise = null;
+            }
+        });
+
+        return refreshPromise;
+    };
+
     const paymentActions: MobilePaymentActions = {
         refreshOrder: orderWorkspace.refreshOrder,
         createPayment: orderWorkspace.createPayment,
@@ -604,6 +646,7 @@ export const useMobileWorkspace = () => {
         deleteAddress,
         load,
         refresh,
+        refreshCustomerOrdersSilently,
         resetCustomerPin: customerWorkspace.resetCustomerPin,
         searchOrders,
         searchCustomerOrders,

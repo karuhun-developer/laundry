@@ -3,7 +3,9 @@
 use App\Enums\PaymentGatewayDriver;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\PushNotificationEvent;
 use App\Enums\RoleName;
+use App\Jobs\SendOrderPushNotification;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Organization;
@@ -14,6 +16,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
@@ -445,6 +448,7 @@ it('processes a signed paid webhook once and deduplicates repeated deliveries', 
     configurePaywuz();
     $context = paymentGatewayTestContext();
     $payment = gatewayPayment($context);
+    Queue::fake();
 
     postPaywuzWebhook($payment, 'delivery-paid-1')
         ->assertOk()
@@ -468,6 +472,20 @@ it('processes a signed paid webhook once and deduplicates repeated deliveries', 
 
     expect(PaymentGatewayDelivery::query()->count())->toBe(1)
         ->and($payment->statusEvents()->count())->toBe(1);
+    Queue::assertPushed(
+        SendOrderPushNotification::class,
+        fn (SendOrderPushNotification $job): bool => $job->orderId === $context['order']->id
+            && $job->event === PushNotificationEvent::PaymentVerified,
+    );
+
+    postPaywuzWebhook($payment, 'delivery-paid-2')
+        ->assertOk()
+        ->assertJsonPath('duplicate', false)
+        ->assertJsonPath('status', PaymentStatus::Paid->value);
+
+    expect(PaymentGatewayDelivery::query()->count())->toBe(2)
+        ->and($payment->statusEvents()->count())->toBe(1);
+    Queue::assertPushed(SendOrderPushNotification::class, 1);
 });
 
 it('rejects Paywuz webhooks whose payment identity or amount does not match', function (

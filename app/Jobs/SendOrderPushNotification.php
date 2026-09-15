@@ -49,6 +49,7 @@ class SendOrderPushNotification implements ShouldQueue
                 'type' => match ($this->event) {
                     PushNotificationEvent::PickupRequested => 'pickup_requested',
                     PushNotificationEvent::PricingConfirmed => 'pricing_confirmed',
+                    PushNotificationEvent::PaymentVerified => 'payment_verified',
                     PushNotificationEvent::StatusUpdated => 'status_updated',
                 },
                 'order_id' => (string) $order->id,
@@ -94,6 +95,10 @@ class SendOrderPushNotification implements ShouldQueue
             PushNotificationEvent::PricingConfirmed => [
                 'Harga pesanan dikonfirmasi',
                 "Harga pesanan {$order->order_number} sudah dikonfirmasi cabang.",
+            ],
+            PushNotificationEvent::PaymentVerified => [
+                'Pembayaran terverifikasi',
+                "Pembayaran pesanan {$order->order_number} sudah diverifikasi.",
             ],
             PushNotificationEvent::StatusUpdated => [
                 'Status pesanan diperbarui',

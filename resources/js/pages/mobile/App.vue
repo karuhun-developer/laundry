@@ -34,6 +34,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Toaster } from '@/components/ui/sonner';
+import { useCustomerOrderPolling } from '@/composables/useCustomerOrderPolling';
 import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
 import { usePushNotifications } from '@/composables/usePushNotifications';
 import type { CustomerOrderFilters as CustomerOrderFilterValues } from '@/lib/mobileOrderFilters';
@@ -105,8 +106,33 @@ const refreshApp = async (showSuccess = true): Promise<void> => {
     }
 };
 
+const refreshCustomerOrders = async (): Promise<void> => {
+    const filters =
+        activeTab.value === 'orders'
+            ? normalizeCustomerOrderFilters(customerOrderFilters.value)
+            : emptyCustomerOrderFilters();
+
+    await workspace.refreshCustomerOrdersSilently(filters);
+};
+
+useCustomerOrderPolling({
+    enabled: computed(
+        () =>
+            workspace.context.value?.role === 'customer' &&
+            (activeTab.value === 'home' || activeTab.value === 'orders'),
+    ),
+    onRefresh: refreshCustomerOrders,
+});
+
 const pushNotifications = usePushNotifications({
-    onRefresh: () => refreshApp(false),
+    onRefresh: async () => {
+        if (workspace.context.value?.role === 'customer') {
+            await refreshCustomerOrders();
+            return;
+        }
+
+        await refreshApp(false);
+    },
 });
 
 const handleLogout = async (): Promise<void> => {
