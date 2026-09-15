@@ -4,6 +4,11 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.17] - 2026-09-15
+
+- Prevented unexpected update-service or logging failures from returning HTTP 500, with update checks and downloads routed through dedicated application actions.
+- Requested Android notification permission when the mobile workspace first opens and registered the device immediately after permission is granted.
+
 ## [1.0.16] - 2026-09-15
 
 - Fixed Android update checks returning HTTP 500 when the configured cache store is unavailable, while preserving direct GitHub checks and controlled failure responses.
