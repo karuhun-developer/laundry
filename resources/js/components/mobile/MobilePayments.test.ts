@@ -12,9 +12,15 @@ import type {
 const externalLinkMocks = vi.hoisted(() => ({
     open: vi.fn(async (_url: string): Promise<void> => undefined),
 }));
+const qrisDownloadMocks = vi.hoisted(() => ({
+    save: vi.fn(async () => ({ status: 'saved' as const })),
+}));
 
 vi.mock('@/lib/externalLinks/transport', () => ({
     externalLinkTransport: externalLinkMocks,
+}));
+vi.mock('@/lib/qrisDownload/transport', () => ({
+    qrisDownloadTransport: qrisDownloadMocks,
 }));
 
 const gatewayMethods: readonly MobilePaymentGatewayMethod[] = [
@@ -132,6 +138,7 @@ const makeActions = (refreshedOrder: MobileOrder = makeOrder()): MobilePaymentAc
 
 beforeEach(() => {
     externalLinkMocks.open.mockClear();
+    qrisDownloadMocks.save.mockClear();
 });
 
 describe('mobile payment dialog', () => {
@@ -209,6 +216,14 @@ describe('mobile payment dialog', () => {
         expect(document.body.querySelector('[data-test="mark-payment-failed"]')).toBeNull();
         expect(document.body.querySelector('[data-test="print-receipt"]')).toBeNull();
         expect(document.body.textContent).not.toContain('Atur printer di Akun');
+
+        document.body.querySelector<HTMLButtonElement>('[data-test="download-qris"]')?.click();
+        await vi.waitFor(() =>
+            expect(qrisDownloadMocks.save).toHaveBeenCalledWith({
+                dataUri: 'data:image/svg+xml;base64,PHN2Zy8+',
+                filename: 'PAY-20260913-00000055.svg',
+            }),
+        );
 
         document.body
             .querySelector<HTMLButtonElement>('[data-test="load-digital-receipt"]')
