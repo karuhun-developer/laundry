@@ -40,4 +40,9 @@ return [
         'credentials' => env('FIREBASE_CREDENTIALS'),
     ],
 
+    'github_releases' => [
+        'repository' => env('GITHUB_RELEASE_REPOSITORY', 'karuhun-developer/laundry'),
+        'token' => env('GITHUB_RELEASE_TOKEN'),
+    ],
+
 ];
