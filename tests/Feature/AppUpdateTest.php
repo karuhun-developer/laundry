@@ -89,6 +89,10 @@ it('reads the APK checksum from the release checksum asset', function (): void {
     $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.13']))
         ->assertOk()
         ->assertJsonPath('data.apk_sha256', $checksum);
+
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.github.com/repos/acme/laundryhub/releases/assets/141'
+        && $request->header('Accept') === ['application/octet-stream']
+    );
 });
 
 it('reuses cached GitHub release metadata for different installed versions', function (): void {
@@ -385,7 +389,7 @@ it('proxies a signed APK download without exposing the GitHub token', function (
 
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.github.com/repos/acme/laundryhub/releases/assets/140'
         && $request->hasHeader('Authorization', 'Bearer private-release-token')
-        && $request->hasHeader('Accept', 'application/octet-stream')
+        && $request->header('Accept') === ['application/octet-stream']
     );
 });
 

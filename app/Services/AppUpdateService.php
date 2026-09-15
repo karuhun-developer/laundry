@@ -131,7 +131,7 @@ class AppUpdateService
 
         return $this->githubRequest()
             ->withOptions(['stream' => true])
-            ->accept('application/octet-stream')
+            ->replaceHeaders(['Accept' => 'application/octet-stream'])
             ->get($this->repositoryApiUrl("/releases/assets/{$assetId}"))
             ->throw();
     }
@@ -429,7 +429,7 @@ class AppUpdateService
         }
 
         $contents = $this->githubRequest()
-            ->accept('application/octet-stream')
+            ->replaceHeaders(['Accept' => 'application/octet-stream'])
             ->get($this->repositoryApiUrl("/releases/assets/{$checksumAssetId}"))
             ->throw()
             ->body();
