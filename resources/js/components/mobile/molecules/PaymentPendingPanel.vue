@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { CheckCircle2, Copy, Download, MessageCircle, XCircle } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
 import { formatRupiah } from '@/lib/mobileOrders';
+import { qrisDownloadTransport } from '@/lib/qrisDownload/transport';
 import type { MobilePayment } from '@/types/mobile';
 
 const props = withDefaults(
@@ -19,6 +21,7 @@ const props = withDefaults(
 );
 
 const copied = ref(false);
+const downloadProcessing = ref(false);
 const isGateway = computed(() => props.payment.gateway !== null);
 const isGatewayQris = computed(() => props.payment.gateway?.method === 'QRIS');
 
@@ -31,6 +34,34 @@ const copyPaymentNumber = async (): Promise<void> => {
 
     await navigator.clipboard.writeText(paymentNumber);
     copied.value = true;
+};
+
+const downloadQris = async (): Promise<void> => {
+    const dataUri = props.payment.qris_image_data_uri;
+    if (!dataUri || downloadProcessing.value) {
+        return;
+    }
+
+    downloadProcessing.value = true;
+
+    try {
+        const result = await qrisDownloadTransport.save({
+            dataUri,
+            filename: `${props.payment.payment_number}.svg`,
+        });
+
+        if (result.status === 'saved') {
+            toast.success('QRIS berhasil disimpan.');
+        } else if (result.status === 'download_started') {
+            toast.success('Unduhan QRIS dimulai.');
+        }
+    } catch (downloadError: unknown) {
+        toast.error(
+            downloadError instanceof Error ? downloadError.message : 'QRIS belum dapat diunduh.',
+        );
+    } finally {
+        downloadProcessing.value = false;
+    }
 };
 
 const emit = defineEmits<{
@@ -65,16 +96,18 @@ const emit = defineEmits<{
                 data-test="qris-image"
             />
         </div>
-        <a
+        <Button
             v-if="payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
-            :href="payment.qris_image_data_uri"
-            :download="`${payment.payment_number}.svg`"
-            class="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-600/25 px-4 text-sm font-semibold text-brand-700"
+            type="button"
+            variant="outline"
+            class="mt-3 w-full border-brand-600/25 text-brand-700"
+            :disabled="downloadProcessing"
             data-test="download-qris"
+            @click="downloadQris"
         >
             <Download class="size-4" aria-hidden="true" />
-            Unduh QRIS
-        </a>
+            {{ downloadProcessing ? 'Menyimpan QRIS...' : 'Unduh QRIS' }}
+        </Button>
         <div
             v-else-if="isGateway && payment.gateway?.payment_number"
             class="mt-4 rounded-2xl border border-line bg-surface p-4"

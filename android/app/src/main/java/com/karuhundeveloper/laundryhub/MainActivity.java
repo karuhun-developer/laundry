@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AppUpdatePlugin.class);
         registerPlugin(ExternalLinkPlugin.class);
+        registerPlugin(QrisDownloadPlugin.class);
         registerPlugin(ThermalPrinterPlugin.class);
         super.onCreate(savedInstanceState);
     }
