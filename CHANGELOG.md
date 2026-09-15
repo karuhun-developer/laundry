@@ -4,6 +4,8 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.14] - 2026-09-15
+
 - Added Android account-screen version details, current-version changelog, update checks, and checksum-verified APK installation through signed server-proxied downloads.
 - Added clear paid/unpaid badges to branch order queues and moved payment and receipt actions directly below each order's payment summary.
 - Added seven-day signed public digital-receipt links with WhatsApp sharing and Open Graph/Twitter metadata for rich link previews.
