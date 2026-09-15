@@ -246,7 +246,7 @@ afterEach(() => {
 });
 
 describe('customer mobile navigation', () => {
-    it('filters customer orders by order, branch, service, and inclusive dates', async () => {
+    it('searches customer orders without rendering date filters', async () => {
         vi.useFakeTimers();
         const matchingOrder = {
             ...makeOrder(42),
@@ -295,15 +295,13 @@ describe('customer mobile navigation', () => {
 
         await selectTab(wrapper, 'orders');
         await wrapper.get('[data-test="customer-order-search"]').setValue('  CKL  ');
-        await wrapper.get('[data-test="customer-order-date-from"]').setValue('2026-09-10');
-        await wrapper.get('[data-test="customer-order-date-to"]').setValue('2026-09-10');
 
         expect(wrapper.text()).toContain('LDR-TARGET-0042');
+        expect(wrapper.find('[data-test="customer-order-date-from"]').exists()).toBe(false);
+        expect(wrapper.find('[data-test="customer-order-date-to"]').exists()).toBe(false);
         await vi.advanceTimersByTimeAsync(300);
         expect(mobileWorkspace.searchCustomerOrders).toHaveBeenLastCalledWith({
             search: 'CKL',
-            date_from: '2026-09-10',
-            date_to: '2026-09-10',
         });
     });
 

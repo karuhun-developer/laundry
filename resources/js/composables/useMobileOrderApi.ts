@@ -1,7 +1,6 @@
 import { useHttp } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
-import type { CustomerOrderFilters } from '@/lib/mobileOrderFilters';
 import { index as customerOrderIndexRoute } from '@/routes/api/v1/mobile/orders';
 import {
     show as showOrderRoute,
@@ -21,7 +20,11 @@ import type {
 } from '@/types/mobile';
 
 type EmptyRequest = Record<string, never>;
-type MobileOrderFilters = Partial<CustomerOrderFilters>;
+type MobileOrderFilters = {
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+};
 
 export const useMobileOrderApi = () => {
     const ordersRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrder[]>>({});

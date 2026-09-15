@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use RuntimeException;
 use Throwable;
@@ -14,6 +18,8 @@ class AppUpdateService
     public const LEGACY_ANDROID_VERSION = '1.0.13';
 
     private const APK_SIZE_LIMIT_BYTES = 104_857_600;
+
+    private const LAST_SUCCESSFUL_RELEASE_CACHE_SECONDS = 604_800;
 
     /**
      * @return array{current_version: string, current_changelog: list<string>, latest_version: string|null, latest_changelog: list<string>, update_available: bool, check_available: bool, unavailable_reason: string|null, download_url: string|null, apk_sha256: string|null, apk_filename: string|null, published_at: string|null}
@@ -39,16 +45,14 @@ class AppUpdateService
             return [...$base, 'unavailable_reason' => 'Pengecekan pembaruan belum dikonfigurasi di server.'];
         }
 
+        $releaseLookup = $this->latestRelease();
+        $release = $releaseLookup['release'];
+
+        if ($release === null) {
+            return [...$base, 'unavailable_reason' => $releaseLookup['unavailable_reason']];
+        }
+
         try {
-            $release = $this->githubRequest()
-                ->get($this->repositoryApiUrl('/releases/latest'))
-                ->throw()
-                ->json();
-
-            if (! is_array($release)) {
-                throw new RuntimeException('Respons rilis GitHub tidak valid.');
-            }
-
             $latestVersion = $this->releaseVersion($release);
             $result = [
                 ...$base,
@@ -109,10 +113,12 @@ class AppUpdateService
                 'apk_sha256' => $checksum,
                 'apk_filename' => $filename,
             ];
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            $this->logReleaseFailure($exception);
+
             return [
                 ...$base,
-                'unavailable_reason' => 'Rilis terbaru belum dapat diperiksa. Periksa koneksi lalu coba lagi.',
+                'unavailable_reason' => $this->releaseFailureReason($exception),
             ];
         }
     }
@@ -187,6 +193,7 @@ class AppUpdateService
         return Http::withToken($this->token())
             ->withHeaders([
                 'Accept' => 'application/vnd.github+json',
+                'User-Agent' => 'LaundryHub-App-Updater',
                 'X-GitHub-Api-Version' => '2022-11-28',
             ])
             ->connectTimeout(5)
@@ -196,6 +203,102 @@ class AppUpdateService
     private function repositoryApiUrl(string $path): string
     {
         return 'https://api.github.com/repos/'.$this->repository().$path;
+    }
+
+    /**
+     * @return array{release: array<string, mixed>|null, unavailable_reason: string|null}
+     */
+    private function latestRelease(): array
+    {
+        /** @var array{release: array<string, mixed>|null, unavailable_reason: string|null} $lookup */
+        $lookup = Cache::remember(
+            $this->releaseCacheKey(),
+            $this->releaseCacheSeconds(),
+            function (): array {
+                try {
+                    $release = $this->githubRequest()
+                        ->get($this->repositoryApiUrl('/releases/latest'))
+                        ->throw()
+                        ->json();
+
+                    if (! is_array($release)) {
+                        throw new RuntimeException('Respons rilis GitHub tidak valid.');
+                    }
+
+                    $this->releaseVersion($release);
+                    Cache::put(
+                        $this->lastSuccessfulReleaseCacheKey(),
+                        $release,
+                        self::LAST_SUCCESSFUL_RELEASE_CACHE_SECONDS,
+                    );
+
+                    return ['release' => $release, 'unavailable_reason' => null];
+                } catch (Throwable $exception) {
+                    $this->logReleaseFailure($exception);
+                    $lastSuccessfulRelease = Cache::get($this->lastSuccessfulReleaseCacheKey());
+
+                    if (is_array($lastSuccessfulRelease)) {
+                        return ['release' => $lastSuccessfulRelease, 'unavailable_reason' => null];
+                    }
+
+                    return [
+                        'release' => null,
+                        'unavailable_reason' => $this->releaseFailureReason($exception),
+                    ];
+                }
+            },
+        );
+
+        return $lookup;
+    }
+
+    private function releaseCacheKey(): string
+    {
+        return 'app-updates:github-release:'.hash(
+            'sha256',
+            $this->repository().'|'.$this->token(),
+        );
+    }
+
+    private function lastSuccessfulReleaseCacheKey(): string
+    {
+        return 'app-updates:github-release:last-successful:'.hash('sha256', $this->repository());
+    }
+
+    private function releaseCacheSeconds(): int
+    {
+        $seconds = config('services.github_releases.cache_seconds', 900);
+
+        return max(1, is_numeric($seconds) ? (int) $seconds : 900);
+    }
+
+    private function releaseFailureReason(Throwable $exception): string
+    {
+        if ($exception instanceof ConnectionException) {
+            return 'GitHub belum dapat dihubungi. Periksa koneksi server lalu coba lagi.';
+        }
+
+        if (! $exception instanceof RequestException) {
+            return 'Rilis terbaru belum dapat diperiksa. Coba lagi nanti.';
+        }
+
+        return match ($exception->response->status()) {
+            401 => 'Token GitHub untuk pembaruan tidak valid atau sudah kedaluwarsa.',
+            403, 429 => 'Akses GitHub ditolak atau batas permintaan telah tercapai. Coba lagi nanti.',
+            404 => 'Repositori atau rilis GitHub tidak ditemukan, atau token tidak memiliki akses.',
+            default => 'Layanan GitHub sedang bermasalah. Coba lagi nanti.',
+        };
+    }
+
+    private function logReleaseFailure(Throwable $exception): void
+    {
+        Log::warning('GitHub release check failed.', [
+            'repository' => $this->repository(),
+            'status' => $exception instanceof RequestException
+                ? $exception->response->status()
+                : null,
+            'exception' => $exception::class,
+        ]);
     }
 
     /** @param array<string, mixed> $release */

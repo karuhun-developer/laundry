@@ -2,11 +2,13 @@
 
 use App\Models\User;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
+    Cache::flush();
     Http::preventStrayRequests();
 });
 
@@ -87,6 +89,81 @@ it('reads the APK checksum from the release checksum asset', function (): void {
         ->assertJsonPath('data.apk_sha256', $checksum);
 });
 
+it('reuses cached GitHub release metadata for different installed versions', function (): void {
+    config()->set([
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+        'services.github_releases.cache_seconds' => 900,
+    ]);
+    Http::fake([
+        'https://api.github.com/repos/acme/laundryhub/releases/latest' => Http::response([
+            'tag_name' => 'v1.0.14',
+            'body' => '- Added cached update checks.',
+            'assets' => [
+                [
+                    'id' => 140,
+                    'name' => 'laundryhub-v1.0.14.apk',
+                    'size' => 24_000_000,
+                    'digest' => 'sha256:'.str_repeat('a', 64),
+                ],
+            ],
+        ]),
+    ]);
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.12']))
+        ->assertOk()
+        ->assertJsonPath('data.update_available', true);
+    $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.14']))
+        ->assertOk()
+        ->assertJsonPath('data.update_available', false);
+
+    Http::assertSentCount(1);
+});
+
+it('uses the last successful release when GitHub is temporarily unavailable', function (): void {
+    config()->set([
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+        'services.github_releases.cache_seconds' => 1,
+    ]);
+    $requestCount = 0;
+    Http::fake(function () use (&$requestCount) {
+        $requestCount++;
+
+        if ($requestCount === 1) {
+            return Http::response([
+                'tag_name' => 'v1.0.14',
+                'body' => '- Added resilient update checks.',
+                'assets' => [
+                    [
+                        'id' => 140,
+                        'name' => 'laundryhub-v1.0.14.apk',
+                        'size' => 24_000_000,
+                        'digest' => 'sha256:'.str_repeat('a', 64),
+                    ],
+                ],
+            ]);
+        }
+
+        return Http::response([], 503);
+    });
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.13']))
+        ->assertOk()
+        ->assertJsonPath('data.latest_version', '1.0.14');
+    $this->travel(2)->seconds();
+
+    $this->getJson(route('api.v1.mobile.app-update.show', ['current_version' => '1.0.13']))
+        ->assertOk()
+        ->assertJsonPath('data.latest_version', '1.0.14')
+        ->assertJsonPath('data.check_available', true)
+        ->assertJsonPath('data.unavailable_reason', null);
+
+    expect($requestCount)->toBe(2);
+});
+
 it('returns controlled unavailable states without exposing server errors', function (): void {
     Sanctum::actingAs(User::factory()->create());
     config()->set([
@@ -96,7 +173,7 @@ it('returns controlled unavailable states without exposing server errors', funct
 
     $this->getJson(route('api.v1.mobile.app-update.show'))
         ->assertOk()
-        ->assertJsonPath('data.current_version', '1.0.14')
+        ->assertJsonPath('data.current_version', '1.0.15')
         ->assertJsonPath('data.check_available', false)
         ->assertJsonPath(
             'data.unavailable_reason',
@@ -114,8 +191,63 @@ it('returns controlled unavailable states without exposing server errors', funct
         ->assertJsonPath('data.check_available', false)
         ->assertJsonPath(
             'data.unavailable_reason',
-            'Rilis terbaru belum dapat diperiksa. Periksa koneksi lalu coba lagi.',
+            'GitHub belum dapat dihubungi. Periksa koneksi server lalu coba lagi.',
         );
+});
+
+it('returns a safe reason for GitHub HTTP failures', function (int $status, string $reason): void {
+    config()->set([
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+    ]);
+    Http::fake([
+        'https://api.github.com/repos/acme/laundryhub/releases/latest' => Http::response([], $status),
+    ]);
+    Sanctum::actingAs(User::factory()->create());
+
+    $response = $this->getJson(route('api.v1.mobile.app-update.show'));
+
+    $response->assertOk()
+        ->assertJsonPath('data.check_available', false)
+        ->assertJsonPath('data.unavailable_reason', $reason);
+    expect($response->getContent())->not->toContain('private-release-token');
+})->with([
+    '401 invalid token' => [
+        401,
+        'Token GitHub untuk pembaruan tidak valid atau sudah kedaluwarsa.',
+    ],
+    '403 denied or rate limited' => [
+        403,
+        'Akses GitHub ditolak atau batas permintaan telah tercapai. Coba lagi nanti.',
+    ],
+    '404 inaccessible release' => [
+        404,
+        'Repositori atau rilis GitHub tidak ditemukan, atau token tidak memiliki akses.',
+    ],
+    '429 rate limited' => [
+        429,
+        'Akses GitHub ditolak atau batas permintaan telah tercapai. Coba lagi nanti.',
+    ],
+]);
+
+it('caches failed GitHub checks to avoid repeated requests', function (): void {
+    config()->set([
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+        'services.github_releases.cache_seconds' => 900,
+    ]);
+    $requestCount = 0;
+    Http::fake(function () use (&$requestCount) {
+        $requestCount++;
+
+        return Http::response([], 401);
+    });
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.mobile.app-update.show'))->assertOk();
+    $this->getJson(route('api.v1.mobile.app-update.show'))->assertOk();
+
+    expect($requestCount)->toBe(1);
 });
 
 it('proxies a signed APK download without exposing the GitHub token', function (): void {
