@@ -5,8 +5,9 @@ import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.v
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
+import { makeOrder } from '@/composables/mobileOrderTestFixtures';
 import MobileApp from '@/pages/mobile/App.vue';
-import type { MobileTab, WhatsAppSuggestion } from '@/types/mobile';
+import type { MobileOrder, MobileTab, WhatsAppSuggestion } from '@/types/mobile';
 
 const mobileWorkspace = vi.hoisted(() => ({
     context: {
@@ -22,7 +23,8 @@ const mobileWorkspace = vi.hoisted(() => ({
     requestError: { value: null },
     rollbackMessage: { value: null },
     queueLoading: { value: false },
-    orders: { value: [] },
+    customerOrderLoading: { value: false },
+    orders: { value: [] as MobileOrder[] },
     addresses: { value: [] },
     customers: { value: [] },
     nearestBranches: { value: [] },
@@ -67,6 +69,7 @@ const mobileWorkspace = vi.hoisted(() => ({
     updateCustomer: vi.fn(),
     resetCustomerPin: vi.fn(),
     searchOrders: vi.fn(),
+    searchCustomerOrders: vi.fn(),
     createAddress: vi.fn(),
     updateAddress: vi.fn(),
     deleteAddress: vi.fn(),
@@ -150,6 +153,7 @@ const mountMobileApp = (): VueWrapper =>
                 CustomerResetPinDialog: true,
                 Dialog: dialogStub,
                 DialogContent: passThroughStub,
+                DialogClose: passThroughStub,
                 DialogDescription: passThroughStub,
                 DialogHeader: passThroughStub,
                 DialogTitle: passThroughStub,
@@ -196,7 +200,29 @@ beforeEach(() => {
     };
     mobileWorkspace.whatsAppSuggestion.value = null;
     mobileWorkspace.whatsAppSuggestionError.value = null;
+    mobileWorkspace.orders.value = [];
+    mobileWorkspace.addresses.value = [];
+    mobileWorkspace.customers.value = [];
+    mobileWorkspace.nearestBranches.value = [];
+    mobileWorkspace.deliveryCoordinates.value = null;
+    mobileWorkspace.services.value = [];
+    mobileWorkspace.selectedBranch.value = null;
+    mobileWorkspace.selectedBranchId.value = null;
+    mobileWorkspace.selectedAddress.value = null;
+    mobileWorkspace.selectedAddressId.value = null;
+    mobileWorkspace.selectedCustomerId.value = null;
     mobileWorkspace.refreshing.value = false;
+    mobileWorkspace.requestError.value = null;
+    mobileWorkspace.rollbackMessage.value = null;
+    mobileWorkspace.queueLoading.value = false;
+    mobileWorkspace.customerOrderLoading.value = false;
+    mobileWorkspace.createProcessing.value = false;
+    mobileWorkspace.pricingProcessing.value = false;
+    mobileWorkspace.transitionProcessing.value = false;
+    mobileWorkspace.paymentProcessing.value = false;
+    mobileWorkspace.searchOrders.mockResolvedValue(undefined);
+    mobileWorkspace.searchCustomerOrders.mockResolvedValue(undefined);
+    mobileWorkspace.createOrder.mockResolvedValue(false);
     mobileWorkspace.refresh.mockResolvedValue(true);
     pushNotificationMocks.unregisterDevice.mockResolvedValue(undefined);
 });
@@ -208,6 +234,67 @@ afterEach(() => {
 });
 
 describe('customer mobile navigation', () => {
+    it('filters customer orders by order, branch, service, and inclusive dates', async () => {
+        vi.useFakeTimers();
+        const matchingOrder = {
+            ...makeOrder(42),
+            order_number: 'LDR-TARGET-0042',
+            branch: {
+                ...makeOrder(42).branch,
+                name: 'Cabang Kemang',
+                code: 'KMG01',
+            },
+            items: [
+                {
+                    ...makeOrder(42).items[0],
+                    id: 99,
+                    service: { id: 2, name: 'Cuci Kering Lipat', code: 'CKL' },
+                    price_option: {
+                        id: 31,
+                        name: 'Reguler',
+                        type: 'per_kilogram' as const,
+                        pricing_snapshot: {
+                            package_weight_grams: null,
+                            base_price_rupiah: null,
+                            price_per_kilogram_rupiah: 12000,
+                            minimum_chargeable_grams: 1000,
+                        },
+                    },
+                    calculation: {
+                        requested_weight_grams: 1000,
+                        chargeable_weight_grams: 1000,
+                        base_price_rupiah: 12000,
+                        excess_weight_grams: 0,
+                        excess_price_rupiah: 0,
+                        subtotal_rupiah: 12000,
+                    },
+                },
+            ],
+            created_at: '2026-09-10T23:59:59+07:00',
+        };
+        mobileWorkspace.context.value = {
+            role: 'customer',
+            organization: { id: 1, name: 'LaundryHub Demo', slug: 'laundryhub-demo' },
+            organizations: [],
+            branches: [],
+        };
+        mobileWorkspace.orders.value = [matchingOrder];
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'orders');
+        await wrapper.get('[data-test="customer-order-search"]').setValue('  CKL  ');
+        await wrapper.get('[data-test="customer-order-date-from"]').setValue('2026-09-10');
+        await wrapper.get('[data-test="customer-order-date-to"]').setValue('2026-09-10');
+
+        expect(wrapper.text()).toContain('LDR-TARGET-0042');
+        await vi.advanceTimersByTimeAsync(300);
+        expect(mobileWorkspace.searchCustomerOrders).toHaveBeenLastCalledWith({
+            search: 'CKL',
+            date_from: '2026-09-10',
+            date_to: '2026-09-10',
+        });
+    });
+
     it('refreshes the customer workspace from the global header action', async () => {
         mobileWorkspace.context.value = {
             role: 'customer',
@@ -306,6 +393,19 @@ describe('branch-admin mobile tab rendering', () => {
         expectNoAccountContent(wrapper);
     });
 
+    it('shows a visible close action on the branch-admin order modal', async () => {
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="open-order-composer"]').trigger('click');
+
+        const closeButton = wrapper.get('[data-test="close-order-composer"]');
+
+        expect(closeButton.text()).toContain('Tutup');
+        await closeButton.trigger('click');
+        expect(wrapper.findComponent(OrderComposer).exists()).toBe(false);
+    });
+
     it('closes the new-order dialog after the order is created', async () => {
         mobileWorkspace.createOrder.mockResolvedValue(true);
         const wrapper = mountMobileApp();
@@ -324,6 +424,25 @@ describe('branch-admin mobile tab rendering', () => {
 
         expect(mobileWorkspace.createOrder).toHaveBeenCalledOnce();
         expect(wrapper.findComponent(OrderComposer).exists()).toBe(false);
+    });
+
+    it('keeps the new-order dialog open when creation fails', async () => {
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="open-order-composer"]').trigger('click');
+        wrapper.findComponent(OrderComposer).vm.$emit(
+            'submit',
+            {
+                customer_id: 21,
+                items: [{ price_option_id: 31, weight_grams: 1000 }],
+            },
+            null,
+        );
+        await flushPromises();
+
+        expect(mobileWorkspace.createOrder).toHaveBeenCalledOnce();
+        expect(wrapper.findComponent(OrderComposer).exists()).toBe(true);
     });
 
     it('debounces and trims queue search requests', async () => {

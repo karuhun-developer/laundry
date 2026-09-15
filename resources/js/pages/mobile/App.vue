@@ -21,11 +21,13 @@ import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSugg
 import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
 import CustomerAddressDialog from '@/components/mobile/organisms/CustomerAddressDialog.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
+import CustomerOrderFilters from '@/components/mobile/organisms/CustomerOrderFilters.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
     DialogHeader,
@@ -34,6 +36,13 @@ import {
 import { Toaster } from '@/components/ui/sonner';
 import { useMobileWorkspace } from '@/composables/useMobileWorkspace';
 import { usePushNotifications } from '@/composables/usePushNotifications';
+import type { CustomerOrderFilters as CustomerOrderFilterValues } from '@/lib/mobileOrderFilters';
+import {
+    emptyCustomerOrderFilters,
+    filterCustomerOrders,
+    hasCustomerOrderFilters,
+    normalizeCustomerOrderFilters,
+} from '@/lib/mobileOrderFilters';
 import { orderStatusLabels } from '@/lib/mobileOrders';
 import { logout } from '@/routes';
 import type {
@@ -60,6 +69,7 @@ const resetPinDialogOpen = ref(false);
 const addressDialogOpen = ref(false);
 const orderComposerOpen = ref(false);
 const queueSearch = ref('');
+const customerOrderFilters = ref<CustomerOrderFilterValues>(emptyCustomerOrderFilters());
 const credentialDialogOpen = ref(false);
 const revealedCredential = ref<{
     customerName: string;
@@ -67,6 +77,7 @@ const revealedCredential = ref<{
 } | null>(null);
 const customerStatusMessage = ref('');
 let queueSearchTimer: ReturnType<typeof setTimeout> | null = null;
+let customerOrderSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let queueSearchClearedSynchronously = false;
 
 const refreshApp = async (showSuccess = true): Promise<void> => {
@@ -78,6 +89,15 @@ const refreshApp = async (showSuccess = true): Promise<void> => {
 
     if (workspace.context.value?.role === 'branch_admin' && queueSearch.value.trim()) {
         await workspace.searchOrders(queueSearch.value.trim());
+    }
+
+    if (
+        workspace.context.value?.role === 'customer' &&
+        hasCustomerOrderFilters(customerOrderFilters.value)
+    ) {
+        await workspace.searchCustomerOrders(
+            normalizeCustomerOrderFilters(customerOrderFilters.value),
+        );
     }
 
     if (showSuccess && !workspace.requestError.value) {
@@ -98,6 +118,9 @@ const handleLogout = async (): Promise<void> => {
 };
 
 const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
+const filteredCustomerOrders = computed(() =>
+    filterCustomerOrders(workspace.orders.value, customerOrderFilters.value),
+);
 const activePickupOrderNumber = computed(
     () =>
         workspace.orders.value.find((order) => order.status === 'pickup_requested')?.order_number ??
@@ -129,6 +152,22 @@ watch(queueSearch, (search) => {
 
     queueSearchTimer = setTimeout(() => void workspace.searchOrders(search.trim()), 300);
 });
+
+watch(
+    customerOrderFilters,
+    (filters) => {
+        if (customerOrderSearchTimer) {
+            clearTimeout(customerOrderSearchTimer);
+        }
+
+        const normalizedFilters = normalizeCustomerOrderFilters(filters);
+        customerOrderSearchTimer = setTimeout(
+            () => void workspace.searchCustomerOrders(normalizedFilters),
+            300,
+        );
+    },
+    { deep: true },
+);
 
 watch(
     () => workspace.requestError.value,
@@ -169,6 +208,10 @@ watch(
 onBeforeUnmount(() => {
     if (queueSearchTimer) {
         clearTimeout(queueSearchTimer);
+    }
+
+    if (customerOrderSearchTimer) {
+        clearTimeout(customerOrderSearchTimer);
     }
 });
 
@@ -430,15 +473,30 @@ const clearQueueSearch = (): void => {
                         />
                     </div>
 
-                    <OrderListPanel
-                        v-else-if="activeTab === 'orders'"
-                        :orders="workspace.orders.value"
-                        role="customer"
-                        :payment-actions="workspace.paymentActions"
-                        :payment-processing="workspace.paymentProcessing.value"
-                        :pricing-processing="workspace.pricingProcessing.value"
-                        :printer-configured="workspace.printer.profile.value !== null"
-                    />
+                    <template v-else-if="activeTab === 'orders'">
+                        <CustomerOrderFilters
+                            v-model="customerOrderFilters"
+                            :loading="workspace.customerOrderLoading.value"
+                        />
+                        <OrderListPanel
+                            :orders="filteredCustomerOrders"
+                            role="customer"
+                            :empty-title="
+                                hasCustomerOrderFilters(customerOrderFilters)
+                                    ? 'Pesanan tidak ditemukan'
+                                    : 'Belum ada pesanan'
+                            "
+                            :empty-description="
+                                hasCustomerOrderFilters(customerOrderFilters)
+                                    ? 'Tidak ada pesanan yang cocok dengan filter ini.'
+                                    : 'Pesanan yang Anda buat akan muncul di sini.'
+                            "
+                            :payment-actions="workspace.paymentActions"
+                            :payment-processing="workspace.paymentProcessing.value"
+                            :pricing-processing="workspace.pricingProcessing.value"
+                            :printer-configured="workspace.printer.profile.value !== null"
+                        />
+                    </template>
 
                     <BranchExplorer
                         v-else-if="activeTab === 'branches'"
@@ -622,7 +680,10 @@ const clearQueueSearch = (): void => {
         />
 
         <Dialog v-if="workspace.context.value?.role === 'branch_admin'" v-model:open="orderComposerOpen">
-            <DialogContent class="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl border-0 bg-transparent p-0 shadow-none">
+            <DialogContent
+                class="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl border-0 bg-transparent p-0 shadow-none"
+                :show-close-button="false"
+            >
                 <DialogHeader class="sr-only">
                     <DialogTitle>Buat pesanan baru</DialogTitle>
                     <DialogDescription>Catat pesanan laundry baru untuk pelanggan.</DialogDescription>
@@ -640,7 +701,21 @@ const clearQueueSearch = (): void => {
                     @create-customer="openCreateCustomer"
                     @submit="onCreateOrder"
                     @update:selected-customer-id="workspace.selectCustomer"
-                />
+                >
+                    <template #header-action>
+                        <DialogClose as-child>
+                            <button
+                                type="button"
+                                class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white/12 px-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                                data-test="close-order-composer"
+                                @click="orderComposerOpen = false"
+                            >
+                                <X class="size-4" aria-hidden="true" />
+                                Tutup
+                            </button>
+                        </DialogClose>
+                    </template>
+                </OrderComposer>
             </DialogContent>
         </Dialog>
 

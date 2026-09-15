@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -153,6 +154,128 @@ it('returns customer orders across organizations without exposing an organizatio
             'id' => $secondOrder->id,
             'slug' => 'bandung-laundry',
         ]);
+});
+
+it('searches customer orders by order number branch and service without leaking other customers', function (): void {
+    $firstOrganization = Organization::factory()->create();
+    $secondOrganization = Organization::factory()->create();
+    $numberBranch = Branch::factory()->for($firstOrganization)->create();
+    $namedBranch = Branch::factory()->for($secondOrganization)->create([
+        'name' => 'Dago Express',
+        'code' => 'DGO-22',
+    ]);
+    $customer = User::factory()->create(['organization_id' => null]);
+    $customer->assignRole(RoleName::Customer->value);
+    $otherCustomer = User::factory()->create(['organization_id' => null]);
+    $otherCustomer->assignRole(RoleName::Customer->value);
+    $numberOrder = Order::factory()->for($firstOrganization)->for($numberBranch)->create([
+        'customer_id' => $customer->id,
+        'created_by_id' => $customer->id,
+        'order_number' => 'LDR-MOBILE-SEARCH-9001',
+    ]);
+    $branchOrder = Order::factory()->for($secondOrganization)->for($namedBranch)->create([
+        'customer_id' => $customer->id,
+        'created_by_id' => $customer->id,
+    ]);
+    $serviceOrder = Order::factory()->for($firstOrganization)->for($numberBranch)->create([
+        'customer_id' => $customer->id,
+        'created_by_id' => $customer->id,
+    ]);
+    OrderItem::factory()->for($serviceOrder)->create([
+        'service_name_snapshot' => 'Cuci Sepatu Premium',
+        'service_code_snapshot' => 'CSP-77',
+    ]);
+    Order::factory()->for($firstOrganization)->for($numberBranch)->create([
+        'customer_id' => $otherCustomer->id,
+        'created_by_id' => $otherCustomer->id,
+        'order_number' => 'LDR-LEAK-ONLY-0001',
+    ]);
+    Sanctum::actingAs($customer);
+    $route = route('api.v1.mobile.orders.index');
+
+    foreach ([
+        'SEARCH-9001' => $numberOrder->id,
+        'Dago Express' => $branchOrder->id,
+        'DGO-22' => $branchOrder->id,
+        'Sepatu Premium' => $serviceOrder->id,
+        'CSP-77' => $serviceOrder->id,
+    ] as $search => $expectedOrderId) {
+        $this->getJson($route.'?'.http_build_query(['search' => $search]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $expectedOrderId);
+    }
+
+    $this->getJson($route.'?search=LEAK-ONLY')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
+it('applies inclusive and independent customer order date boundaries', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $customer = User::factory()->create(['organization_id' => null]);
+    $customer->assignRole(RoleName::Customer->value);
+
+    $orders = collect([
+        'before' => '2026-09-09 23:59:59',
+        'start' => '2026-09-10 00:00:00',
+        'end' => '2026-09-12 23:59:59',
+        'after' => '2026-09-13 00:00:00',
+    ])->map(fn (string $createdAt): Order => Order::factory()
+        ->for($organization)
+        ->for($branch)
+        ->create([
+            'customer_id' => $customer->id,
+            'created_by_id' => $customer->id,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]));
+    Sanctum::actingAs($customer);
+    $route = route('api.v1.mobile.orders.index');
+
+    $boundedResponse = $this->getJson($route.'?date_from=2026-09-10&date_to=2026-09-12')
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+    expect($boundedResponse->json('data.*.id'))->toEqualCanonicalizing([
+        $orders['start']->id,
+        $orders['end']->id,
+    ]);
+
+    $fromResponse = $this->getJson($route.'?date_from=2026-09-10')
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
+    expect($fromResponse->json('data.*.id'))->toEqualCanonicalizing([
+        $orders['start']->id,
+        $orders['end']->id,
+        $orders['after']->id,
+    ]);
+
+    $toResponse = $this->getJson($route.'?date_to=2026-09-12')
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
+    expect($toResponse->json('data.*.id'))->toEqualCanonicalizing([
+        $orders['before']->id,
+        $orders['start']->id,
+        $orders['end']->id,
+    ]);
+});
+
+it('rejects malformed and reversed customer order dates', function (): void {
+    $customer = User::factory()->create(['organization_id' => null]);
+    $customer->assignRole(RoleName::Customer->value);
+    Sanctum::actingAs($customer);
+    $route = route('api.v1.mobile.orders.index');
+
+    foreach ([
+        ['date_from=2026-02-30', 'date_from'],
+        ['date_to=15-09-2026', 'date_to'],
+        ['date_from=2026-09-12&date_to=2026-09-10', 'date_to'],
+    ] as [$query, $field]) {
+        $this->getJson($route.'?'.$query)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors($field);
+    }
 });
 
 it('filters branch admin orders to assigned branches', function (): void {

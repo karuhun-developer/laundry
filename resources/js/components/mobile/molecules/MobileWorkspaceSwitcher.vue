@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown, Store } from '@lucide/vue';
 import { computed } from 'vue';
+import { deliveryCoverageSummary } from '@/lib/mobileDelivery';
 import { formatDistance, formatRupiah } from '@/lib/mobileOrders';
 import type { MobileBranch, MobileContext, NearestMobileBranch } from '@/types/mobile';
 
@@ -87,15 +88,7 @@ const onBranchChange = (event: Event): void => {
             :class="selectedNearestBranch.delivery.within_free_radius ? 'text-mint-500' : 'text-amber-600'"
             data-test="selected-branch-coverage"
         >
-            <template v-if="selectedNearestBranch.delivery.within_free_radius">
-                Gratis jemput & antar hingga
-                {{ formatDistance(selectedNearestBranch.delivery.free_radius_meters) }}
-            </template>
-            <template v-else>
-                Di luar radius gratis
-                {{ formatDistance(selectedNearestBranch.delivery.free_radius_meters) }} · estimasi
-                tambahan {{ formatRupiah(selectedNearestBranch.delivery.fee_rupiah) }}
-            </template>
+            {{ deliveryCoverageSummary(selectedNearestBranch.delivery) }}
         </p>
         <p
             v-else-if="context.role === 'customer'"

@@ -3,6 +3,7 @@ import { useMobileOrderApi } from '@/composables/useMobileOrderApi';
 import type { CreateOrderPayload } from '@/types/mobile';
 
 const submittedBodies = vi.hoisted(() => [] as Record<string, unknown>[]);
+const requestedUrls = vi.hoisted(() => [] as string[]);
 
 vi.mock('@inertiajs/vue3', () => ({
     useHttp: (initialData: Record<string, unknown>) => {
@@ -12,7 +13,11 @@ vi.mock('@inertiajs/vue3', () => ({
             processing: false,
             errors: {},
             cancel: vi.fn(),
-            get: vi.fn(),
+            get: vi.fn(async (url: string) => {
+                requestedUrls.push(url);
+
+                return { data: [] };
+            }),
             post: vi.fn(async () => {
                 submittedBodies.push(
                     Object.fromEntries(
@@ -31,6 +36,7 @@ vi.mock('@inertiajs/vue3', () => ({
 describe('mobile order API', () => {
     beforeEach(() => {
         submittedBodies.length = 0;
+        requestedUrls.length = 0;
     });
 
     it('includes customer pickup coordinates in the serialized request body', async () => {
@@ -44,9 +50,22 @@ describe('mobile order API', () => {
         expect(submittedBodies).toEqual([
             {
                 customer_id: undefined,
+                customer_address_id: undefined,
                 items: payload.items,
                 delivery: payload.delivery,
             },
+        ]);
+    });
+
+    it('loads customer orders through the typed route with trimmed inclusive filters', async () => {
+        await useMobileOrderApi().loadOrders(undefined, {
+            search: '  Kemang CKL  ',
+            date_from: '2026-09-01',
+            date_to: '2026-09-15',
+        });
+
+        expect(requestedUrls).toEqual([
+            '/api/v1/mobile/orders?search=Kemang+CKL&date_from=2026-09-01&date_to=2026-09-15',
         ]);
     });
 });

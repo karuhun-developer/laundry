@@ -147,6 +147,26 @@ describe('customer pickup address dialog', () => {
         ]);
     });
 
+    it('keeps the device location movable before saving the first address', async () => {
+        const wrapper = mountDialog();
+        await wrapper.get('[data-test="add-address"]').trigger('click');
+        await flushPromises();
+
+        const picker = wrapper.findComponent(locationPickerStub);
+        picker.vm.$emit('update:latitude', '-6.917500');
+        picker.vm.$emit('update:longitude', '107.619100');
+        await wrapper.get('#address-text').setValue('Jl. Titik Pilihan No. 8');
+        await wrapper.get('[data-test="address-form"]').trigger('submit');
+        await flushPromises();
+
+        expect(createAddress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                latitude: -6.9175,
+                longitude: 107.6191,
+            }),
+        );
+    });
+
     it('renders server validation next to the corresponding address fields', async () => {
         createAddress.mockRejectedValue(
             new MobileCustomerAddressValidationError('Periksa kembali alamat penjemputan.', {
@@ -168,6 +188,12 @@ describe('customer pickup address dialog', () => {
 
     it('selects an address and can promote another address to default', async () => {
         const wrapper = mountDialog([homeAddress, officeAddress]);
+        const primaryCard = wrapper.get(`[data-test="address-card-${homeAddress.id}"]`);
+        const primaryBadge = wrapper.get(`[data-test="primary-address-badge-${homeAddress.id}"]`);
+
+        expect(primaryCard.classes()).toContain('border-amber-500/40');
+        expect(primaryBadge.text()).toBe('Alamat utama');
+        expect(primaryBadge.classes()).toContain('bg-amber-500/10');
 
         await wrapper.get(`[data-test="default-address-${officeAddress.id}"]`).trigger('click');
         await flushPromises();

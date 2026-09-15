@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { MapPin, PlusCircle, Scale, Sparkles } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import CustomerCombobox from '@/components/mobile/molecules/CustomerCombobox.vue';
 import type { Coordinates } from '@/composables/useGeolocation';
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type {
@@ -53,7 +54,9 @@ const formError = ref<string | null>(null);
 const quote = ref<MobilePriceQuote | null>(null);
 const quoteError = ref<string | null>(null);
 const quoteLoading = ref(false);
+const submitPending = ref(false);
 let quoteTimer: ReturnType<typeof setTimeout> | null = null;
+let submitUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 let quoteGeneration = 0;
 
 const catalogOptions = computed(() =>
@@ -96,8 +99,22 @@ watch(
 watch(
     () => props.deliveryCoordinates,
     (coordinates) => {
-        if (coordinates) {
+        if (!isCustomer.value && coordinates) {
             includeDelivery.value = true;
+        }
+    },
+);
+
+watch(
+    () => props.processing,
+    (processing) => {
+        if (!processing && submitPending.value) {
+            submitPending.value = false;
+
+            if (submitUnlockTimer) {
+                clearTimeout(submitUnlockTimer);
+                submitUnlockTimer = null;
+            }
         }
     },
 );
@@ -158,9 +175,17 @@ onBeforeUnmount(() => {
     if (quoteTimer) {
         clearTimeout(quoteTimer);
     }
+
+    if (submitUnlockTimer) {
+        clearTimeout(submitUnlockTimer);
+    }
 });
 
 const submit = (): void => {
+    if (submitPending.value || props.processing) {
+        return;
+    }
+
     formError.value = null;
 
     if (!props.branch) {
@@ -220,7 +245,12 @@ const submit = (): void => {
         payload.delivery = props.deliveryCoordinates;
     }
 
+    submitPending.value = true;
     emit('submit', payload, isCustomer.value ? null : quote.value);
+    submitUnlockTimer = setTimeout(() => {
+        submitPending.value = false;
+        submitUnlockTimer = null;
+    }, 1000);
 };
 </script>
 
@@ -242,9 +272,11 @@ const submit = (): void => {
                         {{ branch ? `${branch.name} · ${branch.city.name}` : 'Pilih cabang terlebih dahulu' }}
                     </p>
                 </div>
-                <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/12">
-                    <Sparkles class="size-5" aria-hidden="true" />
-                </span>
+                <slot name="header-action">
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/12">
+                        <Sparkles class="size-5" aria-hidden="true" />
+                    </span>
+                </slot>
             </div>
         </div>
 
@@ -263,24 +295,7 @@ const submit = (): void => {
                         + Pelanggan baru
                     </button>
                 </div>
-                <select
-                    id="order-customer"
-                    v-model="customerId"
-                    required
-                    class="mt-2 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-                    data-test="customer-select"
-                >
-                    <option :value="null">Pilih pelanggan</option>
-                    <option
-                        v-for="customer in customers"
-                        :key="customer.id"
-                        :value="customer.id"
-                        :disabled="customer.pending"
-                    >
-                        {{ customer.name }} ·
-                        {{ customer.pending ? 'Menyimpan…' : (customer.email ?? 'Tanpa email') }}
-                    </option>
-                </select>
+                <CustomerCombobox v-model="customerId" :customers="customers" />
             </div>
 
             <label class="block">
@@ -363,12 +378,12 @@ const submit = (): void => {
             </div>
 
             <label
-                v-else-if="deliveryCoordinates"
+                v-if="role === 'branch_admin' && deliveryCoordinates"
                 class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface-blue px-4 py-3"
             >
                 <input v-model="includeDelivery" type="checkbox" class="size-4 accent-brand-700" />
                 <MapPin class="size-5 shrink-0 text-brand-700" aria-hidden="true" />
-                <span class="text-sm text-ink-700">Gunakan lokasi saya untuk antar-jemput</span>
+                <span class="text-sm text-ink-700">Tambahkan antar-jemput untuk pesanan ini</span>
             </label>
 
             <div
@@ -431,6 +446,7 @@ const submit = (): void => {
                 class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 text-sm font-semibold text-white transition hover:bg-brand-600 motion-safe:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 :disabled="
                     processing ||
+                    submitPending ||
                     !branch ||
                     catalogOptions.length === 0 ||
                     (role === 'customer'
@@ -441,7 +457,7 @@ const submit = (): void => {
             >
                 <PlusCircle class="size-5" aria-hidden="true" />
                 {{
-                    processing
+                    processing || submitPending
                         ? 'Menyimpan…'
                         : role === 'customer'
                           ? 'Minta penjemputan'

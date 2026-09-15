@@ -158,22 +158,91 @@ const makeOrder = (): MobileOrder => ({
 });
 
 describe('mobile role-aware components', () => {
-    it('lists organization customers in the branch-admin order selector', () => {
+    it('searches a bounded organization customer list in the branch-admin order selector', async () => {
+        const largeCustomerList: MobileCustomer[] = Array.from({ length: 1000 }, (_, index) => ({
+            id: index + 1,
+            name: index === 776 ? 'Target Pelanggan' : `Pelanggan ${index + 1}`,
+            email: index === 776 ? 'target@example.test' : `customer${index + 1}@example.test`,
+            whatsapp_phone: index === 776 ? '628777000777' : `62812000${index + 1}`,
+            must_change_pin: false,
+            pin_expires_at: null,
+        }));
         const wrapper = mount(OrderComposer, {
             props: {
                 role: 'branch_admin',
                 branch,
                 services,
-                customers,
+                customers: largeCustomerList,
                 deliveryCoordinates: null,
                 quoteOrder: vi.fn(async () => quote),
             },
         });
+        const search = wrapper.get<HTMLInputElement>('[data-test="customer-search"]');
 
-        const customerSelect = wrapper.get<HTMLSelectElement>('select');
+        await search.trigger('focus');
+        expect(wrapper.findAll('[role="option"]')).toHaveLength(50);
 
-        expect(customerSelect.text()).toContain('Pilih pelanggan');
-        expect(customerSelect.text()).toContain('Customer Demo · customer@laundryhub.test');
+        await search.setValue('628777000777');
+        expect(wrapper.findAll('[role="option"]')).toHaveLength(1);
+        expect(wrapper.get('[data-test="customer-option-777"]').text()).toContain(
+            'Target Pelanggan',
+        );
+
+        await wrapper.get('[data-test="customer-option-777"]').trigger('click');
+        expect(wrapper.emitted('update:selectedCustomerId')?.at(-1)).toEqual([777]);
+
+        await search.trigger('focus');
+        await search.trigger('keydown', { key: 'Escape' });
+        expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
+    });
+
+    it('keeps delivery selection staff-only and removes the customer location toggle', () => {
+        const customerWrapper = mount(OrderComposer, {
+            props: {
+                role: 'customer',
+                branch,
+                services,
+                customers: [],
+                deliveryCoordinates: { latitude: -6.2607, longitude: 106.8136 },
+                selectedAddress: customerAddress,
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+        const staffWrapper = mount(OrderComposer, {
+            props: {
+                role: 'branch_admin',
+                branch,
+                services,
+                customers,
+                deliveryCoordinates: { latitude: -6.2607, longitude: 106.8136 },
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+
+        expect(customerWrapper.text()).not.toContain('Gunakan lokasi saya untuk antar-jemput');
+        expect(staffWrapper.text()).toContain('Tambahkan antar-jemput untuk pesanan ini');
+    });
+
+    it('explains the duplicate pickup with the active order number', () => {
+        const wrapper = mount(OrderComposer, {
+            props: {
+                role: 'customer',
+                branch,
+                services,
+                customers: [],
+                deliveryCoordinates: { latitude: -6.2607, longitude: 106.8136 },
+                selectedAddress: customerAddress,
+                activePickupOrderNumber: 'LDR-20260915-00000088',
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+
+        expect(wrapper.get('[data-test="active-pickup-notice"]').text()).toContain(
+            'Penjemputan LDR-20260915-00000088 masih menunggu diproses.',
+        );
+        expect(wrapper.get('[data-test="active-pickup-notice"]').text()).toContain(
+            'Buat pesanan berikutnya setelah penjemputan ini dilanjutkan petugas.',
+        );
     });
 
     it('renders the existing customer directory details', () => {
@@ -283,6 +352,25 @@ describe('mobile role-aware components', () => {
         ]);
     });
 
+    it('emits only one pickup request for rapid duplicate submission', async () => {
+        const wrapper = mount(OrderComposer, {
+            props: {
+                role: 'customer',
+                branch,
+                services,
+                customers: [],
+                deliveryCoordinates: { latitude: -6.2607, longitude: 106.8136 },
+                selectedAddress: customerAddress,
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+        const form = wrapper.get('form');
+
+        await Promise.all([form.trigger('submit'), form.trigger('submit')]);
+
+        expect(wrapper.emitted('submit')).toHaveLength(1);
+    });
+
     it('requires a pickup location before a customer can submit', async () => {
         const wrapper = mount(OrderComposer, {
             props: {
@@ -316,8 +404,9 @@ describe('mobile role-aware components', () => {
             },
         });
 
-        await wrapper.findAll('select')[0]?.setValue('9');
-        await wrapper.findAll('select')[1]?.setValue('5');
+        await wrapper.get('[data-test="customer-search"]').trigger('focus');
+        await wrapper.get('[data-test="customer-option-9"]').trigger('click');
+        await wrapper.find('select').setValue('5');
         const weightInput = wrapper.find<HTMLInputElement>('input[type="number"]');
         await weightInput.setValue('12.5');
 
