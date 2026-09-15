@@ -78,9 +78,11 @@ vi.mock('@/composables/useMobileOrderWorkspace', async () => {
             confirmOrderPricing: vi.fn(),
             createOrder: vi.fn(),
             createPayment: vi.fn(),
+            loadPaymentWhatsAppSuggestion: vi.fn(),
             loadOrders: orderApi.loadOrders,
             loadPaymentGatewayMethods: vi.fn(),
             loadReceipt: vi.fn(),
+            refreshOrder: vi.fn(),
             setOrders: orderApi.setOrders,
             transitionOrder: vi.fn(),
             transitionPaymentStatus: vi.fn(),
@@ -410,6 +412,51 @@ describe('mobile workspace automatic nearest branch selection', () => {
 });
 
 describe('mobile workspace refresh', () => {
+    it('refreshes only customer orders silently and prevents overlapping requests', async () => {
+        const { workspace, unmount } = mountWorkspace();
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        vi.clearAllMocks();
+        let resolveOrders: (orders: []) => void = () => undefined;
+        orderApi.loadOrders.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveOrders = resolve;
+            }),
+        );
+        const filters = { search: 'KMG', date_from: '2026-09-01', date_to: '2026-09-15' };
+
+        const firstRefresh = workspace.refreshCustomerOrdersSilently(filters);
+        const overlappingRefresh = workspace.refreshCustomerOrdersSilently(filters);
+
+        expect(firstRefresh).toBe(overlappingRefresh);
+        expect(orderApi.loadOrders).toHaveBeenCalledOnce();
+        expect(orderApi.loadOrders).toHaveBeenCalledWith(undefined, filters);
+        expect(catalogApi.loadContext).not.toHaveBeenCalled();
+        expect(catalogApi.loadCatalog).not.toHaveBeenCalled();
+        expect(customerAddressApi.loadAddresses).not.toHaveBeenCalled();
+
+        resolveOrders([]);
+        await expect(firstRefresh).resolves.toBe(true);
+        expect(orderApi.setOrders).toHaveBeenCalledWith([]);
+
+        unmount();
+    });
+
+    it('keeps the last order data without exposing an error when silent refresh fails', async () => {
+        const { workspace, unmount } = mountWorkspace();
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        vi.clearAllMocks();
+        orderApi.loadOrders.mockRejectedValueOnce(new Error('Jaringan terputus.'));
+
+        await expect(
+            workspace.refreshCustomerOrdersSilently({ search: '', date_from: '', date_to: '' }),
+        ).resolves.toBe(false);
+
+        expect(orderApi.setOrders).not.toHaveBeenCalled();
+        expect(workspace.requestError.value).toBeNull();
+
+        unmount();
+    });
+
     it('preserves the selected branch, address, and delivery coordinates', async () => {
         customerAddressApi.loadAddresses.mockResolvedValue([defaultCustomerAddress]);
         const { workspace, unmount } = mountWorkspace();
@@ -467,6 +514,41 @@ describe('mobile workspace refresh', () => {
     });
 });
 
+describe('mobile workspace customer addresses', () => {
+    it('selects the latest address ID returned by create', async () => {
+        const createdAddress: MobileCustomerAddress = {
+            ...defaultCustomerAddress,
+            id: 88,
+            label: 'Kantor baru',
+            latitude: -6.9175,
+            longitude: 107.6191,
+        };
+        customerAddressApi.createAddress.mockResolvedValue(createdAddress);
+        const { workspace, unmount } = mountWorkspace();
+
+        await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
+        await workspace.createAddress({
+            label: createdAddress.label,
+            recipient_name: createdAddress.recipient_name,
+            whatsapp_phone: createdAddress.whatsapp_phone,
+            address: createdAddress.address,
+            notes: createdAddress.notes,
+            latitude: createdAddress.latitude,
+            longitude: createdAddress.longitude,
+            is_default: true,
+        });
+
+        expect(workspace.selectedAddressId.value).toBe(createdAddress.id);
+        expect(workspace.selectedAddress.value).toEqual(createdAddress);
+        expect(catalogApi.findNearest).toHaveBeenLastCalledWith(
+            createdAddress.latitude,
+            createdAddress.longitude,
+        );
+
+        unmount();
+    });
+});
+
 describe('mobile nearest branch component render QA', () => {
     it('renders automatic nearest ordering and preserves authoritative coverage after manual selection', async () => {
         const { workspace, wrapper } = mountWorkspaceUi();
@@ -477,16 +559,16 @@ describe('mobile nearest branch component render QA', () => {
 
         expect(options.map((option) => option.attributes('value'))).toEqual(['8', '7']);
         expect(options[0]?.text()).toContain('2,5 km · Gratis jemput & antar');
-        expect(wrapper.get('[data-test="selected-branch-coverage"]').text()).toContain(
-            'Gratis jemput & antar hingga 10 km',
+        expect(wrapper.get('[data-test="selected-branch-coverage"]').text()).toBe(
+            'Jarak 2,5 km · gratis jemput & antar dalam radius 10 km.',
         );
 
         await wrapper.findAll('article')[1]?.get('button').trigger('click');
         await vi.waitFor(() => expect(workspace.selectedBranchId.value).toBe(kemangBranch.id));
 
         expect(workspace.services.value).toEqual([serviceFor(7)]);
-        expect(wrapper.get('[data-test="selected-branch-coverage"]').text()).toContain(
-            'Di luar radius gratis 10 km · estimasi tambahan Rp 9.000',
+        expect(wrapper.get('[data-test="selected-branch-coverage"]').text()).toBe(
+            'Jarak 12,5 km · radius gratis 10 km · estimasi biaya kelebihan Rp 9.000 (Rp 3.000/km).',
         );
 
         wrapper.unmount();

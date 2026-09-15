@@ -5,6 +5,7 @@ import { useMobileCustomerAddressApi } from '@/composables/useMobileCustomerAddr
 import { useMobileCustomerWorkspace } from '@/composables/useMobileCustomerWorkspace';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
 import { useMobilePrinter } from '@/composables/useMobilePrinter';
+import type { CustomerOrderFilters } from '@/lib/mobileOrderFilters';
 import { toLaundryReceiptData } from '@/lib/mobilePayments';
 import type {
     MobileBranch,
@@ -32,6 +33,7 @@ export const useMobileWorkspace = () => {
     const loading = ref(true);
     const refreshing = ref(false);
     const queueLoading = ref(false);
+    const customerOrderLoading = ref(false);
     const requestError = ref<string | null>(null);
     const catalogApi = useMobileCatalogApi();
     const customerAddressApi = useMobileCustomerAddressApi();
@@ -43,6 +45,8 @@ export const useMobileWorkspace = () => {
     let nearestGeneration = 0;
     let branchSelectionGeneration = 0;
     let orderSearchGeneration = 0;
+    let customerOrderSearchGeneration = 0;
+    let customerOrderRefreshPromise: Promise<boolean> | null = null;
 
     const selectedBranch = computed<MobileBranch | null>(
         () =>
@@ -328,6 +332,7 @@ export const useMobileWorkspace = () => {
         refreshing.value = true;
         requestError.value = null;
         orderSearchGeneration += 1;
+        customerOrderSearchGeneration += 1;
 
         try {
             const response = await catalogApi.loadContext(
@@ -491,10 +496,9 @@ export const useMobileWorkspace = () => {
         requestError.value = null;
 
         try {
-            const orders = await orderWorkspace.loadOrders(
-                currentContext.organization.slug,
+            const orders = await orderWorkspace.loadOrders(currentContext.organization.slug, {
                 search,
-            );
+            });
 
             if (requestGeneration === orderSearchGeneration && currentContext === context.value) {
                 orderWorkspace.setOrders(orders);
@@ -510,9 +514,83 @@ export const useMobileWorkspace = () => {
         }
     };
 
+    const searchCustomerOrders = async (filters: CustomerOrderFilters): Promise<void> => {
+        const currentContext = context.value;
+
+        if (currentContext?.role !== 'customer') {
+            return;
+        }
+
+        const requestGeneration = ++customerOrderSearchGeneration;
+        customerOrderLoading.value = true;
+        requestError.value = null;
+
+        try {
+            const orders = await orderWorkspace.loadOrders(undefined, filters);
+
+            if (
+                requestGeneration === customerOrderSearchGeneration &&
+                currentContext === context.value
+            ) {
+                orderWorkspace.setOrders(orders);
+            }
+        } catch (error: unknown) {
+            if (requestGeneration === customerOrderSearchGeneration) {
+                requestError.value = errorMessage(error, 'Pesanan pelanggan tidak dapat dimuat.');
+            }
+        } finally {
+            if (requestGeneration === customerOrderSearchGeneration) {
+                customerOrderLoading.value = false;
+            }
+        }
+    };
+
+    const refreshCustomerOrdersSilently = (filters: CustomerOrderFilters): Promise<boolean> => {
+        const currentContext = context.value;
+
+        if (currentContext?.role !== 'customer') {
+            return Promise.resolve(false);
+        }
+
+        if (customerOrderRefreshPromise) {
+            return customerOrderRefreshPromise;
+        }
+
+        const requestGeneration = ++customerOrderSearchGeneration;
+        const refreshPromise = (async (): Promise<boolean> => {
+            try {
+                const orders = await orderWorkspace.loadOrders(undefined, filters);
+
+                if (
+                    requestGeneration !== customerOrderSearchGeneration ||
+                    currentContext !== context.value
+                ) {
+                    return false;
+                }
+
+                orderWorkspace.setOrders(orders);
+
+                return true;
+            } catch {
+                return false;
+            }
+        })();
+
+        customerOrderRefreshPromise = refreshPromise;
+        void refreshPromise.finally(() => {
+            if (customerOrderRefreshPromise === refreshPromise) {
+                customerOrderRefreshPromise = null;
+            }
+        });
+
+        return refreshPromise;
+    };
+
     const paymentActions: MobilePaymentActions = {
+        refreshOrder: orderWorkspace.refreshOrder,
         createPayment: orderWorkspace.createPayment,
         loadPaymentGatewayMethods: orderWorkspace.loadPaymentGatewayMethods,
+        loadPaymentWhatsAppSuggestion: orderWorkspace.loadPaymentWhatsAppSuggestion,
         transitionPaymentStatus: orderWorkspace.transitionPaymentStatus,
         loadReceipt: orderWorkspace.loadReceipt,
         printReceipt: async (orderId) => {
@@ -547,6 +625,7 @@ export const useMobileWorkspace = () => {
         loading: readonly(loading),
         refreshing: readonly(refreshing),
         queueLoading: readonly(queueLoading),
+        customerOrderLoading: readonly(customerOrderLoading),
         requestError: readonly(requestError),
         orders: orderWorkspace.orders,
         rollbackMessage: orderWorkspace.rollbackMessage,
@@ -567,8 +646,10 @@ export const useMobileWorkspace = () => {
         deleteAddress,
         load,
         refresh,
+        refreshCustomerOrdersSilently,
         resetCustomerPin: customerWorkspace.resetCustomerPin,
         searchOrders,
+        searchCustomerOrders,
         selectAddress,
         selectBranch,
         selectCustomer: customerWorkspace.selectCustomer,

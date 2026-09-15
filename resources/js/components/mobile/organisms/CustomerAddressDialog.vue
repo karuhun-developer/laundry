@@ -237,7 +237,14 @@ const remove = async (): Promise<void> => {
                         v-for="address in addresses"
                         :key="address.id"
                         class="rounded-2xl border p-4"
-                        :class="address.id === selectedAddressId ? 'border-brand-600 bg-brand-100/40' : 'border-line bg-surface'"
+                        :class="[
+                            address.is_default
+                                ? 'border-amber-500/40 bg-amber-500/5'
+                                : 'border-line bg-surface',
+                            address.id === selectedAddressId
+                                ? 'ring-2 ring-brand-100'
+                                : '',
+                        ]"
                         :data-test="`address-card-${address.id}`"
                     >
                         <div class="flex items-start gap-3">
@@ -247,7 +254,14 @@ const remove = async (): Promise<void> => {
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h3 class="font-semibold text-ink-950">{{ address.label }}</h3>
-                                    <span v-if="address.is_default" class="rounded-full bg-mint-500/10 px-2 py-1 text-[11px] font-semibold text-mint-500">Utama</span>
+                                    <span
+                                        v-if="address.is_default"
+                                        class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-700"
+                                        :data-test="`primary-address-badge-${address.id}`"
+                                    >
+                                        <Star class="size-3 fill-current" aria-hidden="true" />
+                                        Alamat utama
+                                    </span>
                                     <span v-if="address.id === selectedAddressId" class="rounded-full bg-brand-700 px-2 py-1 text-[11px] font-semibold text-white">Dipilih</span>
                                 </div>
                                 <p class="mt-2 text-sm font-medium text-ink-700">{{ address.recipient_name }} · {{ address.whatsapp_phone }}</p>

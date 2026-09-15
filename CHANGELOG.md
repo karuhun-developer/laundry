@@ -4,6 +4,16 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-09-15
+
+- Improved customer pickup addresses with automatic primary-address selection, current-location defaults, clearer free-radius pricing, and duplicate-pickup protection that identifies the active order.
+- Added inclusive date and text search for customer orders, a searchable branch-customer picker, and clearer modal controls.
+- Added foreground-only customer order polling with immediate foreground and Firebase refreshes, overlap and stale-response protection, and silent network-failure handling.
+- Refreshed payment details before displaying actions, added customer WhatsApp payment-verification requests, and normalized branch WhatsApp numbers while preserving clear invalid-number errors.
+- Kept digital receipts available to customers while limiting printer controls and setup guidance to branch administrators.
+- Added idempotent `payment_verified` Firebase notifications after committed manual or gateway payment transitions.
+- Fixed Android WhatsApp links by opening the same validated `https://wa.me/...` URL used by browsers through an HTTPS view intent without false-negative handler checks.
+
 ## [1.0.12] - 2026-09-15
 
 - Added organization-wide package and per-kilogram price options that apply automatically to every current and future branch.

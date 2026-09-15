@@ -3,6 +3,7 @@ import { MapPin, Navigation, Store } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import LocationPicker from '@/components/LocationPicker.vue';
 import type { Coordinates } from '@/composables/useGeolocation';
+import { deliveryCoverageSummary } from '@/lib/mobileDelivery';
 import { formatDistance, formatRupiah } from '@/lib/mobileOrders';
 import type { MobileBranch, NearestMobileBranch } from '@/types/mobile';
 
@@ -53,17 +54,8 @@ const branchDistance = (branch: BranchResult): number | null =>
 const branchFee = (branch: BranchResult): number | null =>
     'fee_rupiah' in branch.delivery ? branch.delivery.fee_rupiah : null;
 
-const branchCoverageLabel = (branch: BranchResult): string | null => {
-    const fee = branchFee(branch);
-
-    if (fee === null) {
-        return null;
-    }
-
-    return fee === 0
-        ? 'Gratis jemput & antar'
-        : `Di luar radius gratis · tambahan ${formatRupiah(fee)}`;
-};
+const branchCoverageLabel = (branch: BranchResult): string | null =>
+    'distance_meters' in branch.delivery ? deliveryCoverageSummary(branch.delivery) : null;
 
 watch(
     () => props.selectedCoordinates,

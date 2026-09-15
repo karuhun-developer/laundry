@@ -22,6 +22,9 @@ class CustomerOrderIndexController extends Controller
             throw new LogicException('An authenticated user is required.');
         }
 
-        return OrderResource::collection($listMobileOrders->handleForCustomer($user));
+        return OrderResource::collection($listMobileOrders->handleForCustomer(
+            $user,
+            $request->validated(),
+        ));
     }
 }

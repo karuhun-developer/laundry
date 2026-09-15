@@ -273,7 +273,7 @@ export type WhatsAppSuggestion =
           readonly phone: string;
           readonly message: string;
           readonly url: string;
-          readonly template_id: number;
+          readonly template_id: number | null;
           readonly unavailable_reason: null;
       }
     | {
@@ -323,7 +323,12 @@ export type MobileOrderReceipt = {
 };
 
 export type MobilePaymentActions = {
+    refreshOrder: (orderId: number) => Promise<MobileOrder>;
     createPayment: (orderId: number, payload: CreatePaymentPayload) => Promise<boolean>;
+    loadPaymentWhatsAppSuggestion: (
+        orderId: number,
+        paymentId: number,
+    ) => Promise<WhatsAppSuggestion>;
     loadPaymentGatewayMethods: () => Promise<readonly MobilePaymentGatewayMethod[]>;
     transitionPaymentStatus: (
         orderId: number,

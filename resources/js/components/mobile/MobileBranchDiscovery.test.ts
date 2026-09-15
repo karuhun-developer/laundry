@@ -90,6 +90,45 @@ const locationPickerStub = defineComponent({
 });
 
 describe('mobile branch discovery', () => {
+    it('states the 10 km boundary as free and explains excess-distance fees', () => {
+        const boundaryBranch: NearestMobileBranch = {
+            ...nearestBranches[0],
+            delivery: {
+                ...nearestBranches[0].delivery,
+                distance_meters: 10000,
+                within_free_radius: true,
+                fee_rupiah: 0,
+            },
+        };
+        const context: MobileContext = {
+            role: 'customer',
+            organization: { id: 1, name: 'LaundryHub Demo', slug: 'laundryhub-demo' },
+            organizations: [],
+            branches: [bandungBranch],
+        };
+        const boundaryWrapper = mount(MobileWorkspaceSwitcher, {
+            props: {
+                context,
+                nearestBranches: [boundaryBranch],
+                selectedBranchId: boundaryBranch.id,
+            },
+        });
+        const excessWrapper = mount(MobileWorkspaceSwitcher, {
+            props: {
+                context: { ...context, branches: [branch] },
+                nearestBranches: [nearestBranches[1]],
+                selectedBranchId: branch.id,
+            },
+        });
+
+        expect(boundaryWrapper.get('[data-test="selected-branch-coverage"]').text()).toBe(
+            'Jarak 10 km · gratis jemput & antar dalam radius 10 km.',
+        );
+        expect(excessWrapper.get('[data-test="selected-branch-coverage"]').text()).toBe(
+            'Jarak 12,5 km · radius gratis 10 km · estimasi biaya kelebihan Rp 9.000 (Rp 3.000/km).',
+        );
+    });
+
     it('uses the current device location from the map picker', async () => {
         const wrapper = mount(BranchExplorer, {
             props: { branches: [branch], nearestBranches: [], selectedBranchId: branch.id },
@@ -123,8 +162,8 @@ describe('mobile branch discovery', () => {
         expect(options[0]?.text()).toContain('2,5 km · Gratis jemput & antar');
         expect(options[1]?.text()).toContain('12,5 km · Tambahan Rp 9.000');
         expect(wrapper.text()).not.toContain('Bersih Bandung');
-        expect(wrapper.get('[data-test="selected-branch-coverage"]').text()).toContain(
-            'Di luar radius gratis 10 km · estimasi tambahan Rp 9.000',
+        expect(wrapper.get('[data-test="selected-branch-coverage"]').text()).toBe(
+            'Jarak 12,5 km · radius gratis 10 km · estimasi biaya kelebihan Rp 9.000 (Rp 3.000/km).',
         );
     });
 
@@ -157,9 +196,11 @@ describe('mobile branch discovery', () => {
                 selected: true,
             },
         ]);
-        expect(wrapper.get('[data-test="branch-coverage-8"]').text()).toBe('Gratis jemput & antar');
+        expect(wrapper.get('[data-test="branch-coverage-8"]').text()).toBe(
+            'Jarak 2,5 km · gratis jemput & antar dalam radius 10 km.',
+        );
         expect(wrapper.get('[data-test="branch-coverage-7"]').text()).toBe(
-            'Di luar radius gratis · tambahan Rp 9.000',
+            'Jarak 12,5 km · radius gratis 10 km · estimasi biaya kelebihan Rp 9.000 (Rp 3.000/km).',
         );
 
         await wrapper.get('[data-test="stub-branch-marker"]').trigger('click');

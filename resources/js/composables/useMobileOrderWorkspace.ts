@@ -12,6 +12,7 @@ import type {
     MobileBranch,
     MobileContext,
     MobileCustomer,
+    MobileOrder,
     MobileOrderReceipt,
     MobilePriceQuote,
     MobileService,
@@ -143,6 +144,37 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     const createPayment = (orderId: number, payload: CreatePaymentPayload): Promise<boolean> =>
         optimistic.createPayment(orderId, payload);
 
+    const refreshOrder = async (orderId: number): Promise<MobileOrder> => {
+        const order = optimistic.orders.value.find((entry) => entry.id === orderId);
+
+        if (!order) {
+            throw new Error('Pesanan tidak lagi tersedia. Muat ulang daftar pesanan.');
+        }
+
+        const refreshedOrder = await api.fetchOrder(order.organization.slug, order);
+        optimistic.setOrders(
+            optimistic.orders.value.map((entry) =>
+                entry.id === refreshedOrder.id ? refreshedOrder : entry,
+            ),
+        );
+
+        return refreshedOrder;
+    };
+
+    const loadPaymentWhatsAppSuggestion = async (
+        orderId: number,
+        paymentId: number,
+    ): Promise<WhatsAppSuggestion> => {
+        const order = optimistic.orders.value.find((entry) => entry.id === orderId);
+        const payment = order?.payments.find((entry) => entry.id === paymentId);
+
+        if (!order || !payment) {
+            throw new Error('Pembayaran tidak lagi tersedia. Muat ulang detail pesanan.');
+        }
+
+        return paymentApi.loadPaymentWhatsAppSuggestion(order.organization.slug, order, payment);
+    };
+
     const clearWhatsAppSuggestion = (): void => {
         whatsAppSuggestionGeneration += 1;
         whatsAppSuggestion.value = null;
@@ -239,11 +271,13 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         createOrder,
         createPayment,
         createProcessing: api.createProcessing,
+        loadPaymentWhatsAppSuggestion,
         loadReceipt,
         loadPaymentGatewayMethods: paymentApi.loadPaymentGatewayMethods,
         loadOrders: api.loadOrders,
         orders: optimistic.orders,
         pricingProcessing: api.pricingProcessing,
+        refreshOrder,
         rollbackMessage: optimistic.rollbackMessage,
         setOrders,
         transitionOrder,

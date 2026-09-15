@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, Copy, Download, XCircle } from '@lucide/vue';
+import { CheckCircle2, Copy, Download, MessageCircle, XCircle } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { formatRupiah } from '@/lib/mobileOrders';
@@ -10,9 +10,11 @@ const props = withDefaults(
         payment: MobilePayment;
         busy: boolean;
         canReconcile?: boolean;
+        canRequestVerification?: boolean;
     }>(),
     {
         canReconcile: true,
+        canRequestVerification: false,
     },
 );
 
@@ -33,6 +35,7 @@ const copyPaymentNumber = async (): Promise<void> => {
 
 const emit = defineEmits<{
     reconcile: [payment: MobilePayment, status: 'paid' | 'failed'];
+    requestVerification: [payment: MobilePayment];
 }>();
 </script>
 
@@ -123,5 +126,17 @@ const emit = defineEmits<{
                 Tandai gagal
             </Button>
         </div>
+        <Button
+            v-if="canRequestVerification"
+            type="button"
+            variant="outline"
+            class="mt-4 w-full border-mint-500/30 text-mint-500"
+            :disabled="busy"
+            data-test="request-payment-verification"
+            @click="emit('requestVerification', payment)"
+        >
+            <MessageCircle class="size-4" aria-hidden="true" />
+            Minta verifikasi via WhatsApp
+        </Button>
     </section>
 </template>

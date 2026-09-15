@@ -1,5 +1,6 @@
 package com.karuhundeveloper.laundryhub;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 
@@ -30,12 +31,11 @@ public class ExternalLinkPlugin extends Plugin {
         }
 
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-        if (intent.resolveActivity(getContext().getPackageManager()) == null) {
-            call.reject("Tidak ada aplikasi yang dapat membuka WhatsApp.", "handler_unavailable");
-            return;
+        try {
+            getActivity().startActivity(intent);
+            call.resolve();
+        } catch (ActivityNotFoundException exception) {
+            call.reject("Tidak ada aplikasi yang dapat membuka WhatsApp.", "handler_unavailable", exception);
         }
-
-        getActivity().startActivity(intent);
-        call.resolve();
     }
 }

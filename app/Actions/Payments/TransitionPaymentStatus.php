@@ -2,8 +2,10 @@
 
 namespace App\Actions\Payments;
 
+use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\TransitionPaymentStatusData;
 use App\Enums\PaymentStatus;
+use App\Enums\PushNotificationEvent;
 use App\Exceptions\InvalidPaymentStatusTransition;
 use App\Exceptions\PaymentCannotBeCreated;
 use App\Models\Order;
@@ -13,6 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class TransitionPaymentStatus
 {
+    public function __construct(
+        private DispatchOrderPushNotification $dispatchOrderPushNotification,
+    ) {}
+
     public function handle(
         Order $order,
         Payment $payment,
@@ -66,6 +72,16 @@ final readonly class TransitionPaymentStatus
                     'note' => $data->note,
                 ])
                 ->log('payment status transitioned');
+
+            if (
+                $currentStatus !== PaymentStatus::Paid
+                && $data->status === PaymentStatus::Paid
+            ) {
+                $this->dispatchOrderPushNotification->handle(
+                    $lockedOrder,
+                    PushNotificationEvent::PaymentVerified,
+                );
+            }
 
             return $lockedPayment->load('statusEvents');
         });

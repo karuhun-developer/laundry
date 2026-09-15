@@ -466,6 +466,7 @@ it('requires branch coordinates when delivery is requested', function (): void {
 });
 
 it('prevents duplicate active pickup requests and permits another request after processing starts', function (): void {
+    $this->travelTo('2026-09-15 10:00:00');
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();
     $service = Service::factory()->for($organization)->create();
@@ -492,7 +493,7 @@ it('prevents duplicate active pickup requests and permits another request after 
         ->assertJsonPath('code', 'PICKUP_ALREADY_REQUESTED')
         ->assertJsonPath(
             'message',
-            'Penjemputan untuk pesanan '.Order::query()->findOrFail($firstOrderId)->order_number.' masih diproses.',
+            'Penjemputan untuk pesanan LDR-20260915-00000001 masih diproses.',
         );
 
     Order::query()->findOrFail($firstOrderId)->update(['status' => OrderStatus::Received]);

@@ -3,13 +3,16 @@
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\PushNotificationEvent;
 use App\Enums\RoleName;
+use App\Jobs\SendOrderPushNotification;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
@@ -61,6 +64,7 @@ it('creates and manually reconciles a dynamic QRIS payment with audit history', 
         'items_subtotal_rupiah' => 50000,
     ]);
     Sanctum::actingAs($admin);
+    Queue::fake();
 
     $response = $this->postJson(route('api.v1.organizations.branches.orders.payments.store', [
         'organization' => $organization,
@@ -114,6 +118,22 @@ it('creates and manually reconciles a dynamic QRIS payment with audit history', 
         'subject_id' => $payment->id,
         'description' => 'payment status transitioned',
     ]);
+    Queue::assertPushed(
+        SendOrderPushNotification::class,
+        fn (SendOrderPushNotification $job): bool => $job->orderId === $order->id
+            && $job->event === PushNotificationEvent::PaymentVerified,
+    );
+
+    $this->postJson(route('api.v1.organizations.branches.orders.payments.status-events.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'order' => $order,
+        'payment' => $payment,
+    ]), [
+        'status' => PaymentStatus::Paid->value,
+    ])->assertConflict();
+
+    Queue::assertPushed(SendOrderPushNotification::class, 1);
 });
 
 it('allows a customer to create QRIS only for their own order', function (): void {
