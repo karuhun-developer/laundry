@@ -422,7 +422,7 @@ describe('mobile workspace refresh', () => {
                 resolveOrders = resolve;
             }),
         );
-        const filters = { search: 'KMG', date_from: '2026-09-01', date_to: '2026-09-15' };
+        const filters = { search: 'KMG' };
 
         const firstRefresh = workspace.refreshCustomerOrdersSilently(filters);
         const overlappingRefresh = workspace.refreshCustomerOrdersSilently(filters);
@@ -447,9 +447,7 @@ describe('mobile workspace refresh', () => {
         vi.clearAllMocks();
         orderApi.loadOrders.mockRejectedValueOnce(new Error('Jaringan terputus.'));
 
-        await expect(
-            workspace.refreshCustomerOrdersSilently({ search: '', date_from: '', date_to: '' }),
-        ).resolves.toBe(false);
+        await expect(workspace.refreshCustomerOrdersSilently({ search: '' })).resolves.toBe(false);
 
         expect(orderApi.setOrders).not.toHaveBeenCalled();
         expect(workspace.requestError.value).toBeNull();

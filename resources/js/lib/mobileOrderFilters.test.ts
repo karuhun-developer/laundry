@@ -76,21 +76,9 @@ describe('customer order filters', () => {
         ['cuci kering', 1],
         ['STR', 2],
     ])('matches %s across order, branch, and service fields', (search, expectedId) => {
-        expect(
-            filterCustomerOrders(orders, { search, date_from: '', date_to: '' }).map(
-                (order) => order.id,
-            ),
-        ).toEqual([expectedId]);
-    });
-
-    it('includes both typed date boundaries and excludes the next day', () => {
-        expect(
-            filterCustomerOrders(orders, {
-                search: '',
-                date_from: '2026-09-01',
-                date_to: '2026-09-15',
-            }).map((order) => order.id),
-        ).toEqual([1, 2]);
+        expect(filterCustomerOrders(orders, { search }).map((order) => order.id)).toEqual([
+            expectedId,
+        ]);
     });
 
     it('filters 1,000 orders deterministically without mutating the source', () => {
@@ -108,8 +96,6 @@ describe('customer order filters', () => {
         expect(
             filterCustomerOrders(largeOrderList, {
                 search: 'Cabang Target',
-                date_from: '',
-                date_to: '',
             }).map((order) => order.id),
         ).toEqual([778]);
         expect(largeOrderList).toHaveLength(1000);
