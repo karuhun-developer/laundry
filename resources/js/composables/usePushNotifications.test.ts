@@ -129,24 +129,32 @@ describe('push notification registration', () => {
         wrapper.unmount();
     });
 
-    it('requests prompt permission only after the user enables notifications', async () => {
+    it('requests fresh Android permission on startup and registers when granted', async () => {
         pushMocks.checkPermissions.mockResolvedValue({ receive: 'prompt' });
         const { notifications, wrapper } = mountComposable();
         await flushPromises();
 
-        expect(notifications.status.value).toBe('prompt');
-        expect(pushMocks.requestPermissions).not.toHaveBeenCalled();
-
-        await notifications.enable();
-
         expect(pushMocks.requestPermissions).toHaveBeenCalledOnce();
         expect(pushMocks.register).toHaveBeenCalledOnce();
+        expect(notifications.status.value).toBe('registering');
+
+        wrapper.unmount();
+    });
+
+    it('does not request denied permission again during startup', async () => {
+        pushMocks.checkPermissions.mockResolvedValue({ receive: 'denied' });
+        const { notifications, wrapper } = mountComposable();
+        await flushPromises();
+
+        expect(pushMocks.requestPermissions).not.toHaveBeenCalled();
+        expect(pushMocks.register).not.toHaveBeenCalled();
+        expect(notifications.status.value).toBe('denied');
 
         wrapper.unmount();
     });
 
     it('reports denied permission and native registration errors', async () => {
-        pushMocks.checkPermissions.mockResolvedValue({ receive: 'prompt' });
+        pushMocks.checkPermissions.mockResolvedValue({ receive: 'denied' });
         pushMocks.requestPermissions.mockResolvedValue({ receive: 'denied' });
         const { notifications, wrapper } = mountComposable();
         await flushPromises();

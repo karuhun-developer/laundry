@@ -224,7 +224,11 @@ export const usePushNotifications = ({ onRefresh }: PushNotificationOptions) => 
 
         try {
             await setupListeners();
-            const permission = await PushNotifications.checkPermissions();
+            let permission = await PushNotifications.checkPermissions();
+
+            if (platform() === 'android' && permission.receive === 'prompt') {
+                permission = await PushNotifications.requestPermissions();
+            }
 
             if (permission.receive !== 'granted') {
                 status.value = permission.receive === 'denied' ? 'denied' : 'prompt';
