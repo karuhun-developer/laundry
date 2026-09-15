@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\User;
+use App\Services\AppUpdateService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 
@@ -252,7 +254,7 @@ it('returns controlled unavailable states without exposing server errors', funct
 
     $this->getJson(route('api.v1.mobile.app-update.show'))
         ->assertOk()
-        ->assertJsonPath('data.current_version', '1.0.16')
+        ->assertJsonPath('data.current_version', '1.0.17')
         ->assertJsonPath('data.check_available', false)
         ->assertJsonPath(
             'data.unavailable_reason',
@@ -272,6 +274,34 @@ it('returns controlled unavailable states without exposing server errors', funct
             'data.unavailable_reason',
             'GitHub belum dapat dihubungi. Periksa koneksi server lalu coba lagi.',
         );
+});
+
+it('returns a controlled unavailable state when the update service fails unexpectedly', function (): void {
+    Log::shouldReceive('error')
+        ->once()
+        ->andThrow(new RuntimeException('logging is unavailable'));
+    $appUpdates = Mockery::mock(AppUpdateService::class);
+    $appUpdates->shouldReceive('check')
+        ->once()
+        ->with('1.0.15')
+        ->andThrow(new RuntimeException('private failure details'));
+    $this->app->instance(AppUpdateService::class, $appUpdates);
+    Sanctum::actingAs(User::factory()->create());
+
+    $response = $this->getJson(route('api.v1.mobile.app-update.show', [
+        'current_version' => '1.0.15',
+    ]));
+
+    $response->assertOk()
+        ->assertJsonPath('data.current_version', '1.0.15')
+        ->assertJsonPath('data.latest_version', null)
+        ->assertJsonPath('data.update_available', false)
+        ->assertJsonPath('data.check_available', false)
+        ->assertJsonPath(
+            'data.unavailable_reason',
+            'Rilis terbaru belum dapat diperiksa. Coba lagi nanti.',
+        );
+    expect($response->getContent())->not->toContain('private failure details');
 });
 
 it('returns a safe reason for GitHub HTTP failures', function (int $status, string $reason): void {
