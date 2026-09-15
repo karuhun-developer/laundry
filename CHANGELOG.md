@@ -4,6 +4,12 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-09-15
+
+- Added permanent signed public order-tracking links so customers can monitor an order in the browser without signing in.
+- Cached GitHub release checks for 15 minutes with a seven-day last-known-good fallback, safer diagnostics for token, access, rate-limit, and connectivity failures, and a configurable cache duration.
+- Simplified the customer order list to a compact text search and removed the date filters from the mobile interface.
+
 ## [1.0.14] - 2026-09-15
 
 - Added Android account-screen version details, current-version changelog, update checks, and checksum-verified APK installation through signed server-proxied downloads.
