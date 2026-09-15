@@ -3,8 +3,25 @@ import { decodeQrisImage } from '@/lib/qris';
 
 const STATIC_QRIS =
     '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
+const jsQrMock = vi.hoisted(() => vi.fn());
+
+vi.mock('jsqr', () => ({
+    default: jsQrMock,
+}));
+
+function stubCanvasDecoder(): void {
+    const context: CanvasRenderingContext2D = Object.create(null);
+
+    context.drawImage = vi.fn();
+    context.getImageData = vi.fn().mockReturnValue({
+        data: new Uint8ClampedArray(4),
+    });
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
+}
 
 afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
 });
 
@@ -26,28 +43,41 @@ describe('decodeQrisImage', () => {
         expect(close).toHaveBeenCalledOnce();
     });
 
-    it('explains when the browser cannot decode QR images', async () => {
-        vi.stubGlobal('BarcodeDetector', undefined);
+    it('falls back to canvas decoding when BarcodeDetector is unavailable', async () => {
+        const close = vi.fn();
 
-        await expect(decodeQrisImage(new File(['qris'], 'qris.png'))).rejects.toThrow(
-            'Browser ini belum mendukung pembacaan gambar QR.',
+        vi.stubGlobal(
+            'createImageBitmap',
+            vi.fn().mockResolvedValue({ close, width: 100, height: 100 }),
         );
+        vi.stubGlobal('BarcodeDetector', undefined);
+        stubCanvasDecoder();
+        jsQrMock.mockReturnValue({ data: STATIC_QRIS });
+
+        await expect(decodeQrisImage(new File(['qris'], 'qris.png'))).resolves.toBe(STATIC_QRIS);
+        expect(jsQrMock).toHaveBeenCalledOnce();
+        expect(close).toHaveBeenCalledOnce();
     });
 
     it('rejects a decoded QR that is not QRIS', async () => {
         const close = vi.fn();
 
-        vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ close }));
+        vi.stubGlobal(
+            'createImageBitmap',
+            vi.fn().mockResolvedValue({ close, width: 100, height: 100 }),
+        );
         vi.stubGlobal(
             'BarcodeDetector',
             class {
                 detect = vi.fn().mockResolvedValue([{ rawValue: 'https://example.test' }]);
             },
         );
+        stubCanvasDecoder();
+        jsQrMock.mockReturnValue(null);
 
         await expect(decodeQrisImage(new File(['other'], 'other.png'))).rejects.toThrow(
-            'Gambar tidak berisi payload QRIS Indonesia yang valid.',
+            'QRIS tidak terbaca. Gunakan gambar yang tajam, tidak terpotong, dan menampilkan seluruh kode QR.',
         );
-        expect(close).toHaveBeenCalledOnce();
+        expect(close).toHaveBeenCalledTimes(2);
     });
 });
