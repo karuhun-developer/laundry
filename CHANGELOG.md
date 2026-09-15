@@ -4,6 +4,13 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.12] - 2026-09-15
+
+- Added organization-wide package and per-kilogram price options that apply automatically to every current and future branch.
+- Kept branch-specific pricing available alongside global options, with duplicate-name validation isolated to each service and scope.
+- Updated CMS catalog management, public branch catalogs, quotes, counter orders, and pickup pricing confirmation to support global options.
+- Added regression coverage for global package creation without branches, future-branch availability, tenant isolation, quoting, and order pricing.
+
 ## [1.0.11] - 2026-09-15
 
 - Added a Canvas and `jsQR` fallback so CMS branch management can decode QRIS images in browsers without native `BarcodeDetector` support.
