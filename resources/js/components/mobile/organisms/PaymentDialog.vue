@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, QrCode, ReceiptText } from '@lucide/vue';
+import { CheckCircle2, QrCode, ReceiptText, RefreshCw } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import DigitalReceiptPanel from '@/components/mobile/molecules/DigitalReceiptPanel.vue';
@@ -15,6 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { externalLinkTransport } from '@/lib/externalLinks/transport';
 import { formatRupiah } from '@/lib/mobileOrders';
 import type {
     MobileOrder,
@@ -42,24 +43,30 @@ const props = withDefaults(
 );
 
 const open = ref(false);
+const currentOrder = ref<MobileOrder>(props.order);
 const method = ref<MobilePaymentMethod>(props.role === 'customer' ? 'qris' : 'cash');
 const gatewayMethods = ref<readonly MobilePaymentGatewayMethod[]>([]);
 const selectedGatewayMethod = ref('');
 const amountInput = ref('');
 const note = ref('');
 const actionProcessing = ref(false);
+const orderRefreshProcessing = ref(false);
+const orderRefreshError = ref<string | null>(null);
 const receipt = ref<MobileOrderReceipt | null>(null);
 const message = ref<string | null>(null);
 const error = ref<string | null>(null);
 let gatewayLoadGeneration = 0;
+let orderRefreshGeneration = 0;
 
 const latestPendingPayment = computed<MobilePayment | null>(() => {
-    const payments = [...props.order.payments].reverse();
+    const payments = [...currentOrder.value.payments].reverse();
 
     return payments.find((payment) => payment.status === 'pending') ?? null;
 });
 const amountRupiah = computed(() => Number(amountInput.value));
-const isBusy = computed(() => props.processing || actionProcessing.value);
+const isBusy = computed(
+    () => props.processing || actionProcessing.value || orderRefreshProcessing.value,
+);
 const paymentTriggerLabel = computed(() => {
     if (props.role === 'branch_admin') {
         return 'Pembayaran & struk';
@@ -83,12 +90,12 @@ const canCreatePayment = computed(() => {
     return (
         !isBusy.value &&
         !latestPendingPayment.value &&
-        props.order.payment_summary.outstanding_rupiah > 0 &&
+        currentOrder.value.payment_summary.outstanding_rupiah > 0 &&
         Number.isInteger(amount) &&
         amount > 0 &&
-        amount <= props.order.payment_summary.outstanding_rupiah &&
+        amount <= currentOrder.value.payment_summary.outstanding_rupiah &&
         (props.role !== 'customer' || method.value === 'qris') &&
-        (method.value !== 'qris' || props.order.branch.qris_enabled) &&
+        (method.value !== 'qris' || currentOrder.value.branch.qris_enabled) &&
         (method.value !== 'gateway' ||
             (selectedGateway.value !== null &&
                 amount >= selectedGateway.value.minimum_rupiah &&
@@ -123,30 +130,69 @@ const loadGatewayMethods = async (): Promise<void> => {
     }
 };
 
-watch(
-    [open, () => props.order.payment_summary.outstanding_rupiah],
-    ([isOpen, outstandingRupiah]) => {
-        if (isOpen) {
-            amountInput.value = String(outstandingRupiah);
-            method.value = props.role === 'customer' ? 'qris' : 'cash';
-
-            if (props.role === 'branch_admin') {
-                void loadGatewayMethods();
-            }
-        } else {
-            gatewayLoadGeneration += 1;
-            method.value = props.role === 'customer' ? 'qris' : 'cash';
-            gatewayMethods.value = [];
-            selectedGatewayMethod.value = '';
-        }
-    },
-    { immediate: true },
-);
-
 const resetAnnouncements = (): void => {
     message.value = null;
     error.value = null;
 };
+
+const refreshPaymentDialog = async (): Promise<void> => {
+    const requestGeneration = ++orderRefreshGeneration;
+    orderRefreshProcessing.value = true;
+    orderRefreshError.value = null;
+    resetAnnouncements();
+
+    try {
+        const refreshedOrder = await props.actions.refreshOrder(props.order.id);
+
+        if (requestGeneration !== orderRefreshGeneration || !open.value) {
+            return;
+        }
+
+        currentOrder.value = refreshedOrder;
+        amountInput.value = String(refreshedOrder.payment_summary.outstanding_rupiah);
+        method.value = props.role === 'customer' ? 'qris' : 'cash';
+
+        if (props.role === 'branch_admin') {
+            void loadGatewayMethods();
+        }
+    } catch (refreshError: unknown) {
+        if (requestGeneration === orderRefreshGeneration && open.value) {
+            orderRefreshError.value =
+                refreshError instanceof Error
+                    ? refreshError.message
+                    : 'Detail pembayaran tidak dapat dimuat.';
+        }
+    } finally {
+        if (requestGeneration === orderRefreshGeneration) {
+            orderRefreshProcessing.value = false;
+        }
+    }
+};
+
+watch(
+    () => props.order,
+    (order) => {
+        currentOrder.value = order;
+    },
+);
+
+watch(
+    open,
+    (isOpen) => {
+        if (isOpen) {
+            void refreshPaymentDialog();
+            return;
+        }
+
+        orderRefreshGeneration += 1;
+        gatewayLoadGeneration += 1;
+        method.value = props.role === 'customer' ? 'qris' : 'cash';
+        gatewayMethods.value = [];
+        selectedGatewayMethod.value = '';
+        orderRefreshError.value = null;
+    },
+    { immediate: true },
+);
 
 const submitPayment = async (): Promise<void> => {
     if (!canCreatePayment.value) {
@@ -168,7 +214,7 @@ const submitPayment = async (): Promise<void> => {
                   }
                 : {}),
         };
-        const saved = await props.actions.createPayment(props.order.id, payload);
+        const saved = await props.actions.createPayment(currentOrder.value.id, payload);
 
         if (saved) {
             message.value =
@@ -193,13 +239,17 @@ const reconcile = async (payment: MobilePayment, status: 'paid' | 'failed'): Pro
     resetAnnouncements();
 
     try {
-        const saved = await props.actions.transitionPaymentStatus(props.order.id, payment.id, {
-            status,
-            note:
-                status === 'paid'
-                    ? 'Pembayaran QRIS dikonfirmasi admin cabang'
-                    : 'Pembayaran QRIS ditandai gagal oleh admin cabang',
-        });
+        const saved = await props.actions.transitionPaymentStatus(
+            currentOrder.value.id,
+            payment.id,
+            {
+                status,
+                note:
+                    status === 'paid'
+                        ? 'Pembayaran QRIS dikonfirmasi admin cabang'
+                        : 'Pembayaran QRIS ditandai gagal oleh admin cabang',
+            },
+        );
 
         if (saved) {
             message.value =
@@ -219,7 +269,7 @@ const loadReceipt = async (): Promise<void> => {
     resetAnnouncements();
 
     try {
-        receipt.value = await props.actions.loadReceipt(props.order.id);
+        receipt.value = await props.actions.loadReceipt(currentOrder.value.id);
         message.value = 'Struk digital berhasil dimuat.';
         toast.success(message.value);
     } catch (loadError: unknown) {
@@ -236,7 +286,7 @@ const printReceipt = async (): Promise<void> => {
     resetAnnouncements();
 
     try {
-        const printed = await props.actions.printReceipt(props.order.id);
+        const printed = await props.actions.printReceipt(currentOrder.value.id);
 
         if (printed) {
             message.value = 'Struk dikirim ke printer.';
@@ -245,6 +295,30 @@ const printReceipt = async (): Promise<void> => {
             error.value = 'Struk belum dapat dicetak. Periksa profil dan koneksi printer.';
             toast.error(error.value);
         }
+    } finally {
+        actionProcessing.value = false;
+    }
+};
+
+const requestPaymentVerification = async (payment: MobilePayment): Promise<void> => {
+    actionProcessing.value = true;
+    resetAnnouncements();
+
+    try {
+        const suggestion = await props.actions.loadPaymentWhatsAppSuggestion(
+            currentOrder.value.id,
+            payment.id,
+        );
+
+        if (!suggestion.available) {
+            error.value = suggestion.unavailable_reason;
+            return;
+        }
+
+        await externalLinkTransport.open(suggestion.url);
+    } catch (openError: unknown) {
+        error.value =
+            openError instanceof Error ? openError.message : 'WhatsApp tidak dapat dibuka.';
     } finally {
         actionProcessing.value = false;
     }
@@ -284,17 +358,43 @@ const printReceipt = async (): Promise<void> => {
                 </DialogDescription>
             </DialogHeader>
 
+            <section
+                v-if="orderRefreshProcessing"
+                class="flex min-h-40 items-center justify-center gap-2 rounded-2xl border border-line bg-canvas text-sm text-ink-500"
+                data-test="payment-detail-loading"
+            >
+                <RefreshCw class="size-4 animate-spin" aria-hidden="true" />
+                Memuat detail pembayaran terbaru…
+            </section>
+            <section
+                v-else-if="orderRefreshError"
+                class="rounded-2xl border border-red-600/20 bg-red-600/5 p-4 text-sm text-red-600"
+                data-test="payment-detail-error"
+            >
+                <p>{{ orderRefreshError }}</p>
+                <Button
+                    type="button"
+                    variant="outline"
+                    class="mt-3 border-red-600/25 text-red-600"
+                    data-test="retry-payment-detail"
+                    @click="refreshPaymentDialog"
+                >
+                    <RefreshCw class="size-4" aria-hidden="true" />
+                    Coba lagi
+                </Button>
+            </section>
+            <template v-else>
             <div class="grid grid-cols-2 gap-3">
                 <div class="rounded-xl bg-surface-blue p-3">
                     <p class="text-xs text-ink-500">Sudah dibayar</p>
                     <p class="mt-1 font-display text-lg font-semibold text-brand-700">
-                        {{ formatRupiah(order.payment_summary.paid_rupiah) }}
+                        {{ formatRupiah(currentOrder.payment_summary.paid_rupiah) }}
                     </p>
                 </div>
                 <div class="rounded-xl bg-canvas p-3">
                     <p class="text-xs text-ink-500">Sisa tagihan</p>
                     <p class="mt-1 font-display text-lg font-semibold text-ink-950">
-                        {{ formatRupiah(order.payment_summary.outstanding_rupiah) }}
+                        {{ formatRupiah(currentOrder.payment_summary.outstanding_rupiah) }}
                     </p>
                 </div>
             </div>
@@ -314,22 +414,27 @@ const printReceipt = async (): Promise<void> => {
                 :payment="latestPendingPayment"
                 :busy="isBusy"
                 :can-reconcile="role === 'branch_admin'"
+                :can-request-verification="role === 'customer'"
                 @reconcile="reconcile"
+                @request-verification="requestPaymentVerification"
             />
             <PaymentEntryForm
-                v-else-if="role === 'branch_admin' && order.payment_summary.outstanding_rupiah > 0"
+                v-else-if="
+                    role === 'branch_admin' &&
+                    currentOrder.payment_summary.outstanding_rupiah > 0
+                "
                 v-model:method="method"
                 v-model:amount-input="amountInput"
                 v-model:note="note"
                 v-model:selected-gateway-method="selectedGatewayMethod"
-                :order="order"
+                :order="currentOrder"
                 :busy="isBusy"
                 :can-submit="canCreatePayment"
                 :gateway-methods="gatewayMethods"
                 @submit="submitPayment"
             />
             <section
-                v-else-if="order.payment_summary.outstanding_rupiah > 0"
+                v-else-if="currentOrder.payment_summary.outstanding_rupiah > 0"
                 class="rounded-2xl border border-brand-600/20 bg-surface-blue p-4"
                 data-test="customer-qris-payment"
             >
@@ -341,7 +446,7 @@ const printReceipt = async (): Promise<void> => {
                     </span>
                     <div>
                         <p class="font-semibold text-ink-950">
-                            Bayar {{ formatRupiah(order.payment_summary.outstanding_rupiah) }}
+                            Bayar {{ formatRupiah(currentOrder.payment_summary.outstanding_rupiah) }}
                         </p>
                         <p class="mt-1 text-sm leading-5 text-ink-500">
                             QRIS dibuat khusus dengan nominal tagihan ini, jadi Anda tidak perlu
@@ -350,7 +455,7 @@ const printReceipt = async (): Promise<void> => {
                     </div>
                 </div>
                 <Button
-                    v-if="order.branch.qris_enabled"
+                    v-if="currentOrder.branch.qris_enabled"
                     type="button"
                     class="mt-4 min-h-11 w-full bg-brand-700 text-white hover:bg-brand-700/90"
                     data-test="customer-create-qris"
@@ -378,14 +483,19 @@ const printReceipt = async (): Promise<void> => {
                 </div>
             </section>
 
-            <PaymentHistory v-if="order.payments.length" :payments="order.payments" />
+            <PaymentHistory
+                v-if="currentOrder.payments.length"
+                :payments="currentOrder.payments"
+            />
             <DigitalReceiptPanel
                 :receipt="receipt"
                 :busy="isBusy"
                 :printer-configured="printerConfigured && role === 'branch_admin'"
+                :show-print-action="role === 'branch_admin'"
                 @load="loadReceipt"
                 @print="printReceipt"
             />
+            </template>
         </DialogScrollContent>
     </Dialog>
 </template>

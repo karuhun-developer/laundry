@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
 import { store as storePaymentRoute } from '@/routes/api/v1/organizations/branches/orders/payments';
 import { store as storePaymentStatusRoute } from '@/routes/api/v1/organizations/branches/orders/payments/status-events';
+import { show as showPaymentWhatsAppSuggestionRoute } from '@/routes/api/v1/organizations/branches/orders/payments/whatsapp-suggestion';
 import { show as showReceiptRoute } from '@/routes/api/v1/organizations/branches/orders/receipt';
 import { index as paymentGatewayMethodsRoute } from '@/routes/api/v1/payment-gateway-methods';
 import type {
@@ -13,6 +14,7 @@ import type {
     MobilePayment,
     MobilePaymentGatewayMethod,
     TransitionPaymentStatusPayload,
+    WhatsAppSuggestion,
 } from '@/types/mobile';
 
 type EmptyRequest = Record<string, never>;
@@ -32,6 +34,7 @@ export const useMobilePaymentApi = () => {
         EmptyRequest,
         ApiEnvelope<readonly MobilePaymentGatewayMethod[]>
     >({});
+    const whatsAppSuggestionRequest = useHttp<EmptyRequest, ApiEnvelope<WhatsAppSuggestion>>({});
 
     const createPayment = async (
         organizationSlug: string,
@@ -167,16 +170,40 @@ export const useMobilePaymentApi = () => {
         return response.data;
     };
 
+    const loadPaymentWhatsAppSuggestion = async (
+        organizationSlug: string,
+        order: MobileOrder,
+        payment: MobilePayment,
+    ): Promise<WhatsAppSuggestion> => {
+        whatsAppSuggestionRequest.cancel();
+        const response = await whatsAppSuggestionRequest.get(
+            showPaymentWhatsAppSuggestionRoute({
+                organization: organizationSlug,
+                branch: order.branch.id,
+                order: order.id,
+                payment: payment.id,
+            }).url,
+        );
+
+        if (!response) {
+            throw new Error('Tautan verifikasi pembayaran tidak dapat dimuat.');
+        }
+
+        return response.data;
+    };
+
     return {
         createPayment,
         loadPaymentGatewayMethods,
+        loadPaymentWhatsAppSuggestion,
         loadReceipt,
         processing: computed(
             () =>
                 createRequest.processing ||
                 statusRequest.processing ||
                 receiptRequest.processing ||
-                gatewayMethodsRequest.processing,
+                gatewayMethodsRequest.processing ||
+                whatsAppSuggestionRequest.processing,
         ),
         transitionPaymentStatus,
     };

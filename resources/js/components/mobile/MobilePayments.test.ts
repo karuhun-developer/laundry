@@ -6,7 +6,14 @@ import type {
     MobileOrderReceipt,
     MobilePaymentActions,
     MobilePaymentGatewayMethod,
+    WhatsAppSuggestion,
 } from '@/types/mobile';
+
+const externalLinkMocks = vi.hoisted(() => ({ open: vi.fn(async () => undefined) }));
+
+vi.mock('@/lib/externalLinks/transport', () => ({
+    externalLinkTransport: externalLinkMocks,
+}));
 
 const gatewayMethods: readonly MobilePaymentGatewayMethod[] = [
     {
@@ -101,8 +108,19 @@ const makeOrder = (): MobileOrder => ({
     created_at: '2026-09-13T08:00:00.000Z',
 });
 
-const makeActions = (): MobilePaymentActions => ({
+const makeActions = (refreshedOrder: MobileOrder = makeOrder()): MobilePaymentActions => ({
+    refreshOrder: vi.fn(async () => refreshedOrder),
     createPayment: vi.fn(async () => true),
+    loadPaymentWhatsAppSuggestion: vi.fn(
+        async (): Promise<WhatsAppSuggestion> => ({
+            available: true,
+            phone: '6281234567890',
+            message: 'Mohon verifikasi pembayaran.',
+            url: 'https://wa.me/6281234567890?text=Mohon%20verifikasi%20pembayaran.',
+            template_id: null,
+            unavailable_reason: null,
+        }),
+    ),
     loadPaymentGatewayMethods: vi.fn(async () => []),
     transitionPaymentStatus: vi.fn(async () => true),
     loadReceipt: vi.fn(async () => receipt),
@@ -110,10 +128,40 @@ const makeActions = (): MobilePaymentActions => ({
 });
 
 describe('mobile payment dialog', () => {
+    it('hides stale QRIS actions until the latest order detail is loaded', async () => {
+        let resolveRefresh: (order: MobileOrder) => void = () => undefined;
+        const refreshPromise = new Promise<MobileOrder>((resolve) => {
+            resolveRefresh = resolve;
+        });
+        const staleOrder = makeOrder();
+        staleOrder.payments = [];
+        const paidOrder = makeOrder();
+        paidOrder.payments = [];
+        paidOrder.payment_summary = { paid_rupiah: 30000, outstanding_rupiah: 0, is_paid: true };
+        const actions = makeActions(staleOrder);
+        vi.mocked(actions.refreshOrder).mockReturnValue(refreshPromise);
+        const wrapper = mount(PaymentDialog, {
+            props: { order: staleOrder, actions, role: 'customer' },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        expect(document.body.querySelector('[data-test="payment-detail-loading"]')).not.toBeNull();
+        expect(document.body.querySelector('[data-test="customer-create-qris"]')).toBeNull();
+
+        resolveRefresh(paidOrder);
+
+        await vi.waitFor(() => expect(document.body.textContent).toContain('Pesanan sudah lunas'));
+        expect(document.body.querySelector('[data-test="customer-create-qris"]')).toBeNull();
+
+        wrapper.unmount();
+    });
+
     it('lets a customer create dynamic QRIS for the full outstanding amount', async () => {
-        const actions = makeActions();
         const order = makeOrder();
         order.payments = [];
+        const actions = makeActions(order);
         const wrapper = mount(PaymentDialog, {
             props: { order, actions, role: 'customer' },
             attachTo: document.body,
@@ -153,6 +201,25 @@ describe('mobile payment dialog', () => {
         expect(document.body.querySelector('[data-test="mark-payment-paid"]')).toBeNull();
         expect(document.body.querySelector('[data-test="mark-payment-failed"]')).toBeNull();
         expect(document.body.querySelector('[data-test="print-receipt"]')).toBeNull();
+        expect(document.body.textContent).not.toContain('Atur printer di Akun');
+
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="load-digital-receipt"]')
+            ?.click();
+        await vi.waitFor(() => expect(actions.loadReceipt).toHaveBeenCalledWith(21));
+        await vi.waitFor(() => expect(document.body.textContent).toContain('Customer Demo'));
+        expect(document.body.querySelector('[data-test="print-receipt"]')).toBeNull();
+
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="request-payment-verification"]')
+            ?.click();
+
+        await vi.waitFor(() =>
+            expect(actions.loadPaymentWhatsAppSuggestion).toHaveBeenCalledWith(21, 55),
+        );
+        expect(externalLinkMocks.open).toHaveBeenCalledWith(
+            'https://wa.me/6281234567890?text=Mohon%20verifikasi%20pembayaran.',
+        );
 
         wrapper.unmount();
     });
@@ -187,10 +254,10 @@ describe('mobile payment dialog', () => {
     });
 
     it('loads a digital receipt and offers a configured printer reprint', async () => {
-        const actions = makeActions();
         const order = makeOrder();
         order.payments = [];
         order.payment_summary = { paid_rupiah: 30000, outstanding_rupiah: 0, is_paid: true };
+        const actions = makeActions(order);
         const wrapper = mount(PaymentDialog, {
             props: { order, actions, printerConfigured: true },
             attachTo: document.body,
@@ -211,9 +278,9 @@ describe('mobile payment dialog', () => {
     });
 
     it('hides payment gateway controls when no provider methods are available', async () => {
-        const actions = makeActions();
         const order = makeOrder();
         order.payments = [];
+        const actions = makeActions(order);
         const wrapper = mount(PaymentDialog, {
             props: { order, actions },
             attachTo: document.body,
@@ -227,10 +294,10 @@ describe('mobile payment dialog', () => {
     });
 
     it('selects Paywuz QRIS by default and submits a direct VA method', async () => {
-        const actions = makeActions();
-        vi.mocked(actions.loadPaymentGatewayMethods).mockResolvedValue(gatewayMethods);
         const order = makeOrder();
         order.payments = [];
+        const actions = makeActions(order);
+        vi.mocked(actions.loadPaymentGatewayMethods).mockResolvedValue(gatewayMethods);
         const wrapper = mount(PaymentDialog, {
             props: { order, actions },
             attachTo: document.body,
@@ -281,7 +348,6 @@ describe('mobile payment dialog', () => {
     });
 
     it('shows downloadable gateway QRIS without manual reconciliation', async () => {
-        const actions = makeActions();
         const order = makeOrder();
         const payment = order.payments[0];
 
@@ -302,6 +368,7 @@ describe('mobile payment dialog', () => {
             payment_url: null,
             expires_at: '2026-09-14T16:00:00.000Z',
         };
+        const actions = makeActions(order);
         const wrapper = mount(PaymentDialog, {
             props: { order, actions },
             attachTo: document.body,
@@ -321,7 +388,6 @@ describe('mobile payment dialog', () => {
             configurable: true,
             value: { writeText },
         });
-        const actions = makeActions();
         const order = makeOrder();
         const payment = order.payments[0];
 
@@ -344,6 +410,7 @@ describe('mobile payment dialog', () => {
             payment_url: null,
             expires_at: '2026-09-14T16:00:00.000Z',
         };
+        const actions = makeActions(order);
         const wrapper = mount(PaymentDialog, {
             props: { order, actions },
             attachTo: document.body,

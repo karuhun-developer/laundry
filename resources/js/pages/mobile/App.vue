@@ -469,7 +469,6 @@ const clearQueueSearch = (): void => {
                             :payment-actions="workspace.paymentActions"
                             :payment-processing="workspace.paymentProcessing.value"
                             :pricing-processing="workspace.pricingProcessing.value"
-                            :printer-configured="workspace.printer.profile.value !== null"
                         />
                     </div>
 
@@ -494,7 +493,6 @@ const clearQueueSearch = (): void => {
                             :payment-actions="workspace.paymentActions"
                             :payment-processing="workspace.paymentProcessing.value"
                             :pricing-processing="workspace.pricingProcessing.value"
-                            :printer-configured="workspace.printer.profile.value !== null"
                         />
                     </template>
 
@@ -516,13 +514,6 @@ const clearQueueSearch = (): void => {
                         role="customer"
                         :must-change-pin="page.props.auth.user.must_change_pin"
                         :pin-expires-at="page.props.auth.user.pin_expires_at"
-                        :printer-available="workspace.printer.available"
-                        :printer-profile="workspace.printer.profile.value"
-                        :printer-devices="workspace.printer.devices.value"
-                        :printer-discovering="workspace.printer.discovering.value"
-                        :printer-printing="workspace.printer.printing.value"
-                        :printer-message="workspace.printer.message.value"
-                        :printer-error="workspace.printer.error.value"
                         :notification-available="pushNotifications.available"
                         :notification-status="pushNotifications.status.value"
                         :notification-error="pushNotifications.error.value"

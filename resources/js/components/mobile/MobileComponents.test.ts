@@ -14,10 +14,22 @@ import type {
     MobilePriceOption,
     MobilePriceQuote,
     MobileService,
+    WhatsAppSuggestion,
 } from '@/types/mobile';
 
 const paymentActions: MobilePaymentActions = {
+    refreshOrder: vi.fn(async () => makeOrder()),
     createPayment: vi.fn(async () => true),
+    loadPaymentWhatsAppSuggestion: vi.fn(
+        async (): Promise<WhatsAppSuggestion> => ({
+            available: false,
+            phone: null,
+            message: null,
+            url: null,
+            template_id: null,
+            unavailable_reason: 'Nomor WhatsApp cabang belum tersedia atau tidak valid.',
+        }),
+    ),
     loadPaymentGatewayMethods: vi.fn(async () => []),
     transitionPaymentStatus: vi.fn(async () => true),
     loadReceipt: vi.fn(async () => {

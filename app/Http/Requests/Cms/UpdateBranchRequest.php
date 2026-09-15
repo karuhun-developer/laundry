@@ -4,6 +4,8 @@ namespace App\Http\Requests\Cms;
 
 use App\Models\Branch;
 use App\Rules\ValidQrisPayload;
+use App\Rules\ValidWhatsAppPhone;
+use App\Services\WhatsAppPhoneNormalizer;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -38,7 +40,7 @@ class UpdateBranchRequest extends FormRequest
                     ->where('organization_id', $branch?->organization_id)
                     ->ignore($branch),
             ],
-            'phone' => ['nullable', 'string', 'max:24'],
+            'phone' => ['nullable', 'string', 'max:24', new ValidWhatsAppPhone],
             'address' => ['required', 'string', 'max:1000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
@@ -63,6 +65,14 @@ class UpdateBranchRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->filled('phone')) {
+            $phone = app(WhatsAppPhoneNormalizer::class)->normalize($this->input('phone'));
+
+            if ($phone !== null) {
+                $this->merge(['phone' => $phone]);
+            }
+        }
+
         if ($this->filled('code')) {
             $this->merge(['code' => Str::upper($this->string('code')->toString())]);
         }

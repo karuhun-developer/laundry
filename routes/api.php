@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentGatewayMethodController;
 use App\Http\Controllers\Api\V1\PaymentGatewayWebhookController;
 use App\Http\Controllers\Api\V1\PaymentStatusEventController;
+use App\Http\Controllers\Api\V1\PaymentWhatsAppSuggestionController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
 use App\Http\Controllers\Api\V1\ResetCustomerPinController;
 use App\Http\Controllers\Api\V1\SetDefaultCustomerAddressController;
@@ -137,6 +138,12 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     )->middleware('auth:sanctum')
         ->scopeBindings()
         ->name('organizations.branches.orders.payments.status-events.store');
+    Route::get(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments/{payment}/whatsapp-suggestion',
+        PaymentWhatsAppSuggestionController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.payments.whatsapp-suggestion.show');
     Route::get(
         'organizations/{organization:slug}/branches/{branch}/orders/{order}/receipt',
         OrderReceiptController::class,

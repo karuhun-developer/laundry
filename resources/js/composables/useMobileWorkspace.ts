@@ -545,8 +545,10 @@ export const useMobileWorkspace = () => {
     };
 
     const paymentActions: MobilePaymentActions = {
+        refreshOrder: orderWorkspace.refreshOrder,
         createPayment: orderWorkspace.createPayment,
         loadPaymentGatewayMethods: orderWorkspace.loadPaymentGatewayMethods,
+        loadPaymentWhatsAppSuggestion: orderWorkspace.loadPaymentWhatsAppSuggestion,
         transitionPaymentStatus: orderWorkspace.transitionPaymentStatus,
         loadReceipt: orderWorkspace.loadReceipt,
         printReceipt: async (orderId) => {

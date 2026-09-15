@@ -4,11 +4,15 @@ import { Button } from '@/components/ui/button';
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type { MobileOrderReceipt } from '@/types/mobile';
 
-defineProps<{
-    receipt: MobileOrderReceipt | null;
-    busy: boolean;
-    printerConfigured: boolean;
-}>();
+withDefaults(
+    defineProps<{
+        receipt: MobileOrderReceipt | null;
+        busy: boolean;
+        printerConfigured: boolean;
+        showPrintAction?: boolean;
+    }>(),
+    { showPrintAction: true },
+);
 
 const emit = defineEmits<{
     load: [];
@@ -24,7 +28,7 @@ const emit = defineEmits<{
                     Struk digital
                 </h3>
                 <p class="mt-1 text-xs leading-5 text-ink-500">
-                    Ambil snapshot terbaru sebelum melihat atau mencetak ulang.
+                    Ambil snapshot terbaru sebelum melihat struk.
                 </p>
             </div>
             <Button
@@ -73,6 +77,7 @@ const emit = defineEmits<{
                 </div>
             </dl>
             <Button
+                v-if="showPrintAction"
                 type="button"
                 class="mt-4 w-full bg-brand-700 text-white"
                 :disabled="busy || !printerConfigured"
