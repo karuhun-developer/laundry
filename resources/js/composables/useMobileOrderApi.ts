@@ -24,7 +24,11 @@ type EmptyRequest = Record<string, never>;
 export const useMobileOrderApi = () => {
     const ordersRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrder[]>>({});
     const detailRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrder>>({});
-    const createRequest = useHttp<CreateOrderPayload, ApiEnvelope<MobileOrder>>({ items: [] });
+    const createRequest = useHttp<CreateOrderPayload, ApiEnvelope<MobileOrder>>({
+        customer_id: undefined,
+        items: [],
+        delivery: undefined,
+    });
     const transitionRequest = useHttp<TransitionOrderPayload, ApiEnvelope<MobileOrder>>({
         status: 'received',
         note: '',
