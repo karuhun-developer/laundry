@@ -9,12 +9,13 @@ use App\Http\Controllers\Cms\ServiceController;
 use App\Http\Controllers\Cms\UserController;
 use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MobileAppController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RoleRedirectController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', RoleRedirectController::class)->name('home');
+Route::get('/', LandingPageController::class)->name('home');
 Route::post('login/customer', CustomerLoginController::class)
     ->middleware('guest')
     ->name('customer-login.store');
