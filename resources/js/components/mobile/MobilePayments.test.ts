@@ -289,6 +289,66 @@ describe('mobile payment dialog', () => {
         wrapper.unmount();
     });
 
+    it('lets branch admin view pending QRIS and share payment details to customer WhatsApp', async () => {
+        const actions = makeActions();
+        const wrapper = mount(PaymentDialog, {
+            props: { order: makeOrder(), actions, role: 'branch_admin' },
+            attachTo: document.body,
+        });
+
+        expect(wrapper.get('[data-test="open-payment-dialog"]').text()).toBe(
+            'Lihat QRIS pembayaran',
+        );
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        const shareButton = document.body.querySelector<HTMLButtonElement>(
+            '[data-test="share-payment-whatsapp"]',
+        );
+        expect(shareButton).not.toBeNull();
+        shareButton?.click();
+
+        await vi.waitFor(() =>
+            expect(actions.loadPaymentWhatsAppSuggestion).toHaveBeenCalledWith(21, 55),
+        );
+        expect(externalLinkMocks.open).toHaveBeenCalledWith(
+            'https://wa.me/6281234567890?text=Mohon%20verifikasi%20pembayaran.',
+        );
+
+        wrapper.unmount();
+    });
+
+    it('shows error toast when branch admin shares payment but customer WhatsApp is unavailable', async () => {
+        const actions = makeActions();
+        vi.mocked(actions.loadPaymentWhatsAppSuggestion).mockResolvedValueOnce({
+            available: false,
+            phone: null,
+            message: null,
+            url: null,
+            template_id: null,
+            unavailable_reason: 'Nomor WhatsApp pelanggan belum tersedia atau tidak valid.',
+        });
+
+        const wrapper = mount(PaymentDialog, {
+            props: { order: makeOrder(), actions, role: 'branch_admin' },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        document.body
+            .querySelector<HTMLButtonElement>('[data-test="share-payment-whatsapp"]')
+            ?.click();
+
+        await vi.waitFor(() =>
+            expect(document.body.textContent).toContain(
+                'Nomor WhatsApp pelanggan belum tersedia atau tidak valid.',
+            ),
+        );
+
+        wrapper.unmount();
+    });
+
     it('loads a digital receipt and offers a configured printer reprint', async () => {
         const order = makeOrder();
         order.payments = [];

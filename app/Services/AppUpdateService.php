@@ -140,7 +140,7 @@ class AppUpdateService
     {
         $contents = $this->changelogContents();
 
-        if (preg_match('/^## \[([0-9]+\.[0-9]+\.[0-9]+)\] - \d{4}-\d{2}-\d{2}$/m', $contents, $matches) !== 1) {
+        if (preg_match('/^## \[([0-9]+\.[0-9]+\.[0-9]+)\] - \d{4}-\d{2}-\d{2}(?:\r?\n|\z)/m', $contents, $matches) !== 1) {
             return self::LEGACY_ANDROID_VERSION;
         }
 
@@ -160,9 +160,15 @@ class AppUpdateService
         return $this->bulletLines($matches['body']);
     }
 
-    private function changelogContents(): string
+    protected function changelogContents(): string
     {
-        $contents = file_get_contents(base_path('CHANGELOG.md'));
+        $path = base_path('CHANGELOG.md');
+
+        if (! is_file($path) || ! is_readable($path)) {
+            return '';
+        }
+
+        $contents = file_get_contents($path);
 
         return is_string($contents) ? $contents : '';
     }
@@ -348,22 +354,28 @@ class AppUpdateService
 
     private function logReleaseFailure(Throwable $exception): void
     {
-        Log::warning('GitHub release check failed.', [
-            'repository' => $this->repository(),
-            'status' => $exception instanceof RequestException
-                ? $exception->response->status()
-                : null,
-            'exception' => $exception::class,
-        ]);
+        try {
+            Log::warning('GitHub release check failed.', [
+                'repository' => $this->repository(),
+                'status' => $exception instanceof RequestException
+                    ? $exception->response->status()
+                    : null,
+                'exception' => $exception::class,
+            ]);
+        } catch (Throwable) {
+        }
     }
 
     private function logCacheFailure(string $operation, Throwable $exception): void
     {
-        Log::warning('App update cache operation failed.', [
-            'repository' => $this->repository(),
-            'operation' => $operation,
-            'exception' => $exception::class,
-        ]);
+        try {
+            Log::warning('App update cache operation failed.', [
+                'repository' => $this->repository(),
+                'operation' => $operation,
+                'exception' => $exception::class,
+            ]);
+        } catch (Throwable) {
+        }
     }
 
     /** @param array<string, mixed> $release */

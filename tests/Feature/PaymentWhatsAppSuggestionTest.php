@@ -117,6 +117,70 @@ it('returns a clear unavailable result when the branch phone is missing or inval
     'invalid phone' => '12345',
 ]);
 
+it('returns an RFC3986 wa.me suggestion for branch admin to share payment to customer', function (): void {
+    [$organization, $branch, $order, $payment, $customer] = createPaymentWhatsAppSuggestionContext();
+    $order->update([
+        'customer_name_snapshot' => 'Budi Pelanggan',
+        'customer_whatsapp_phone_snapshot' => '0812-9876-5432',
+    ]);
+
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+    Sanctum::actingAs($branchAdmin);
+
+    $response = $this->getJson(
+        paymentWhatsAppSuggestionRoute($organization, $branch, $order, $payment),
+    )->assertOk()
+        ->assertJsonPath('data.available', true)
+        ->assertJsonPath('data.phone', '6281298765432')
+        ->assertJsonPath('data.template_id', null)
+        ->assertJsonPath('data.unavailable_reason', null);
+
+    $message = $response->json('data.message');
+    $url = $response->json('data.url');
+
+    expect($message)->toContain('Halo Budi Pelanggan')
+        ->toContain('LDR-20260915-00000001')
+        ->toContain('PAY-20260915-00000001')
+        ->toContain('Metode pembayaran: QRIS')
+        ->toContain('Nominal: Rp125.000')
+        ->toContain('Silakan selesaikan pembayaran melalui QRIS.')
+        ->toContain('pesanan/LDR-20260915-00000001')
+        ->and($url)->toStartWith('https://wa.me/6281298765432?text=')
+        ->toContain('%20')
+        ->not->toContain('+');
+
+    parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+    expect($query['text'] ?? null)->toBe($message);
+});
+
+it('returns unavailable when branch admin requests suggestion and customer phone is missing or invalid', function (?string $phone): void {
+    [$organization, $branch, $order, $payment, $customer] = createPaymentWhatsAppSuggestionContext();
+    $order->update([
+        'customer_whatsapp_phone_snapshot' => $phone,
+    ]);
+
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+    Sanctum::actingAs($branchAdmin);
+
+    $this->getJson(paymentWhatsAppSuggestionRoute($organization, $branch, $order, $payment))
+        ->assertOk()
+        ->assertJsonPath('data.available', false)
+        ->assertJsonPath('data.phone', null)
+        ->assertJsonPath('data.message', null)
+        ->assertJsonPath('data.url', null)
+        ->assertJsonPath(
+            'data.unavailable_reason',
+            'Nomor WhatsApp pelanggan belum tersedia atau tidak valid.',
+        );
+})->with([
+    'missing phone' => null,
+    'invalid phone' => '12345',
+]);
+
 it('enforces authentication, customer ownership, role, and nested bindings', function (): void {
     [$organization, $branch, $order, $payment, $customer] = createPaymentWhatsAppSuggestionContext();
     $route = paymentWhatsAppSuggestionRoute($organization, $branch, $order, $payment);
@@ -128,9 +192,14 @@ it('enforces authentication, customer ownership, role, and nested bindings', fun
     Sanctum::actingAs($otherCustomer);
     $this->getJson($route)->assertForbidden();
 
-    $owner = User::factory()->for($organization)->create();
-    $owner->assignRole(RoleName::Owner->value);
-    Sanctum::actingAs($owner);
+    $otherOrgBranchAdmin = User::factory()->create();
+    $otherOrgBranchAdmin->assignRole(RoleName::BranchAdmin->value);
+    Sanctum::actingAs($otherOrgBranchAdmin);
+    $this->getJson($route)->assertForbidden();
+
+    $unassignedBranchAdmin = User::factory()->for($organization)->create();
+    $unassignedBranchAdmin->assignRole(RoleName::BranchAdmin->value);
+    Sanctum::actingAs($unassignedBranchAdmin);
     $this->getJson($route)->assertForbidden();
 
     Sanctum::actingAs($customer);

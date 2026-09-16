@@ -68,12 +68,12 @@ const isBusy = computed(
     () => props.processing || actionProcessing.value || orderRefreshProcessing.value,
 );
 const paymentTriggerLabel = computed(() => {
-    if (props.role === 'branch_admin') {
-        return 'Pembayaran & struk';
-    }
-
     if (latestPendingPayment.value?.qris_image_data_uri) {
         return 'Lihat QRIS pembayaran';
+    }
+
+    if (props.role === 'branch_admin') {
+        return 'Pembayaran & struk';
     }
 
     return props.order.payment_summary.is_paid ? 'Lihat pembayaran' : 'Bayar dengan QRIS';
@@ -343,6 +343,34 @@ const requestPaymentVerification = async (payment: MobilePayment): Promise<void>
         actionProcessing.value = false;
     }
 };
+
+const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => {
+    actionProcessing.value = true;
+    resetAnnouncements();
+
+    try {
+        const suggestion = await props.actions.loadPaymentWhatsAppSuggestion(
+            currentOrder.value.id,
+            payment.id,
+        );
+
+        if (!suggestion.available) {
+            error.value = suggestion.unavailable_reason;
+            toast.error(
+                suggestion.unavailable_reason ?? 'Nomor WhatsApp pelanggan tidak tersedia.',
+            );
+            return;
+        }
+
+        await externalLinkTransport.open(suggestion.url);
+    } catch (openError: unknown) {
+        error.value =
+            openError instanceof Error ? openError.message : 'WhatsApp tidak dapat dibuka.';
+        toast.error(error.value);
+    } finally {
+        actionProcessing.value = false;
+    }
+};
 </script>
 
 <template>
@@ -435,8 +463,10 @@ const requestPaymentVerification = async (payment: MobilePayment): Promise<void>
                 :busy="isBusy"
                 :can-reconcile="role === 'branch_admin'"
                 :can-request-verification="role === 'customer'"
+                :can-share-payment="role === 'branch_admin'"
                 @reconcile="reconcile"
                 @request-verification="requestPaymentVerification"
+                @share-payment="sharePaymentToCustomer"
             />
             <PaymentEntryForm
                 v-else-if="

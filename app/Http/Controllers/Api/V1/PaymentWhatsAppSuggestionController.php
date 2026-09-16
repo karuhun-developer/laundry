@@ -25,7 +25,7 @@ class PaymentWhatsAppSuggestionController extends Controller
         BuildPaymentWhatsAppSuggestion $buildPaymentWhatsAppSuggestion,
     ): WhatsAppSuggestionResource {
         return new WhatsAppSuggestionResource(
-            $buildPaymentWhatsAppSuggestion->handle($order, $payment),
+            $buildPaymentWhatsAppSuggestion->handle($order, $payment, $request->user()),
         );
     }
 }

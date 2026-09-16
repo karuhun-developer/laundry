@@ -13,10 +13,12 @@ const props = withDefaults(
         busy: boolean;
         canReconcile?: boolean;
         canRequestVerification?: boolean;
+        canSharePayment?: boolean;
     }>(),
     {
         canReconcile: true,
         canRequestVerification: false,
+        canSharePayment: false,
     },
 );
 
@@ -67,6 +69,7 @@ const downloadQris = async (): Promise<void> => {
 const emit = defineEmits<{
     reconcile: [payment: MobilePayment, status: 'paid' | 'failed'];
     requestVerification: [payment: MobilePayment];
+    sharePayment: [payment: MobilePayment];
 }>();
 </script>
 
@@ -96,18 +99,34 @@ const emit = defineEmits<{
                 data-test="qris-image"
             />
         </div>
-        <Button
+        <div
             v-if="payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
-            type="button"
-            variant="outline"
-            class="mt-3 w-full border-brand-600/25 text-brand-700"
-            :disabled="downloadProcessing"
-            data-test="download-qris"
-            @click="downloadQris"
+            class="mt-3 grid gap-2"
+            :class="canSharePayment ? 'sm:grid-cols-2' : ''"
         >
-            <Download class="size-4" aria-hidden="true" />
-            {{ downloadProcessing ? 'Menyimpan QRIS...' : 'Unduh QRIS' }}
-        </Button>
+            <Button
+                type="button"
+                variant="outline"
+                class="w-full border-brand-600/25 text-brand-700"
+                :disabled="downloadProcessing"
+                data-test="download-qris"
+                @click="downloadQris"
+            >
+                <Download class="size-4" aria-hidden="true" />
+                {{ downloadProcessing ? 'Menyimpan QRIS...' : 'Unduh QRIS' }}
+            </Button>
+            <Button
+                v-if="canSharePayment"
+                type="button"
+                class="w-full bg-mint-500 text-white hover:bg-mint-500/90"
+                :disabled="busy"
+                data-test="share-payment-whatsapp"
+                @click="emit('sharePayment', payment)"
+            >
+                <MessageCircle class="size-4" aria-hidden="true" />
+                Bagikan ke WhatsApp
+            </Button>
+        </div>
         <div
             v-else-if="isGateway && payment.gateway?.payment_number"
             class="mt-4 rounded-2xl border border-line bg-surface p-4"
@@ -118,16 +137,29 @@ const emit = defineEmits<{
             <p class="mt-2 break-all font-mono text-lg font-semibold text-ink-950">
                 {{ payment.gateway.payment_number }}
             </p>
-            <Button
-                type="button"
-                variant="outline"
-                class="mt-3 w-full border-brand-600/25 text-brand-700"
-                data-test="copy-gateway-va"
-                @click="copyPaymentNumber"
-            >
-                <Copy class="size-4" aria-hidden="true" />
-                {{ copied ? 'Nomor tersalin' : 'Salin nomor pembayaran' }}
-            </Button>
+            <div class="mt-3 grid gap-2" :class="canSharePayment ? 'sm:grid-cols-2' : ''">
+                <Button
+                    type="button"
+                    variant="outline"
+                    class="w-full border-brand-600/25 text-brand-700"
+                    data-test="copy-gateway-va"
+                    @click="copyPaymentNumber"
+                >
+                    <Copy class="size-4" aria-hidden="true" />
+                    {{ copied ? 'Nomor tersalin' : 'Salin nomor pembayaran' }}
+                </Button>
+                <Button
+                    v-if="canSharePayment"
+                    type="button"
+                    class="w-full bg-mint-500 text-white hover:bg-mint-500/90"
+                    :disabled="busy"
+                    data-test="share-payment-whatsapp"
+                    @click="emit('sharePayment', payment)"
+                >
+                    <MessageCircle class="size-4" aria-hidden="true" />
+                    Bagikan ke WhatsApp
+                </Button>
+            </div>
         </div>
         <div
             v-else-if="!isGateway || isGatewayQris"

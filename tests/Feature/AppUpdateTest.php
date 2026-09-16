@@ -258,7 +258,7 @@ it('returns controlled unavailable states without exposing server errors', funct
 
     $this->getJson(route('api.v1.mobile.app-update.show'))
         ->assertOk()
-        ->assertJsonPath('data.current_version', '1.0.18')
+        ->assertJsonPath('data.current_version', '1.0.19')
         ->assertJsonPath('data.check_available', false)
         ->assertJsonPath(
             'data.unavailable_reason',
@@ -306,6 +306,54 @@ it('returns a controlled unavailable state when the update service fails unexpec
             'Rilis terbaru belum dapat diperiksa. Coba lagi nanti.',
         );
     expect($response->getContent())->not->toContain('private failure details');
+});
+
+it('correctly parses changelog version with windows CRLF line endings', function (): void {
+    $service = new class extends AppUpdateService
+    {
+        protected function changelogContents(): string
+        {
+            return "## [1.0.18] - 2026-09-15\r\n\r\n- Fixed something.\r\n";
+        }
+    };
+
+    expect($service->latestLocalVersion())->toBe('1.0.18');
+});
+
+it('falls back safely to legacy version when changelog is empty or unreadable without errors', function (): void {
+    $service = new class extends AppUpdateService
+    {
+        protected function changelogContents(): string
+        {
+            return '';
+        }
+    };
+
+    expect($service->latestLocalVersion())->toBe(AppUpdateService::LEGACY_ANDROID_VERSION);
+    expect($service->changelogFor('1.0.18'))->toBe([]);
+});
+
+it('tolerates log writing failures when recording release failures', function (): void {
+    Log::shouldReceive('warning')
+        ->atLeast()->once()
+        ->andThrow(new RuntimeException('storage permission denied'));
+
+    config()->set([
+        'services.github_releases.repository' => 'acme/laundryhub',
+        'services.github_releases.token' => 'private-release-token',
+    ]);
+    Http::fake([
+        'https://api.github.com/repos/acme/laundryhub/releases/latest' => Http::response([], 404),
+    ]);
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.mobile.app-update.show'))
+        ->assertOk()
+        ->assertJsonPath('data.check_available', false)
+        ->assertJsonPath(
+            'data.unavailable_reason',
+            'Repositori atau rilis GitHub tidak ditemukan, atau token tidak memiliki akses.',
+        );
 });
 
 it('returns a safe reason for GitHub HTTP failures', function (int $status, string $reason): void {

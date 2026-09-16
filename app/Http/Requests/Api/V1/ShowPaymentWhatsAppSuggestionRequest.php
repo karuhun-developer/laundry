@@ -22,12 +22,19 @@ class ShowPaymentWhatsAppSuggestionRequest extends FormRequest
         $payment = $this->route('payment');
         $user = $this->user();
 
-        return $order instanceof Order
-            && $payment instanceof Payment
-            && $user instanceof User
-            && $user->hasRole(RoleName::Customer->value)
-            && $order->customer_id === $user->id
-            && $payment->order_id === $order->id;
+        if (! ($order instanceof Order && $payment instanceof Payment && $user instanceof User)) {
+            return false;
+        }
+
+        if ($payment->order_id !== $order->id) {
+            return false;
+        }
+
+        if ($user->hasRole(RoleName::Customer->value)) {
+            return $order->customer_id === $user->id;
+        }
+
+        return $user->can('updateStatus', $order) || $user->can('view', $order);
     }
 
     /**
