@@ -5,6 +5,7 @@
     $description = 'Struk dan status pesanan '.$order->order_number.' dari '.$order->branch->name.'. '.$pricingSummary.', Status: '.$order->status->label().'.';
     $socialImageUrl = asset('apple-touch-icon.png');
     $isPaid = $isPriced && $outstandingRupiah === 0;
+    $canSelectQris = $pendingPayment === null && $order->branch->qris_enabled && $order->branch->qris_static_payload !== null;
     $isGateway = $pendingPayment !== null && ($pendingPayment->gateway_driver !== null || $pendingPayment->method === \App\Enums\PaymentMethod::Gateway);
     $isQris = $pendingPayment !== null && $pendingPayment->method === \App\Enums\PaymentMethod::Qris;
 @endphp
@@ -368,63 +369,65 @@
                                 @if ($gatewayUnavailable)
                                     <p class="mb-3 text-sm text-ink-600" role="status">Gateway sementara tidak tersedia. Gunakan QRIS cabang atau hubungi kasir.</p>
                                 @endif
-                                <details class="group">
-                                    <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-brand-700 uppercase hover:underline">
-                                        <span>Pilih metode pembayaran lain</span>
-                                        <span class="text-ink-400 transition group-open:rotate-180">&#9662;</span>
-                                    </summary>
-                                    <div class="mt-3 space-y-3 pt-2">
-                                        {{-- Form ganti ke QRIS --}}
-                                        @if ($pendingPayment === null && $order->branch->qris_enabled && $order->branch->qris_static_payload !== null)
-                                            <form action="{{ $paymentActionUrl }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="method" value="qris">
-                                                <button
-                                                    type="submit"
-                                                    class="w-full rounded-xl border border-brand-600/30 bg-surface px-4 py-2.5 text-left text-sm font-semibold text-brand-700 hover:bg-brand-50"
-                                                >
-                                                    &larr; Ganti ke QRIS Dinamis (Instan)
-                                                </button>
-                                            </form>
-                                        @endif
-
-                                        {{-- Form ganti ke Payment Gateway --}}
-                                        @if (! empty($gatewayMethods))
-                                            <form action="{{ $paymentActionUrl }}" method="POST" class="space-y-3">
-                                                @csrf
-                                                <input type="hidden" name="method" value="gateway">
-                                                <div>
-                                                    <label for="gateway_method" class="block text-xs font-medium text-ink-600">
-                                                        Pilih Metode Payment Gateway (Virtual Account & E-Wallet):
-                                                    </label>
-                                                    <select
-                                                        id="gateway_method"
-                                                        name="gateway_method"
-                                                        class="mt-1 block w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink-950 focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600"
-                                                        required
+                                @if ($canSelectQris || ! empty($gatewayMethods))
+                                    <details class="group">
+                                        <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-brand-700 uppercase hover:underline">
+                                            <span>Pilih metode pembayaran lain</span>
+                                            <span class="text-ink-400 transition group-open:rotate-180">&#9662;</span>
+                                        </summary>
+                                        <div class="mt-3 space-y-3 pt-2">
+                                            {{-- Form ganti ke QRIS --}}
+                                            @if ($canSelectQris)
+                                                <form action="{{ $paymentActionUrl }}" method="POST">
+                                                    @csrf
+                                                    <input type="hidden" name="method" value="qris">
+                                                    <button
+                                                        type="submit"
+                                                        class="w-full rounded-xl border border-brand-600/30 bg-surface px-4 py-2.5 text-left text-sm font-semibold text-brand-700 hover:bg-brand-50"
                                                     >
-                                                        <option value="" disabled {{ ! $isGateway ? 'selected' : '' }}>-- Pilih metode pembayaran --</option>
-                                                        @foreach ($gatewayMethods as $gm)
-                                                            @continue(in_array($gm->code, ['VA', 'ALL'], true))
-                                                            <option
-                                                                value="{{ $gm->code }}"
-                                                                {{ $isGateway && $pendingPayment?->gateway_method === $gm->code ? 'selected' : '' }}
-                                                            >
-                                                                {{ $gm->name }} (Rp{{ number_format($gm->minimumRupiah, 0, ',', '.') }} - Rp{{ number_format($gm->maximumRupiah, 0, ',', '.') }})
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <button
-                                                    type="submit"
-                                                    class="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                                                >
-                                                    {{ $isGateway ? 'Ganti ke Metode Gateway Terpilih' : 'Bayar via Payment Gateway' }}
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </details>
+                                                        &larr; Ganti ke QRIS Dinamis (Instan)
+                                                    </button>
+                                                </form>
+                                            @endif
+
+                                            {{-- Form ganti ke Payment Gateway --}}
+                                            @if (! empty($gatewayMethods))
+                                                <form action="{{ $paymentActionUrl }}" method="POST" class="space-y-3">
+                                                    @csrf
+                                                    <input type="hidden" name="method" value="gateway">
+                                                    <div>
+                                                        <label for="gateway_method" class="block text-xs font-medium text-ink-600">
+                                                            Pilih Metode Payment Gateway (Virtual Account & E-Wallet):
+                                                        </label>
+                                                        <select
+                                                            id="gateway_method"
+                                                            name="gateway_method"
+                                                            class="mt-1 block w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink-950 focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600"
+                                                            required
+                                                        >
+                                                            <option value="" disabled {{ ! $isGateway ? 'selected' : '' }}>-- Pilih metode pembayaran --</option>
+                                                            @foreach ($gatewayMethods as $gm)
+                                                                @continue(in_array($gm->code, ['VA', 'ALL'], true))
+                                                                <option
+                                                                    value="{{ $gm->code }}"
+                                                                    {{ $isGateway && $pendingPayment?->gateway_method === $gm->code ? 'selected' : '' }}
+                                                                >
+                                                                    {{ $gm->name }} (Rp{{ number_format($gm->minimumRupiah, 0, ',', '.') }} - Rp{{ number_format($gm->maximumRupiah, 0, ',', '.') }})
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <button
+                                                        type="submit"
+                                                        class="w-full rounded-xl bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                                                    >
+                                                        {{ $isGateway ? 'Ganti ke Metode Gateway Terpilih' : 'Bayar via Payment Gateway' }}
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </details>
+                                @endif
                             </div>
                         @endif
                     </section>

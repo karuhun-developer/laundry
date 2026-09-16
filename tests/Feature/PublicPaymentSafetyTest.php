@@ -94,7 +94,8 @@ it('keeps tracking accessible during gateway outages', function (bool $paid, boo
         $response->assertSee('Struk Pembayaran Lunas');
         Http::assertNothingSent();
     } else {
-        $response->assertSee('Unduh QRIS')->assertSee('Gateway sementara tidak tersedia');
+        $response->assertSee('Unduh QRIS')->assertSee('Gateway sementara tidak tersedia')
+            ->assertDontSee('Pilih metode pembayaran lain');
         Http::assertSentCount(1);
     }
 })->with([true, false])->with([true, false]);
