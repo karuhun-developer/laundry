@@ -8,6 +8,7 @@ use App\Exceptions\PaymentCannotBeCreated;
 use App\Jobs\SendOrderPushNotification;
 use App\Models\Branch;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -63,13 +64,16 @@ function safetyPayment(Order $order, PaymentMethod $method = PaymentMethod::Qris
 it('keeps unpriced zero-total orders distinct from confirmed free orders', function (bool $priced): void {
     $order = safetyOrder();
     $order->update(['total_rupiah' => 0, 'priced_at' => $priced ? now() : null]);
+    OrderItem::factory()->for($order)->create(['subtotal_rupiah' => 0]);
 
     $response = $this->get(URL::signedRoute('orders.public.show', ['order' => $order->order_number]))->assertOk();
 
     if ($priced) {
-        $response->assertSee('Struk Pembayaran Lunas');
+        $response->assertSee('Struk Pembayaran Lunas')->assertSee('Rp0');
     } else {
-        $response->assertDontSee('Struk Pembayaran Lunas')->assertSee('Penentuan harga sedang diproses');
+        $response->assertDontSee('Struk Pembayaran Lunas')->assertSee('Penentuan harga sedang diproses')
+            ->assertSee('Total belum ditetapkan')->assertDontSee('Rp0')
+            ->assertDontSee('Sisa Yang Harus Dibayar');
     }
 
     Http::assertNothingSent();

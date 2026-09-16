@@ -1,8 +1,10 @@
 @php
     $title = 'Detail & Struk '.$order->order_number.' | LaundryHub';
-    $description = 'Struk dan status pesanan '.$order->order_number.' dari '.$order->branch->name.'. Total: Rp'.number_format($order->total_rupiah, 0, ',', '.').', Status: '.$order->status->label().'.';
+    $isPriced = $order->priced_at !== null;
+    $pricingSummary = $isPriced ? 'Total: Rp'.number_format($order->total_rupiah, 0, ',', '.') : 'Total belum ditetapkan';
+    $description = 'Struk dan status pesanan '.$order->order_number.' dari '.$order->branch->name.'. '.$pricingSummary.', Status: '.$order->status->label().'.';
     $socialImageUrl = asset('apple-touch-icon.png');
-    $isPaid = $order->priced_at !== null && $outstandingRupiah === 0;
+    $isPaid = $isPriced && $outstandingRupiah === 0;
     $isGateway = $pendingPayment !== null && ($pendingPayment->gateway_driver !== null || $pendingPayment->method === \App\Enums\PaymentMethod::Gateway);
     $isQris = $pendingPayment !== null && $pendingPayment->method === \App\Enums\PaymentMethod::Qris;
 @endphp
@@ -116,31 +118,35 @@
                         </span>
                     </div>
 
-                    <div class="mt-4 rounded-xl bg-canvas p-4 text-center">
-                        <p class="text-xs font-semibold tracking-wide text-ink-500 uppercase">Total Yang Harus Dibayar</p>
-                        <p class="mt-1 font-display text-3xl font-extrabold text-brand-700">
-                            Rp{{ number_format($order->total_rupiah, 0, ',', '.') }}
-                        </p>
-                    </div>
+                    @if ($isPriced)
+                        <div class="mt-4 rounded-xl bg-canvas p-4 text-center">
+                            <p class="text-xs font-semibold tracking-wide text-ink-500 uppercase">Total Yang Harus Dibayar</p>
+                            <p class="mt-1 font-display text-3xl font-extrabold text-brand-700">
+                                Rp{{ number_format($order->total_rupiah, 0, ',', '.') }}
+                            </p>
+                        </div>
 
-                    <dl class="mt-4 space-y-2 border-t border-dashed border-line pt-3 text-sm">
-                        <div class="flex justify-between gap-4">
-                            <dt class="text-ink-500">Jumlah Sudah Dibayar</dt>
-                            <dd @class(['font-semibold', 'text-mint-600' => $paidRupiah > 0, 'text-ink-700' => $paidRupiah === 0])>
-                                Rp{{ number_format($paidRupiah, 0, ',', '.') }}
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-4 text-base font-bold">
-                            <dt class="text-ink-950">Sisa Yang Harus Dibayar</dt>
-                            <dd @class([
-                                'font-display',
-                                'text-mint-600' => $isPaid,
-                                'text-red-600' => ! $isPaid,
-                            ])>
-                                {{ $isPaid ? 'Rp0 (Lunas)' : 'Rp'.number_format($outstandingRupiah, 0, ',', '.') }}
-                            </dd>
-                        </div>
-                    </dl>
+                        <dl class="mt-4 space-y-2 border-t border-dashed border-line pt-3 text-sm">
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-ink-500">Jumlah Sudah Dibayar</dt>
+                                <dd @class(['font-semibold', 'text-mint-600' => $paidRupiah > 0, 'text-ink-700' => $paidRupiah === 0])>
+                                    Rp{{ number_format($paidRupiah, 0, ',', '.') }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-4 text-base font-bold">
+                                <dt class="text-ink-950">Sisa Yang Harus Dibayar</dt>
+                                <dd @class([
+                                    'font-display',
+                                    'text-mint-600' => $isPaid,
+                                    'text-red-600' => ! $isPaid,
+                                ])>
+                                    {{ $isPaid ? 'Rp0 (Lunas)' : 'Rp'.number_format($outstandingRupiah, 0, ',', '.') }}
+                                </dd>
+                            </div>
+                        </dl>
+                    @else
+                        <p class="mt-4 rounded-xl bg-canvas p-4 text-center text-sm font-semibold text-ink-700">Total belum ditetapkan</p>
+                    @endif
                 </section>
 
                 {{-- Rincian Layanan Cucian --}}
@@ -160,17 +166,19 @@
                                             @elseif ($item->quantity !== null)
                                                 {{ $item->quantity }} pcs
                                             @endif
-                                            @if ($item->unit_price_rupiah > 0)
+                                            @if ($isPriced && $item->unit_price_rupiah > 0)
                                                 &middot; @ Rp{{ number_format($item->unit_price_rupiah, 0, ',', '.') }}
                                             @endif
                                         </p>
                                     </div>
-                                    <p class="font-semibold text-ink-950">Rp{{ number_format($item->subtotal_rupiah, 0, ',', '.') }}</p>
+                                    @if ($isPriced)
+                                        <p class="font-semibold text-ink-950">Rp{{ number_format($item->subtotal_rupiah, 0, ',', '.') }}</p>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>
 
-                        @if ($order->delivery_fee_rupiah > 0)
+                        @if ($isPriced && $order->delivery_fee_rupiah > 0)
                             <div class="mt-2 flex justify-between rounded-xl bg-canvas px-4 py-2.5 text-xs text-ink-600">
                                 <span>Ongkos kirim antar-jemput</span>
                                 <span class="font-semibold text-ink-950">Rp{{ number_format($order->delivery_fee_rupiah, 0, ',', '.') }}</span>
