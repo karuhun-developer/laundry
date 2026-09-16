@@ -4,10 +4,16 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
-- Merged digital receipt into signed public order-tracking page (`/pesanan/{order_number}`), removing legacy standalone `/struk/{order}` routes and views.
+## [1.0.20] - 2026-09-16
+
+- Merged digital receipts into signed public order-tracking pages (`/pesanan/{order_number}`), preserving valid legacy `/struk/{order}` links through signed redirects.
 - Added high-visibility payment status badge, total amount due, and remaining balance to the public order page.
 - Added dynamic QRIS generation, download capability, and payment gateway selection (Virtual Account & E-Wallet) directly on the public order tracking page for unpaid orders.
 - Added digital receipt breakdown and print button for fully settled orders.
+- Kept unpriced orders distinct from fully paid orders and preserved tracking and QRIS access during gateway outages.
+- Made public payment selection atomic and repeat-safe, restoring the previous QRIS payment when gateway creation fails.
+- Blocked method changes while a gateway payment is pending so subsequent successful webhooks remain reconcilable; QRIS can be selected again after confirmed failure or cancellation.
+- Required actual APK binary access in update-token diagnostics, with accurate support for fine-grained and installation tokens.
 
 ## [1.0.19] - 2026-09-16
 

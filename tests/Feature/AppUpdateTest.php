@@ -258,7 +258,7 @@ it('returns controlled unavailable states without exposing server errors', funct
 
     $this->getJson(route('api.v1.mobile.app-update.show'))
         ->assertOk()
-        ->assertJsonPath('data.current_version', '1.0.19')
+        ->assertJsonPath('data.current_version', '1.0.20')
         ->assertJsonPath('data.check_available', false)
         ->assertJsonPath(
             'data.unavailable_reason',
