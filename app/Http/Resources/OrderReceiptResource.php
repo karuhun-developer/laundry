@@ -54,8 +54,8 @@ class OrderReceiptResource extends JsonResource
             'issued_at' => now()->toISOString(),
             'ordered_at' => $this->created_at->toISOString(),
             'share_url' => URL::signedRoute(
-                'receipts.public.show',
-                ['order' => $this->id],
+                'orders.public.show',
+                ['order' => $this->order_number],
             ),
         ];
     }

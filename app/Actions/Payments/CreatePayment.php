@@ -23,7 +23,7 @@ final readonly class CreatePayment
     public function handle(
         Order $order,
         Branch $branch,
-        User $actor,
+        ?User $actor,
         CreatePaymentData $data,
     ): Payment {
         return DB::transaction(function () use ($order, $branch, $actor, $data): Payment {
@@ -70,7 +70,7 @@ final readonly class CreatePayment
                 'organization_id' => $lockedOrder->organization_id,
                 'branch_id' => $lockedOrder->branch_id,
                 'order_id' => $lockedOrder->id,
-                'recorded_by_id' => $actor->id,
+                'recorded_by_id' => $actor?->id,
                 'method' => $data->method,
                 'status' => $status,
                 'amount_rupiah' => $data->amountRupiah,
@@ -100,15 +100,22 @@ final readonly class CreatePayment
                 $status = $payment->status;
             }
 
+            $actorName = $actor instanceof User ? $actor->name : ($lockedOrder->customer_name_snapshot ?? 'Pelanggan');
+
             $payment->statusEvents()->create([
-                'actor_id' => $actor->id,
-                'actor_name_snapshot' => $actor->name,
+                'actor_id' => $actor?->id,
+                'actor_name_snapshot' => $actorName,
                 'status' => $payment->status,
                 'note' => $data->note,
             ]);
 
-            activity('payments')
-                ->causedBy($actor)
+            $activity = activity('payments');
+
+            if ($actor !== null) {
+                $activity->causedBy($actor);
+            }
+
+            $activity
                 ->performedOn($payment)
                 ->withProperties([
                     'payment_number' => $payment->payment_number,

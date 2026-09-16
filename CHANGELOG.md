@@ -4,6 +4,11 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+- Merged digital receipt into signed public order-tracking page (`/pesanan/{order_number}`), removing legacy standalone `/struk/{order}` routes and views.
+- Added high-visibility payment status badge, total amount due, and remaining balance to the public order page.
+- Added dynamic QRIS generation, download capability, and payment gateway selection (Virtual Account & E-Wallet) directly on the public order tracking page for unpaid orders.
+- Added digital receipt breakdown and print button for fully settled orders.
+
 ## [1.0.19] - 2026-09-16
 
 - Added feature for branch administrators to share dynamic QRIS and online gateway payment details directly to customer WhatsApp, including signed public order-tracking links.

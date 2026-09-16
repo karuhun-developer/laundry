@@ -12,7 +12,7 @@ use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MobileAppController;
-use App\Http\Controllers\PublicOrderReceiptController;
+use App\Http\Controllers\PublicOrderPaymentController;
 use App\Http\Controllers\PublicOrderTrackingController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RoleRedirectController;
@@ -22,12 +22,12 @@ Route::get('/', LandingPageController::class)->name('home');
 Route::post('login/customer', CustomerLoginController::class)
     ->middleware('guest')
     ->name('customer-login.store');
-Route::get('struk/{order}', PublicOrderReceiptController::class)
-    ->middleware(['signed', 'throttle:60,1'])
-    ->name('receipts.public.show');
 Route::get('pesanan/{order:order_number}', PublicOrderTrackingController::class)
     ->middleware(['signed', 'throttle:60,1'])
     ->name('orders.public.show');
+Route::post('pesanan/{order:order_number}/bayar', PublicOrderPaymentController::class)
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('orders.public.payment.store');
 Route::get('app-updates/{asset}/{filename}', AppUpdateDownloadController::class)
     ->whereNumber('asset')
     ->where('filename', 'laundryhub-v[0-9]+\.[0-9]+\.[0-9]+\.apk')
