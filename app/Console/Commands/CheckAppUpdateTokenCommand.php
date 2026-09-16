@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AppUpdateService;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -25,7 +27,7 @@ class CheckAppUpdateTokenCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(AppUpdateService $appUpdates): int
     {
         $repository = config('services.github_releases.repository');
         $token = config('services.github_releases.token');
@@ -52,6 +54,7 @@ class CheckAppUpdateTokenCommand extends Command
         $this->newLine();
 
         $this->line('1. Memeriksa identitas pemilik token...');
+        $userResponse = null;
 
         try {
             $userResponse = Http::withToken($token)
@@ -59,39 +62,35 @@ class CheckAppUpdateTokenCommand extends Command
                     'Accept' => 'application/vnd.github+json',
                     'User-Agent' => 'LaundryHub-App-Updater',
                 ])
+                ->connectTimeout(5)
                 ->timeout(10)
                 ->get('https://api.github.com/user');
-        } catch (Throwable $e) {
-            $this->error('Gagal menghubungi GitHub API: '.$e->getMessage());
-
-            return self::FAILURE;
+        } catch (Throwable) {
+            $this->warn('   Identitas token belum dapat diperiksa. Periksa koneksi atau batas waktu GitHub API; pemeriksaan rilis dilanjutkan.');
         }
 
-        if ($userResponse->status() === 401) {
+        if ($userResponse?->status() === 401) {
             $this->error('Token tidak valid atau sudah kedaluwarsa (HTTP 401).');
             $this->line('Buat token baru di https://github.com/settings/tokens lalu perbarui .env.');
 
             return self::FAILURE;
         }
 
-        if (! $userResponse->successful()) {
-            $this->error("GitHub API mengembalikan status HTTP {$userResponse->status()} saat memeriksa pengguna.");
+        if ($userResponse?->successful()) {
+            $userData = $userResponse->json();
+            $username = is_string($userData['login'] ?? null) ? $userData['login'] : 'unknown';
+            $name = is_string($userData['name'] ?? null) ? $userData['name'] : '';
 
-            return self::FAILURE;
+            $this->info("   Terautentikasi sebagai: {$username}".($name !== '' ? " ({$name})" : ''));
+        } elseif ($userResponse !== null) {
+            $this->warn("   Identitas token tidak tersedia (HTTP {$userResponse->status()}). Endpoint /user tidak wajib untuk token instalasi; pemeriksaan rilis dilanjutkan.");
         }
 
-        $userData = $userResponse->json();
-        $username = is_array($userData) && isset($userData['login']) ? (string) $userData['login'] : 'unknown';
-        $name = is_array($userData) && isset($userData['name']) ? (string) $userData['name'] : '';
-
-        $this->info("   Terautentikasi sebagai: {$username}".($name !== '' ? " ({$name})" : ''));
-
-        $scopes = (string) $userResponse->header('x-oauth-scopes');
+        $scopes = (string) $userResponse?->header('x-oauth-scopes');
         $scopeList = array_filter(array_map('trim', explode(',', $scopes)));
 
         if ($scopeList === []) {
-            $this->warn('   Scope token aktif: (KOSONG / 0 SCOPE)');
-            $this->warn('   Perhatian: Token tanpa scope tidak bisa mengakses repositori privat!');
+            $this->line('   Scope OAuth tidak dilaporkan; ini tidak menentukan akses token fine-grained atau instalasi.');
         } else {
             $this->line('   Scope token aktif: '.implode(', ', $scopeList));
         }
@@ -105,10 +104,11 @@ class CheckAppUpdateTokenCommand extends Command
                     'Accept' => 'application/vnd.github+json',
                     'User-Agent' => 'LaundryHub-App-Updater',
                 ])
+                ->connectTimeout(5)
                 ->timeout(15)
                 ->get("https://api.github.com/repos/{$repository}/releases/latest");
-        } catch (Throwable $e) {
-            $this->error('Gagal menghubungi GitHub API: '.$e->getMessage());
+        } catch (Throwable) {
+            $this->error('Gagal menghubungi GitHub API. Periksa koneksi atau batas waktu permintaan lalu coba lagi.');
 
             return self::FAILURE;
         }
@@ -117,16 +117,48 @@ class CheckAppUpdateTokenCommand extends Command
 
         if ($status === 200) {
             $releaseData = $releaseResponse->json();
-            $tagName = is_array($releaseData) && isset($releaseData['tag_name']) ? (string) $releaseData['tag_name'] : '-';
-            $assets = is_array($releaseData) && isset($releaseData['assets']) && is_array($releaseData['assets']) ? count($releaseData['assets']) : 0;
-            $publishedAt = is_array($releaseData) && isset($releaseData['published_at']) ? (string) $releaseData['published_at'] : '-';
+            $tagName = is_array($releaseData) ? ($releaseData['tag_name'] ?? null) : null;
 
-            $this->info('   [BERHASIL] Rilis terbaru dapat diakses!');
+            if (! is_string($tagName)
+                || preg_match('/^v?([0-9]+\.[0-9]+\.[0-9]+)\z/', $tagName, $matches) !== 1
+                || ($releaseData['draft'] ?? false) !== false
+                || ($releaseData['prerelease'] ?? false) !== false
+            ) {
+                $this->error('   [GAGAL] Tag rilis terbaru bukan versi stabil yang valid.');
+
+                return self::FAILURE;
+            }
+
+            $assets = is_array($releaseData['assets'] ?? null) ? $releaseData['assets'] : [];
+            $publishedAt = is_string($releaseData['published_at'] ?? null) ? $releaseData['published_at'] : '-';
+
             $this->line("   Tag rilis:    {$tagName}");
-            $this->line("   Jumlah aset:  {$assets}");
+            $this->line('   Jumlah aset:  '.count($assets));
             $this->line("   Dipublikasi:  {$publishedAt}");
 
-            return self::SUCCESS;
+            $filename = "laundryhub-v{$matches[1]}.apk";
+
+            foreach ($assets as $asset) {
+                if (is_array($asset)
+                    && ($asset['name'] ?? null) === $filename
+                    && is_int($asset['id'] ?? null)
+                    && $asset['id'] > 0
+                ) {
+                    $this->line("3. Memeriksa unduhan biner {$filename}...");
+
+                    return $this->checkAssetAccess($appUpdates, $asset['id']);
+                }
+            }
+
+            $this->error("   [GAGAL] Rilis tidak memiliki APK {$filename} dengan ID aset yang valid.");
+
+            return self::FAILURE;
+        }
+
+        if ($status === 401) {
+            $this->error('   [GAGAL] Token tidak valid atau sudah kedaluwarsa (HTTP 401).');
+
+            return self::FAILURE;
         }
 
         if ($status === 404) {
@@ -134,7 +166,7 @@ class CheckAppUpdateTokenCommand extends Command
 
             $this->error('   [GAGAL] Repositori atau rilis tidak ditemukan (HTTP 404).');
             $this->line('   Penyebab:');
-            $this->line("   - Repositori '{$repository}' berstatus privat, dan token ini tidak memiliki scope 'repo'.");
+            $this->line('   - Repositori atau rilis belum tersedia, atau token belum diberi akses ke repositori.');
             if ($acceptedScopes !== '') {
                 $this->line("   - Scope yang disyaratkan GitHub: {$acceptedScopes}");
             }
@@ -142,7 +174,7 @@ class CheckAppUpdateTokenCommand extends Command
             $this->newLine();
             $this->line('   Solusi:');
             $this->line('   1. Buka https://github.com/settings/tokens');
-            $this->line("   2. Buat token baru dengan mencentang scope 'repo'.");
+            $this->line("   2. Berikan akses repositori dan Contents: read untuk token fine-grained/instalasi, atau scope 'repo' untuk token klasik.");
             $this->line("   3. Simpan token ke .env (GITHUB_RELEASE_TOKEN=...) lalu jalankan 'php artisan config:clear'.");
 
             return self::FAILURE;
@@ -157,6 +189,68 @@ class CheckAppUpdateTokenCommand extends Command
         $this->error("   [GAGAL] GitHub API mengembalikan status HTTP {$status}.");
 
         return self::FAILURE;
+    }
+
+    private function checkAssetAccess(AppUpdateService $appUpdates, int $assetId): int
+    {
+        $response = null;
+
+        try {
+            try {
+                try {
+                    $response = $appUpdates->downloadAsset($assetId);
+                } catch (RequestException $exception) {
+                    $response = $exception->response;
+                }
+
+                $status = $response->status();
+
+                if ($status !== 200) {
+                    $reason = match ($status) {
+                        401 => 'Token tidak valid atau sudah kedaluwarsa',
+                        403, 429 => 'Akses ditolak atau batas kuota permintaan GitHub tercapai',
+                        404 => 'Aset APK tidak ditemukan atau token tidak memiliki akses',
+                        default => 'Unduhan APK mengembalikan status yang tidak diharapkan',
+                    };
+                    $this->error("   [GAGAL] {$reason} (HTTP {$status}).");
+
+                    return self::FAILURE;
+                }
+
+                $contentType = strtolower(trim(explode(';', $response->header('Content-Type'))[0]));
+                $stream = $response->toPsrResponse()->getBody();
+                $signature = '';
+
+                while (strlen($signature) < 4) {
+                    $chunk = $stream->read(4 - strlen($signature));
+
+                    if ($chunk === '') {
+                        break;
+                    }
+
+                    $signature .= $chunk;
+                }
+
+                if ($signature !== "PK\x03\x04"
+                    || ! in_array($contentType, ['', 'application/octet-stream', 'application/vnd.android.package-archive', 'application/zip'], true)
+                ) {
+                    $this->error('   [GAGAL] Respons unduhan bukan biner APK yang valid (kosong, JSON, atau respons galat).');
+
+                    return self::FAILURE;
+                }
+            } finally {
+                $response?->close();
+            }
+        } catch (Throwable) {
+            $this->error('   [GAGAL] Unduhan APK belum dapat diperiksa. Periksa koneksi atau batas waktu permintaan lalu coba lagi.');
+
+            return self::FAILURE;
+        }
+
+        $this->info('   [BERHASIL] Rilis terbaru dapat diakses!');
+        $this->info('   Biner APK dapat diunduh (pemeriksaan awal 4 byte).');
+
+        return self::SUCCESS;
     }
 
     private function maskToken(string $token): string
