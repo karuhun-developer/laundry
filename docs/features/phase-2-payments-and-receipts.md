@@ -19,7 +19,7 @@ Branch admins can record cash, present a dynamic QRIS payment, reconcile its sta
 
 ## Roles and authorization
 
-- Branch admins can create payments, reconcile pending payments, load receipts, and print orders in assigned branches.
+- Branch admins can create payments, reconcile pending payments, share payment details to customer WhatsApp, load receipts, and print orders in assigned branches.
 - Owners and superadmins retain API visibility within their policy scope, while the mobile payment controls remain optimized for branch operations.
 - Customers receive paid and outstanding totals through their canonical order resource but cannot mutate payment state.
 - Nested organization, branch, order, and payment bindings prevent cross-tenant or cross-branch access.
@@ -54,7 +54,8 @@ The Android printer boundary supports Bluetooth SPP and USB device discovery. A 
 
 ## Mobile interaction contract
 
-- Branch-admin order tickets expose one `Pembayaran & struk` dialog.
+- Branch-admin order tickets expose `Pembayaran & struk`, or `Lihat QRIS pembayaran` when a pending QRIS payment exists.
+- Branch admins can share dynamic QRIS and gateway payment details directly to customer WhatsApp with a signed public order-tracking link.
 - Pending QRIS takes precedence over payment entry so duplicate pending QR codes cannot be created.
 - Async outcomes are announced in a polite live region and controls remain disabled during the active mutation.
 - The digital receipt is fetched on demand before rendering or printing.

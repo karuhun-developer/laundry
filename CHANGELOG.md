@@ -4,6 +4,13 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.0.19] - 2026-09-16
+
+- Added feature for branch administrators to share dynamic QRIS and online gateway payment details directly to customer WhatsApp, including signed public order-tracking links.
+- Updated branch order tickets to display "Lihat QRIS pembayaran" when a pending QRIS payment exists.
+- Added `php artisan app:check-update-token` command to inspect GitHub Releases API token status, active OAuth scopes, and asset accessibility.
+- Hardened `AppUpdateService` local changelog parsing and added safe fallback handling during update checks.
+
 ## [1.0.18] - 2026-09-15
 
 - Fixed Android QRIS downloads by saving the generated SVG through the native system document picker, while preserving browser downloads and showing clear save feedback.
