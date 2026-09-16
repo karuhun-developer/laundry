@@ -6,6 +6,7 @@ use App\Actions\Payments\CreatePayment;
 use App\Data\CreatePaymentData;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Exceptions\PaymentGatewayException;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Payments\PaymentGatewayManager;
@@ -61,7 +62,17 @@ class PublicOrderTrackingController extends Controller
             ? (new QrisImageGenerator)->dataUri($pendingPayment->qris_payload)
             : null;
 
-        $gatewayMethods = $gatewayManager->availableMethods();
+        $gatewayMethods = [];
+        $gatewayUnavailable = false;
+
+        if ($order->priced_at !== null && $outstandingRupiah > 0 && $pendingPayment?->gateway_driver === null && $pendingPayment?->method !== PaymentMethod::Gateway) {
+            try {
+                $gatewayMethods = $gatewayManager->availableMethods();
+            } catch (PaymentGatewayException $exception) {
+                report($exception);
+                $gatewayUnavailable = true;
+            }
+        }
 
         $settledPayments = $order->payments
             ->filter(static fn (Payment $payment): bool => $payment->status === PaymentStatus::Paid);
@@ -74,6 +85,7 @@ class PublicOrderTrackingController extends Controller
             'settledPayments' => $settledPayments,
             'qrisImageDataUri' => $qrisImageDataUri,
             'gatewayMethods' => $gatewayMethods,
+            'gatewayUnavailable' => $gatewayUnavailable,
             'canonicalUrl' => request()->fullUrl(),
             'paymentActionUrl' => URL::signedRoute('orders.public.payment.store', ['order' => $order->order_number]),
         ]);

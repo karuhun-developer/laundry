@@ -13,6 +13,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MobileAppController;
 use App\Http\Controllers\PublicOrderPaymentController;
+use App\Http\Controllers\PublicOrderReceiptController;
 use App\Http\Controllers\PublicOrderTrackingController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RoleRedirectController;
@@ -25,6 +26,9 @@ Route::post('login/customer', CustomerLoginController::class)
 Route::get('pesanan/{order:order_number}', PublicOrderTrackingController::class)
     ->middleware(['signed', 'throttle:60,1'])
     ->name('orders.public.show');
+Route::get('struk/{order}', PublicOrderReceiptController::class)
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('receipts.public.show');
 Route::post('pesanan/{order:order_number}/bayar', PublicOrderPaymentController::class)
     ->middleware(['signed', 'throttle:10,1'])
     ->name('orders.public.payment.store');

@@ -9,6 +9,7 @@ use App\Enums\PaymentGatewayDriver;
 use App\Enums\PaymentStatus;
 use App\Enums\PushNotificationEvent;
 use App\Exceptions\PaymentGatewayException;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentGatewayDelivery;
 use App\Services\Payments\PaymentGatewayManager;
@@ -43,12 +44,14 @@ final readonly class HandlePaymentGatewayWebhook
             $payment = Payment::query()
                 ->where('gateway_driver', $driver->value)
                 ->where('gateway_order_id', $data->gatewayOrderId)
-                ->lockForUpdate()
                 ->first();
 
             if (! $payment instanceof Payment) {
                 throw PaymentGatewayException::webhookPaymentNotFound();
             }
+
+            Order::query()->whereKey($payment->order_id)->lockForUpdate()->firstOrFail();
+            $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
             $this->validatePayment($payment, $data);
 

@@ -255,7 +255,8 @@ it('allows customer to switch payment method to payment gateway via signed POST'
         ->assertSee('Payment Gateway')
         ->assertSee('880812345678')
         ->assertSee('Buka Halaman Pembayaran')
-        ->assertSee('Ganti ke QRIS Dinamis');
+        ->assertSee('Pembayaran gateway masih aktif')
+        ->assertDontSee('Pilih metode pembayaran lain');
 });
 
 it('displays lunas badge and digital receipt in the unified page when order is fully paid', function (): void {
@@ -314,7 +315,7 @@ it('escapes customer branch and address content in the unified public order rece
         ->assertSee(e($branchAddress), false);
 });
 
-it('allows customer to switch from payment gateway back to QRIS via signed POST', function (): void {
+it('blocks switching an active gateway back to QRIS via signed POST', function (): void {
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
@@ -342,17 +343,14 @@ it('allows customer to switch from payment gateway back to QRIS via signed POST'
     ]);
 
     $trackingUrl = URL::signedRoute('orders.public.show', ['order' => $order->order_number]);
-    $response->assertRedirect($trackingUrl);
+    $response->assertRedirect($trackingUrl)->assertSessionHas('error');
 
-    expect($gatewayPayment->fresh()->status)->toBe(PaymentStatus::Cancelled);
-
-    $qrisPayment = $order->payments()->where('status', PaymentStatus::Pending)->first();
-    expect($qrisPayment)->not->toBeNull()
-        ->and($qrisPayment->method)->toBe(PaymentMethod::Qris)
-        ->and($qrisPayment->qris_payload)->not->toBeNull();
+    expect($gatewayPayment->fresh()->status)->toBe(PaymentStatus::Pending);
+    expect($order->payments()->count())->toBe(1);
 
     $this->get($trackingUrl)
         ->assertOk()
-        ->assertSee('QRIS Dinamis')
-        ->assertSee('Unduh QRIS');
+        ->assertSee('Pembayaran gateway masih aktif')
+        ->assertDontSee('Pilih metode pembayaran lain')
+        ->assertDontSee('Unduh QRIS');
 });
