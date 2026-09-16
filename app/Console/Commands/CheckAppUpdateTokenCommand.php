@@ -172,6 +172,6 @@ class CheckAppUpdateTokenCommand extends Command
     {
         $parts = explode('/', $repository);
 
-        return $parts[0] ?? $repository;
+        return $parts[0] !== '' ? $parts[0] : $repository;
     }
 }
