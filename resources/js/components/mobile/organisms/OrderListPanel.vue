@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Inbox } from '@lucide/vue';
+import { computed } from 'vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import type {
     ConfirmOrderPricingPayload,
     MobileBranch,
+    MobileCustomer,
     MobileOrder,
     MobileOrderStatus,
     MobilePaymentActions,
@@ -14,6 +16,7 @@ import type {
 type Props = {
     orders: readonly MobileOrder[];
     branches?: readonly MobileBranch[];
+    customers?: readonly MobileCustomer[];
     role: MobileRole;
     processing?: boolean;
     title?: string;
@@ -27,8 +30,9 @@ type Props = {
     loadStatusWhatsAppSuggestion?: (orderId: number) => Promise<WhatsAppSuggestion>;
 };
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
     branches: () => [],
+    customers: () => [],
     processing: false,
     title: 'Pesanan laundry',
     description: 'Status terbaru dan riwayat proses ada di satu tempat.',
@@ -41,6 +45,10 @@ withDefaults(defineProps<Props>(), {
     printerConfigured: false,
     loadStatusWhatsAppSuggestion: undefined,
 });
+
+const customerPhones = computed(
+    () => new Map(props.customers.map((customer) => [customer.id, customer.whatsapp_phone])),
+);
 
 const emit = defineEmits<{
     'confirm-pricing': [orderId: number, payload: ConfirmOrderPricingPayload];
@@ -75,6 +83,7 @@ const onConfirmPricing = (orderId: number, payload: ConfirmOrderPricingPayload):
                 :order="order"
                 :role="role"
                 :branches="branches"
+                :customer-phone="customerPhones.get(order.customer.id) ?? null"
                 :processing="processing"
                 :payment-actions="paymentActions"
                 :payment-processing="paymentProcessing"

@@ -8,7 +8,13 @@ import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import { makeOrder } from '@/composables/mobileOrderTestFixtures';
 import MobileApp from '@/pages/mobile/App.vue';
-import type { MobileOrder, MobileService, MobileTab, WhatsAppSuggestion } from '@/types/mobile';
+import type {
+    MobileCustomer,
+    MobileOrder,
+    MobileService,
+    MobileTab,
+    WhatsAppSuggestion,
+} from '@/types/mobile';
 
 const mobileWorkspace = vi.hoisted(() => ({
     context: {
@@ -27,7 +33,7 @@ const mobileWorkspace = vi.hoisted(() => ({
     customerOrderLoading: { value: false },
     orders: { value: [] as MobileOrder[] },
     addresses: { value: [] },
-    customers: { value: [] },
+    customers: { value: [] as MobileCustomer[] },
     nearestBranches: { value: [] },
     deliveryCoordinates: { value: null },
     services: { value: [] as MobileService[] },
@@ -85,6 +91,11 @@ const pushNotificationMocks = vi.hoisted(() => ({
 const routerMocks = vi.hoisted(() => ({
     post: vi.fn(),
 }));
+const externalLinkMocks = vi.hoisted(() => ({
+    open: vi.fn<(url: string) => Promise<void>>().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/lib/externalLinks/transport', () => ({ externalLinkTransport: externalLinkMocks }));
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: defineComponent({ template: '<span />' }),
@@ -693,6 +704,30 @@ describe('branch-admin mobile tab rendering', () => {
         expect(wrapper.get('#printer-settings-title').text()).toBe('Printer thermal');
         expect(wrapper.get('[data-test="discover-printers"]').text()).toContain('Cari printer');
         expect(wrapper.text()).toContain('Keluar');
+    });
+
+    it('opens customer WhatsApp directly from the loaded branch queue', async () => {
+        const order = makeOrder(42);
+        mobileWorkspace.orders.value = [order];
+        mobileWorkspace.customers.value = [
+            {
+                ...order.customer,
+                email: null,
+                whatsapp_phone: '0813 4567 8901',
+                must_change_pin: false,
+                pin_expires_at: null,
+            },
+        ];
+        const wrapper = mountMobileApp();
+
+        await selectTab(wrapper, 'queue');
+        await wrapper.get('[data-test="chat-customer"]').trigger('click');
+
+        expect(externalLinkMocks.open).toHaveBeenCalledExactlyOnceWith(
+            'https://wa.me/6281345678901',
+        );
+        expect(mobileWorkspace.loadStatusWhatsAppSuggestion).not.toHaveBeenCalled();
+        expect(mobileWorkspace.transitionOrder).not.toHaveBeenCalled();
     });
 
     it('keeps the normalized WhatsApp destination and complete server template on Queue', async () => {

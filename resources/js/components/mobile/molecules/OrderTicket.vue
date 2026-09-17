@@ -3,8 +3,8 @@ import { Building2, ChevronRight, Clock3, Scale, X } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import MobileStatusBadge from '@/components/mobile/atoms/MobileStatusBadge.vue';
 import WhatsAppIcon from '@/components/mobile/atoms/WhatsAppIcon.vue';
-import BranchWhatsAppButton from '@/components/mobile/molecules/BranchWhatsAppButton.vue';
 import OrderDetailsDialog from '@/components/mobile/molecules/OrderDetailsDialog.vue';
+import WhatsAppContactButton from '@/components/mobile/molecules/WhatsAppContactButton.vue';
 import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSuggestionDialog.vue';
 import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
 import {
@@ -28,6 +28,7 @@ type Props = {
     order: MobileOrder;
     role: MobileRole;
     branches?: readonly MobileBranch[];
+    customerPhone?: string | null;
     processing?: boolean;
     pricingProcessing?: boolean;
     paymentProcessing?: boolean;
@@ -38,6 +39,7 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     branches: () => [],
+    customerPhone: null,
     processing: false,
     pricingProcessing: false,
     paymentProcessing: false,
@@ -168,7 +170,7 @@ const confirmPricing = (): void => {
                     <h3 class="mt-1 break-words font-display text-lg font-semibold text-ink-950">
                         {{ order.order_number }}
                     </h3>
-                    <p class="mt-1 text-sm text-ink-500">{{ order.customer.name }}</p>
+                    <p class="mt-1 text-sm wrap-anywhere text-ink-500">{{ order.customer.name }}</p>
                 </div>
                 <span
                     v-if="role === 'branch_admin' && !isPricingPending"
@@ -183,6 +185,12 @@ const confirmPricing = (): void => {
                     {{ order.payment_summary.is_paid ? 'Lunas' : 'Belum lunas' }}
                 </span>
             </div>
+
+            <WhatsAppContactButton
+                v-if="role === 'branch_admin'"
+                :phone="customerPhone ?? ''"
+                recipient="customer"
+            />
 
             <section
                 class="rounded-2xl border border-line bg-surface-blue/70 p-4"
@@ -204,7 +212,7 @@ const confirmPricing = (): void => {
                         <p v-if="branchDetails" class="mt-1 text-xs text-ink-500">
                             {{ branchDetails.city.name }}, {{ branchDetails.city.province }}
                         </p>
-                        <BranchWhatsAppButton
+                        <WhatsAppContactButton
                             v-if="role === 'customer' && branchDetails?.phone"
                             :phone="branchDetails.phone"
                             class="mt-3"

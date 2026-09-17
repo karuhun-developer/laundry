@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Building2, MapPin, ReceiptText, UserRound } from '@lucide/vue';
 import { computed } from 'vue';
-import BranchWhatsAppButton from '@/components/mobile/molecules/BranchWhatsAppButton.vue';
+import WhatsAppContactButton from '@/components/mobile/molecules/WhatsAppContactButton.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -47,7 +47,7 @@ const isPricingPending = computed(() => !props.order.pricing.confirmed);
                 <p v-if="branch" class="mt-2 text-sm leading-6 text-ink-700">
                     {{ branch.address }}
                 </p>
-                <BranchWhatsAppButton
+                <WhatsAppContactButton
                     v-if="role === 'customer' && branch?.phone"
                     :phone="branch.phone"
                     class="mt-3"

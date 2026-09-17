@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MessageCircle, Printer } from '@lucide/vue';
-import BranchWhatsAppButton from '@/components/mobile/molecules/BranchWhatsAppButton.vue';
+import WhatsAppContactButton from '@/components/mobile/molecules/WhatsAppContactButton.vue';
 import { Button } from '@/components/ui/button';
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type { MobileOrderReceipt } from '@/types/mobile';
@@ -62,7 +62,7 @@ const emit = defineEmits<{
                         <p class="mt-1 text-xs leading-5 text-ink-500">
                             {{ receipt.branch.address }}, {{ receipt.branch.city.name }}
                         </p>
-                        <BranchWhatsAppButton
+                        <WhatsAppContactButton
                             v-if="showBranchContact && receipt.branch.phone"
                             :phone="receipt.branch.phone"
                             class="mt-3"
