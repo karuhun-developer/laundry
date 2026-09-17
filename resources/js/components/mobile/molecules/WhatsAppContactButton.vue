@@ -4,7 +4,9 @@ import WhatsAppIcon from '@/components/mobile/atoms/WhatsAppIcon.vue';
 import { Button } from '@/components/ui/button';
 import { externalLinkTransport } from '@/lib/externalLinks/transport';
 
-const props = defineProps<{ phone: string }>();
+const props = withDefaults(defineProps<{ phone: string; recipient?: 'branch' | 'customer' }>(), {
+    recipient: 'branch',
+});
 const opening = ref(false);
 const openError = ref<string | null>(null);
 const whatsAppUrl = computed(() => {
@@ -39,13 +41,15 @@ const openWhatsApp = async (): Promise<void> => {
             variant="outline"
             class="min-h-11 rounded-xl border-brand-600/20 bg-white text-brand-700 hover:bg-brand-100"
             :disabled="!whatsAppUrl || opening"
-            data-test="chat-branch"
+            :data-test="recipient === 'customer' ? 'chat-customer' : 'chat-branch'"
             @click="openWhatsApp"
         >
             <WhatsAppIcon class="size-4 shrink-0" />
-            {{ opening ? 'Membuka WhatsApp…' : 'Chat Cabang' }}
+            {{ opening ? 'Membuka WhatsApp…' : recipient === 'customer' ? 'Chat Pelanggan' : 'Chat Cabang' }}
         </Button>
-        <p v-if="!whatsAppUrl" class="mt-2 text-xs text-ink-500">Nomor WhatsApp cabang belum tersedia.</p>
+        <p v-if="!whatsAppUrl" class="mt-2 text-xs text-ink-500">
+            Nomor WhatsApp {{ recipient === 'customer' ? 'pelanggan' : 'cabang' }} belum tersedia.
+        </p>
         <p v-if="openError" role="alert" class="mt-2 text-sm text-red-600">{{ openError }}</p>
     </div>
 </template>

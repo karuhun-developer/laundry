@@ -595,6 +595,7 @@ const clearQueueSearch = (): void => {
                             :orders="workspace.orders.value"
                             :branches="workspace.context.value.branches"
                             role="branch_admin"
+                            :customers="workspace.customers.value"
                             :load-status-whats-app-suggestion="workspace.loadStatusWhatsAppSuggestion"
                             :processing="workspace.transitionProcessing.value"
                             title="Antrean cabang"

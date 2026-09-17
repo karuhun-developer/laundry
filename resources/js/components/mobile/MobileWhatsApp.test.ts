@@ -1,10 +1,11 @@
 import { DOMWrapper, flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import BranchWhatsAppButton from '@/components/mobile/molecules/BranchWhatsAppButton.vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
+import WhatsAppContactButton from '@/components/mobile/molecules/WhatsAppContactButton.vue';
+import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import { makeOrder } from '@/composables/mobileOrderTestFixtures';
 import { formatOrderDate } from '@/lib/mobileOrders';
-import type { MobileBranch, MobileRole, WhatsAppSuggestion } from '@/types/mobile';
+import type { MobileBranch, MobileCustomer, MobileRole, WhatsAppSuggestion } from '@/types/mobile';
 
 const transport = vi.hoisted(() => ({ open: vi.fn<(url: string) => Promise<void>>() }));
 vi.mock('@/lib/externalLinks/transport', () => ({ externalLinkTransport: transport }));
@@ -67,7 +68,7 @@ describe('branch WhatsApp contact', () => {
     it.each(['0812 3456 7890', '+62 812-3456-7890', '6281234567890'])(
         'opens %s through the shared native-aware transport',
         async (phone) => {
-            const wrapper = mount(BranchWhatsAppButton, { props: { phone } });
+            const wrapper = mount(WhatsAppContactButton, { props: { phone } });
             wrappers.push(wrapper);
             expect(transport.open).not.toHaveBeenCalled();
             expect(wrapper.find('a[href^="tel:"]').exists()).toBe(false);
@@ -79,7 +80,7 @@ describe('branch WhatsApp contact', () => {
     );
 
     it.each(['0211234567', 'invalid', ''])('does not open an invalid number: %s', async (phone) => {
-        const wrapper = mount(BranchWhatsAppButton, { props: { phone } });
+        const wrapper = mount(WhatsAppContactButton, { props: { phone } });
         wrappers.push(wrapper);
 
         expect(wrapper.get<HTMLButtonElement>('button').element.disabled).toBe(true);
@@ -90,7 +91,7 @@ describe('branch WhatsApp contact', () => {
 
     it('shows opening failures and allows another attempt', async () => {
         transport.open.mockRejectedValueOnce(new Error('Tidak ada aplikasi WhatsApp.'));
-        const wrapper = mount(BranchWhatsAppButton, { props: { phone: '081234567890' } });
+        const wrapper = mount(WhatsAppContactButton, { props: { phone: '081234567890' } });
         wrappers.push(wrapper);
 
         await wrapper.get('button').trigger('click');
@@ -117,6 +118,70 @@ describe('branch WhatsApp contact', () => {
             expect(transport.open).not.toHaveBeenCalled();
         },
     );
+});
+
+describe('customer WhatsApp contact in the branch queue', () => {
+    it('opens the matching customer number directly and follows profile updates', async () => {
+        const order = makeOrder(21);
+        const customer: MobileCustomer = {
+            ...order.customer,
+            email: null,
+            whatsapp_phone: '0813 4567 8901',
+            must_change_pin: false,
+            pin_expires_at: null,
+        };
+        const wrapper = mount(OrderListPanel, {
+            props: {
+                orders: [order],
+                branches: [branch],
+                role: 'branch_admin',
+                customers: [{ ...customer, id: 99, whatsapp_phone: '081455667788' }, customer],
+            },
+        });
+        wrappers.push(wrapper);
+
+        expect(wrapper.find('[data-test="chat-branch"]').exists()).toBe(false);
+        expect(wrapper.get('[data-test="chat-customer"]').text()).toBe('Chat Pelanggan');
+        await wrapper.get('[data-test="chat-customer"]').trigger('click');
+        await flushPromises();
+
+        expect(transport.open).toHaveBeenCalledExactlyOnceWith('https://wa.me/6281345678901');
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(wrapper.emitted('transition')).toBeUndefined();
+        expect(wrapper.emitted('confirm-pricing')).toBeUndefined();
+
+        await wrapper.setProps({
+            customers: [{ ...customer, whatsapp_phone: '+62 815-2345-6789' }],
+        });
+        await wrapper.get('[data-test="chat-customer"]').trigger('click');
+
+        expect(transport.open).toHaveBeenLastCalledWith('https://wa.me/6281523456789');
+    });
+
+    it.each([null, '', '0211234567', 'invalid'])(
+        'disables direct chat when the customer number is unavailable: %s',
+        async (customerPhone) => {
+            const { wrapper } = mountTicket();
+            await wrapper.setProps({ customerPhone });
+
+            const button = wrapper.get<HTMLButtonElement>('[data-test="chat-customer"]');
+            expect(button.element.disabled).toBe(true);
+            expect(wrapper.text()).toContain('Nomor WhatsApp pelanggan belum tersedia.');
+            await button.trigger('click');
+
+            expect(transport.open).not.toHaveBeenCalled();
+        },
+    );
+
+    it('keeps only branch chat available in customer order cards', async () => {
+        const { wrapper } = mountTicket('customer');
+        await wrapper.setProps({ customerPhone: '081345678901' });
+
+        expect(wrapper.find('[data-test="chat-customer"]').exists()).toBe(false);
+        await wrapper.get('[data-test="chat-branch"]').trigger('click');
+
+        expect(transport.open).toHaveBeenCalledExactlyOnceWith('https://wa.me/6281234567890');
+    });
 });
 
 describe('order history WhatsApp notifications', () => {
