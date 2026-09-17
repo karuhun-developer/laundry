@@ -58,7 +58,7 @@ const openWhatsApp = async (suggestion: WhatsAppSuggestion): Promise<void> => {
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent class="mobile-dialog max-h-[90dvh] max-w-lg overflow-y-auto rounded-2xl">
+        <DialogContent class="mobile-dialog max-h-[90dvh] grid-cols-1 overflow-y-auto rounded-2xl">
             <DialogHeader>
                 <span
                     class="mb-2 flex size-11 items-center justify-center rounded-xl bg-mint-500/10 text-mint-500"
@@ -76,12 +76,12 @@ const openWhatsApp = async (suggestion: WhatsAppSuggestion): Promise<void> => {
             </p>
             <div
                 v-else-if="suggestion?.available"
-                class="space-y-3 rounded-2xl border border-line bg-canvas p-4"
+                class="min-w-0 space-y-3 rounded-2xl border border-line bg-canvas p-4"
             >
                 <p class="text-xs font-semibold tracking-wide text-ink-500 uppercase">
                     Tujuan {{ suggestion.phone }}
                 </p>
-                <p class="text-sm leading-6 break-words whitespace-pre-wrap text-ink-950" data-test="whatsapp-message">
+                <p class="text-sm leading-6 whitespace-pre-wrap wrap-anywhere text-ink-950" data-test="whatsapp-message">
                     {{ suggestion.message }}
                 </p>
             </div>
