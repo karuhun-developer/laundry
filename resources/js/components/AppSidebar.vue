@@ -82,11 +82,11 @@ const mainNavItems = computed<NavItem[]>(() => {
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
+    <Sidebar collapsible="icon" variant="inset" class="border-r-0">
+        <SidebarHeader class="border-b border-sidebar-border px-3 py-4">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
+                    <SidebarMenuButton size="lg" as-child class="h-12 hover:bg-white/8">
                         <Link :href="dashboard()">
                             <AppLogo />
                         </Link>
@@ -95,11 +95,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent class="px-1 py-5">
             <NavMain :items="mainNavItems" label="Operasional" />
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter class="border-t border-sidebar-border p-3">
             <NavUser />
         </SidebarFooter>
     </Sidebar>

@@ -109,7 +109,7 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
 
             <section
                 v-if="isSuperadmin"
-                class="border-line bg-surface grid gap-2 rounded-xl border p-5 shadow-sm sm:max-w-md"
+                class="border-line bg-surface grid gap-2 rounded-3xl border p-5 shadow-low sm:max-w-md"
             >
                 <Label for="catalog-organization-filter">Filter organisasi</Label>
                 <select
@@ -139,7 +139,7 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
                 <article
                     v-for="service in visibleServices"
                     :key="service.id"
-                    class="border-line bg-surface overflow-hidden rounded-xl border shadow-sm"
+                    class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low"
                 >
                     <header class="border-line flex flex-col gap-4 border-b p-5 sm:flex-row sm:items-start sm:justify-between">
                         <div class="min-w-0">

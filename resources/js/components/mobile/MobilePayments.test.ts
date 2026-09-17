@@ -1,5 +1,6 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
 import type {
     MobileOrder,
@@ -142,6 +143,48 @@ beforeEach(() => {
 });
 
 describe('mobile payment dialog', () => {
+    it('opens order details and payment actions directly without changing payments', async () => {
+        const order = makeOrder();
+        const actions = makeActions(order);
+        const wrapper = mount(OrderTicket, {
+            props: { order, role: 'branch_admin', paymentActions: actions },
+            attachTo: document.body,
+        });
+
+        try {
+            const detailsButton = wrapper.get('[data-test="open-order-details"]');
+            const paymentButton = wrapper.get('[data-test="open-payment-dialog"]');
+            expect(detailsButton.element.closest('details')).toBeNull();
+            expect(paymentButton.element.closest('details')).toBeNull();
+
+            await detailsButton.trigger('click');
+            await flushPromises();
+
+            const detailsDialog = document.body.querySelector('[data-test="order-details-dialog"]');
+            expect(detailsDialog?.textContent).toContain(order.order_number);
+            expect(detailsDialog?.textContent).toContain(order.branch.name);
+            expect(detailsDialog?.textContent).toContain(order.customer.name);
+            expect(actions.refreshOrder).not.toHaveBeenCalled();
+            detailsDialog?.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')?.click();
+            await flushPromises();
+
+            await paymentButton.trigger('click');
+            await flushPromises();
+
+            expect(actions.refreshOrder).toHaveBeenCalledWith(order.id);
+            expect(document.body.querySelector('[data-test="mark-payment-paid"]')).not.toBeNull();
+            expect(
+                document.body.querySelector('[data-test="share-payment-whatsapp"]'),
+            ).not.toBeNull();
+            expect(actions.createPayment).not.toHaveBeenCalled();
+            expect(actions.transitionPaymentStatus).not.toHaveBeenCalled();
+            expect(actions.loadPaymentWhatsAppSuggestion).not.toHaveBeenCalled();
+            expect(externalLinkMocks.open).not.toHaveBeenCalled();
+        } finally {
+            wrapper.unmount();
+        }
+    });
+
     it('hides stale QRIS actions until the latest order detail is loaded', async () => {
         let resolveRefresh: (order: MobileOrder) => void = () => undefined;
         const refreshPromise = new Promise<MobileOrder>((resolve) => {
@@ -232,6 +275,7 @@ describe('mobile payment dialog', () => {
         await vi.waitFor(() => expect(document.body.textContent).toContain('Customer Demo'));
         expect(document.body.querySelector('[data-test="print-receipt"]')).toBeNull();
 
+        expect(document.body.querySelector('[data-test="chat-branch"]')).not.toBeNull();
         document.body
             .querySelector<HTMLButtonElement>('[data-test="share-receipt-whatsapp"]')
             ?.click();
@@ -297,7 +341,7 @@ describe('mobile payment dialog', () => {
         });
 
         expect(wrapper.get('[data-test="open-payment-dialog"]').text()).toBe(
-            'Lihat QRIS pembayaran',
+            'Verifikasi / kirim tagihan',
         );
 
         await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
@@ -367,6 +411,9 @@ describe('mobile payment dialog', () => {
         await vi.waitFor(() => expect(actions.loadReceipt).toHaveBeenCalledWith(21));
         await vi.waitFor(() => expect(document.body.textContent).toContain('Customer Demo'));
 
+        expect(document.body.querySelector('[data-test="chat-branch"]')).toBeNull();
+        expect(document.body.textContent).not.toContain('Telp/WA');
+        expect(document.body.textContent).not.toContain(receipt.branch.phone);
         document.body.querySelector<HTMLButtonElement>('[data-test="print-receipt"]')?.click();
         await vi.waitFor(() => expect(actions.printReceipt).toHaveBeenCalledWith(21));
 

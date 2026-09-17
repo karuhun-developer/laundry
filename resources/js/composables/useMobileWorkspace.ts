@@ -631,6 +631,7 @@ export const useMobileWorkspace = () => {
         rollbackMessage: orderWorkspace.rollbackMessage,
         whatsAppSuggestion: orderWorkspace.whatsAppSuggestion,
         whatsAppSuggestionError: orderWorkspace.whatsAppSuggestionError,
+        loadStatusWhatsAppSuggestion: orderWorkspace.loadStatusWhatsAppSuggestion,
         createProcessing: orderWorkspace.createProcessing,
         pricingProcessing: orderWorkspace.pricingProcessing,
         transitionProcessing: orderWorkspace.transitionProcessing,

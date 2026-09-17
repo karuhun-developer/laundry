@@ -4,6 +4,29 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-17
+
+- Applied the Stitch-inspired slate, cyan, and mint visual system to CMS, mobile, login, and registration screens without changing backend behavior.
+- Made light mode the default and only appearance, including the initial page render and previously saved dark-mode preferences.
+- Simplified the customer home screen into shortcuts and pickup information, keeping active and recent order details in the Orders tab.
+- Moved installed and available-version changelogs into a dedicated modal with a single labeled close control.
+- Standardized the X Tutup controls in customer create, edit, and PIN-reset dialogs, and added a save icon to the new-PIN action.
+- Included the original .stitch design references for future visual consistency.
+
+## [1.1.0] - 2026-09-17
+
+- Redesigned CMS, mobile, and public order-tracking interfaces with a cohesive visual system.
+- Added home shortcuts for faster access to common workflows.
+- Refined mobile home screens with green bento layouts, soft gradients, and lightweight glass navigation.
+- Added customer order creation from both Home and Orders, and renamed the branch-admin account tab to Akun.
+- Restored one-tap order details and payment dialogs, with direct access to verification and billing actions.
+- Fixed pickup address dialogs appearing behind the order composer while preserving form input and keyboard focus.
+- Improved order-detail hierarchy to make key status, payment, and fulfillment information easier to scan.
+- Aligned customer modal layouts and controls for a more consistent experience.
+- Added customer Chat Cabang buttons using the existing native-aware WhatsApp opener and removed redundant branch phone rows from admin order views.
+- Added admin-only WhatsApp previews from saved order-status history, retaining the current server template and clearly dating earlier history.
+- Refreshed Android launcher icons and splash-screen branding.
+
 ## [1.0.20] - 2026-09-16
 
 - Merged digital receipts into signed public order-tracking pages (`/pesanan/{order_number}`), preserving valid legacy `/struk/{order}` links through signed redirects.

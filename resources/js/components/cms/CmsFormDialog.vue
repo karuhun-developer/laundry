@@ -39,8 +39,8 @@ const emit = defineEmits<{ submit: [] }>();
         </DialogTrigger>
         <DialogContent :class="contentClass">
             <form class="space-y-6" :data-test="formTest" @submit.prevent="emit('submit')">
-                <DialogHeader>
-                    <span class="bg-surface-blue text-brand-700 mb-2 grid size-10 place-items-center rounded-lg">
+                <DialogHeader class="pr-11 text-left">
+                    <span class="bg-brand-100 text-brand-700 mb-2 grid size-11 place-items-center rounded-xl ring-1 ring-brand-600/10">
                         <slot name="icon" />
                     </span>
                     <DialogTitle>{{ title }}</DialogTitle>

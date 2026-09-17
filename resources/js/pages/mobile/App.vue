@@ -1,26 +1,20 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    Building2,
-    MessageCircle,
-    Plus,
-    RefreshCw,
-    Search,
-    Shirt,
-    X,
-} from '@lucide/vue';
+import { AlertTriangle, MessageCircle, Plus, RefreshCw, Search, X } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import CustomerCredentialDialog from '@/components/mobile/molecules/CustomerCredentialDialog.vue';
 import CustomerFormDialog from '@/components/mobile/molecules/CustomerFormDialog.vue';
 import CustomerResetPinDialog from '@/components/mobile/molecules/CustomerResetPinDialog.vue';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
 import MobileWorkspaceSwitcher from '@/components/mobile/molecules/MobileWorkspaceSwitcher.vue';
 import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSuggestionDialog.vue';
+import AdminHome from '@/components/mobile/organisms/AdminHome.vue';
 import BranchExplorer from '@/components/mobile/organisms/BranchExplorer.vue';
 import CustomerAddressDialog from '@/components/mobile/organisms/CustomerAddressDialog.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
+import CustomerHome from '@/components/mobile/organisms/CustomerHome.vue';
 import CustomerOrderFilters from '@/components/mobile/organisms/CustomerOrderFilters.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
@@ -143,7 +137,6 @@ const handleLogout = async (): Promise<void> => {
     }
 };
 
-const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
 const filteredCustomerOrders = computed(() =>
     filterCustomerOrders(workspace.orders.value, customerOrderFilters.value),
 );
@@ -155,8 +148,8 @@ const activePickupOrderNumber = computed(
 
 watch(
     () => workspace.context.value?.role,
-    (role) => {
-        activeTab.value = role === 'branch_admin' ? 'queue' : 'home';
+    () => {
+        activeTab.value = 'home';
     },
 );
 
@@ -322,6 +315,7 @@ const onCreateOrder = async (
     }
 
     if (workspace.context.value?.role === 'customer') {
+        orderComposerOpen.value = false;
         toast.success('Permintaan penjemputan berhasil dibuat dan menunggu verifikasi cabang.');
     } else {
         orderComposerOpen.value = false;
@@ -370,11 +364,11 @@ const clearQueueSearch = (): void => {
     <Head title="LaundryHub Mobile" />
 
     <div class="mobile-shell bg-canvas text-ink-950">
-        <header class="mobile-fixed-header fixed inset-x-0 top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+        <header class="mobile-glass mobile-fixed-header fixed inset-x-0 top-0 z-30 border-b border-line">
             <div class="mx-auto flex min-h-16 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
                 <div class="flex min-w-0 items-center gap-3">
-                    <span class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-low">
-                        <Shirt class="size-5" aria-hidden="true" />
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-brand-100 shadow-low">
+                        <AppLogoIcon class-name="size-7" />
                     </span>
                     <div class="min-w-0">
                         <p class="truncate font-display text-base font-semibold text-ink-950">LaundryHub</p>
@@ -403,9 +397,6 @@ const clearQueueSearch = (): void => {
                             aria-hidden="true"
                         />
                     </button>
-                    <span class="flex size-10 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
-                        {{ page.props.auth.user.name.slice(0, 1).toUpperCase() }}
-                    </span>
                 </div>
             </div>
         </header>
@@ -462,49 +453,38 @@ const clearQueueSearch = (): void => {
                 </p>
 
                 <template v-if="workspace.context.value.role === 'customer'">
-                    <div v-if="activeTab === 'home'" class="space-y-8">
-                        <OrderComposer
-                            role="customer"
-                            :branch="workspace.selectedBranch.value"
-                            :services="workspace.services.value"
-                            :customers="workspace.customers.value"
-                            :delivery-coordinates="workspace.deliveryCoordinates.value"
-                            :selected-address="workspace.selectedAddress.value"
-                            :active-pickup-order-number="activePickupOrderNumber"
-                            :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
-                            :quote-order="workspace.quoteOrder"
-                            :processing="workspace.createProcessing.value"
-                            @manage-addresses="addressDialogOpen = true"
-                            @submit="onCreateOrder"
-                        />
-                        <button
-                            type="button"
-                            class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-brand-600 bg-surface px-5 text-sm font-semibold text-brand-700 shadow-low transition hover:bg-brand-100 motion-safe:active:scale-[0.98]"
-                            data-test="view-branches-shortcut"
-                            @click="activeTab = 'branches'"
-                        >
-                            <Building2 class="size-5" aria-hidden="true" />
-                            Lihat daftar cabang
-                        </button>
-                        <OrderListPanel
-                            v-if="recentOrders.length"
-                            :orders="recentOrders"
-                            role="customer"
-                            title="Pesanan terbaru"
-                            description="Pantau dua pesanan terakhir tanpa meninggalkan beranda."
-                            :payment-actions="workspace.paymentActions"
-                            :payment-processing="workspace.paymentProcessing.value"
-                            :pricing-processing="workspace.pricingProcessing.value"
-                        />
-                    </div>
+                    <CustomerHome
+                        v-if="activeTab === 'home'"
+                        :user-name="page.props.auth.user.name"
+                        :branch="workspace.selectedBranch.value"
+                        :address-label="workspace.selectedAddress.value?.label"
+                        @create-order="orderComposerOpen = true"
+                        @view-orders="activeTab = 'orders'"
+                        @view-branches="activeTab = 'branches'"
+                        @manage-addresses="addressDialogOpen = true"
+                        @view-account="activeTab = 'account'"
+                    />
 
                     <template v-else-if="activeTab === 'orders'">
+                        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                            <h1 class="font-display text-2xl font-semibold text-ink-950">Pesanan saya</h1>
+                            <button
+                                type="button"
+                                class="mobile-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold"
+                                data-test="open-customer-order-composer-orders"
+                                @click="orderComposerOpen = true"
+                            >
+                                <Plus class="size-4" aria-hidden="true" />
+                                Buat pesanan
+                            </button>
+                        </div>
                         <CustomerOrderFilters
                             v-model="customerOrderFilters"
                             :loading="workspace.customerOrderLoading.value"
                         />
                         <OrderListPanel
                             :orders="filteredCustomerOrders"
+                            :branches="workspace.context.value.branches"
                             role="customer"
                             :empty-title="
                                 hasCustomerOrderFilters(customerOrderFilters)
@@ -549,7 +529,22 @@ const clearQueueSearch = (): void => {
                 </template>
 
                 <template v-else>
-                    <template v-if="activeTab === 'queue'">
+                    <AdminHome
+                        v-if="activeTab === 'home'"
+                        :user-name="page.props.auth.user.name"
+                        :branch="workspace.selectedBranch.value"
+                        :orders="workspace.orders.value"
+                        :customer-count="workspace.customers.value.length"
+                        :printer-configured="workspace.printer.profile.value !== null"
+                        :whats-app-available="workspace.whatsAppSuggestion.value !== null || workspace.whatsAppSuggestionError.value !== null"
+                        @create-order="orderComposerOpen = true"
+                        @view-queue="activeTab = 'queue'"
+                        @view-customers="activeTab = 'customers'"
+                        @view-whatsapp="whatsAppDialogOpen = true"
+                        @view-more="activeTab = 'more'"
+                    />
+
+                    <template v-else-if="activeTab === 'queue'">
                         <div class="mb-5 space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-low">
                             <button
                                 type="button"
@@ -598,7 +593,9 @@ const clearQueueSearch = (): void => {
 
                         <OrderListPanel
                             :orders="workspace.orders.value"
+                            :branches="workspace.context.value.branches"
                             role="branch_admin"
+                            :load-status-whats-app-suggestion="workspace.loadStatusWhatsAppSuggestion"
                             :processing="workspace.transitionProcessing.value"
                             title="Antrean cabang"
                             description="Lanjutkan status satu tahap atau batalkan pesanan yang masih aktif."
@@ -684,6 +681,7 @@ const clearQueueSearch = (): void => {
         <CustomerAddressDialog
             v-if="workspace.context.value?.role === 'customer'"
             v-model:open="addressDialogOpen"
+            :layer="orderComposerOpen ? 'nested' : 'default'"
             :addresses="workspace.addresses.value"
             :selected-address-id="workspace.selectedAddressId.value"
             :customer-name="page.props.auth.user.name"
@@ -696,26 +694,35 @@ const clearQueueSearch = (): void => {
             @success="toast.success"
         />
 
-        <Dialog v-if="workspace.context.value?.role === 'branch_admin'" v-model:open="orderComposerOpen">
+        <Dialog v-if="workspace.context.value" v-model:open="orderComposerOpen">
             <DialogContent
-                class="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl border-0 bg-transparent p-0 shadow-none"
+                class="max-h-[92dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-3xl border-0 bg-transparent p-0 shadow-none sm:p-0"
                 :show-close-button="false"
             >
                 <DialogHeader class="sr-only">
                     <DialogTitle>Buat pesanan baru</DialogTitle>
-                    <DialogDescription>Catat pesanan laundry baru untuk pelanggan.</DialogDescription>
+                    <DialogDescription>
+                        {{
+                            workspace.context.value.role === 'customer'
+                                ? 'Atur penjemputan laundry baru.'
+                                : 'Catat pesanan laundry baru untuk pelanggan.'
+                        }}
+                    </DialogDescription>
                 </DialogHeader>
                 <OrderComposer
-                    role="branch_admin"
+                    :role="workspace.context.value.role"
                     :branch="workspace.selectedBranch.value"
                     :services="workspace.services.value"
                     :customers="workspace.customers.value"
                     :delivery-coordinates="workspace.deliveryCoordinates.value"
+                    :selected-address="workspace.selectedAddress.value"
+                    :active-pickup-order-number="activePickupOrderNumber"
                     :delivery-fee-rupiah="workspace.selectedBranchDeliveryFee.value"
                     :quote-order="workspace.quoteOrder"
                     :processing="workspace.createProcessing.value"
                     :selected-customer-id="workspace.selectedCustomerId.value"
                     @create-customer="openCreateCustomer"
+                    @manage-addresses="addressDialogOpen = true"
                     @submit="onCreateOrder"
                     @update:selected-customer-id="workspace.selectCustomer"
                 >

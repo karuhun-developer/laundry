@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ExternalLink, MessageCircle } from '@lucide/vue';
+import { ExternalLink } from '@lucide/vue';
 import { ref, watch } from 'vue';
+import WhatsAppIcon from '@/components/mobile/atoms/WhatsAppIcon.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,10 +15,18 @@ import {
 import { externalLinkTransport } from '@/lib/externalLinks/transport';
 import type { WhatsAppSuggestion } from '@/types/mobile';
 
-defineProps<{
-    suggestion: WhatsAppSuggestion | null;
-    loadError: string | null;
-}>();
+withDefaults(
+    defineProps<{
+        suggestion: WhatsAppSuggestion | null;
+        loadError: string | null;
+        loading?: boolean;
+        description?: string;
+    }>(),
+    {
+        loading: false,
+        description: 'Status pesanan sudah tersimpan. Periksa pesannya sebelum membuka WhatsApp.',
+    },
+);
 
 const open = defineModel<boolean>('open', { required: true });
 const opening = ref(false);
@@ -49,27 +58,30 @@ const openWhatsApp = async (suggestion: WhatsAppSuggestion): Promise<void> => {
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent class="max-w-lg rounded-2xl bg-surface">
+        <DialogContent class="mobile-dialog max-h-[90dvh] max-w-lg overflow-y-auto rounded-2xl">
             <DialogHeader>
                 <span
                     class="mb-2 flex size-11 items-center justify-center rounded-xl bg-mint-500/10 text-mint-500"
                 >
-                    <MessageCircle class="size-5" aria-hidden="true" />
+                    <WhatsAppIcon class="size-5" />
                 </span>
                 <DialogTitle>Preview pesan WhatsApp</DialogTitle>
                 <DialogDescription>
-                    Status pesanan sudah tersimpan. Periksa pesannya sebelum membuka WhatsApp.
+                    {{ description }}
                 </DialogDescription>
             </DialogHeader>
 
+            <p v-if="loading" role="status" class="rounded-xl bg-canvas p-4 text-sm text-ink-500">
+                Memuat pesan WhatsApp…
+            </p>
             <div
-                v-if="suggestion?.available"
+                v-else-if="suggestion?.available"
                 class="space-y-3 rounded-2xl border border-line bg-canvas p-4"
             >
                 <p class="text-xs font-semibold tracking-wide text-ink-500 uppercase">
                     Tujuan {{ suggestion.phone }}
                 </p>
-                <p class="whitespace-pre-wrap text-sm leading-6 text-ink-950" data-test="whatsapp-message">
+                <p class="text-sm leading-6 break-words whitespace-pre-wrap text-ink-950" data-test="whatsapp-message">
                     {{ suggestion.message }}
                 </p>
             </div>
@@ -94,7 +106,7 @@ const openWhatsApp = async (suggestion: WhatsAppSuggestion): Promise<void> => {
                     <Button type="button" variant="secondary">Tutup</Button>
                 </DialogClose>
                 <Button
-                    v-if="suggestion?.available"
+                    v-if="!loading && suggestion?.available"
                     type="button"
                     :disabled="opening"
                     data-test="open-whatsapp"

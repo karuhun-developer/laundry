@@ -75,8 +75,8 @@ const dismiss = (): void => {
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent class="max-w-lg rounded-2xl bg-surface" :show-close-button="false">
-            <DialogHeader>
+        <DialogContent class="w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-surface" :show-close-button="false">
+            <DialogHeader class="pr-11 text-left">
                 <span
                     class="mb-2 flex size-11 items-center justify-center rounded-xl bg-mint-500/10 text-mint-500"
                 >

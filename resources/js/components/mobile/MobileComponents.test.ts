@@ -283,9 +283,9 @@ describe('mobile role-aware components', () => {
 
         expect(wrapper.text()).toContain('Antrean');
         expect(wrapper.text()).toContain('Pelanggan');
-        expect(wrapper.text()).toContain('Lainnya');
+        expect(wrapper.get('[data-test="mobile-tab-more"]').text()).toBe('Akun');
         expect(wrapper.find('[data-test="mobile-tab-new-order"]').exists()).toBe(false);
-        expect(wrapper.find('[data-test="mobile-tab-home"]').exists()).toBe(false);
+        expect(wrapper.find('[data-test="mobile-tab-home"]').exists()).toBe(true);
     });
 
     it('keeps customer order tracking read-only', () => {
@@ -295,6 +295,7 @@ describe('mobile role-aware components', () => {
 
         expect(wrapper.text()).toContain('Dicuci');
         expect(wrapper.text()).toContain('Lihat perjalanan laundry');
+        expect(wrapper.get('[data-test="current-status"]').text()).toContain('Dicuci');
         expect(wrapper.text()).toContain('LDR-20260913-00000021');
         expect(wrapper.find('h3').classes()).not.toContain('break-all');
         expect(wrapper.text()).toContain('Ditimbang');

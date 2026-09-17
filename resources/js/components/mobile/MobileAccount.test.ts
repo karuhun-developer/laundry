@@ -1,3 +1,4 @@
+import { Save } from '@lucide/vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
@@ -99,6 +100,7 @@ describe('customer PIN settings', () => {
         });
         const wrapper = mountPinSettings();
 
+        expect(wrapper.findComponent(Save).exists()).toBe(true);
         expect(wrapper.get('[data-test="mandatory-pin-notice"]').text()).toContain(
             'PIN sementara wajib diganti',
         );

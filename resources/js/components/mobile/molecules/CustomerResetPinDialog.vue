@@ -93,12 +93,13 @@ const resetPin = async (): Promise<void> => {
 <template>
     <Dialog :open="open" @update:open="updateOpen">
         <DialogContent
-            class="max-w-lg rounded-2xl bg-surface"
+            class="w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-surface"
+            close-label="Tutup"
             :show-close-button="!processing"
             @escape-key-down="preventDismissal"
             @interact-outside="preventDismissal"
         >
-            <DialogHeader>
+            <DialogHeader class="text-left">
                 <span
                     class="mb-2 flex size-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700"
                 >

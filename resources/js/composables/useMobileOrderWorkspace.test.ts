@@ -79,11 +79,11 @@ const suggestion: WhatsAppSuggestion = {
     unavailable_reason: null,
 };
 
-const createWorkspace = () => {
+const createWorkspace = (role: MobileContext['role'] = 'branch_admin') => {
     const selectedBranch = ref<MobileBranch | null>(branch);
 
     return useMobileOrderWorkspace({
-        context: ref<MobileContext | null>(context),
+        context: ref<MobileContext | null>({ ...context, role }),
         selectedBranch: computed(() => selectedBranch.value),
         services: ref([]),
         customers: ref([]),
@@ -99,6 +99,42 @@ beforeEach(() => {
 });
 
 describe('mobile order WhatsApp suggestions', () => {
+    it('loads a saved status notification without changing orders or the last transition preview', async () => {
+        const workspace = createWorkspace();
+        const order = makeOrder(21, 'washing');
+        workspace.setOrders([order]);
+        apiHarness.fetchWhatsAppSuggestion.mockResolvedValueOnce(suggestion);
+
+        await expect(workspace.loadStatusWhatsAppSuggestion(21)).resolves.toEqual(suggestion);
+
+        expect(apiHarness.fetchWhatsAppSuggestion).toHaveBeenCalledExactlyOnceWith(
+            order.organization.slug,
+            order,
+        );
+        expect(apiHarness.transitionOrder).not.toHaveBeenCalled();
+        expect(apiHarness.confirmOrderPricing).not.toHaveBeenCalled();
+        expect(workspace.orders.value).toEqual([order]);
+        expect(workspace.whatsAppSuggestion.value).toBeNull();
+    });
+
+    it('does not request staff notifications from a customer workspace', async () => {
+        const workspace = createWorkspace('customer');
+        workspace.setOrders([makeOrder(21)]);
+        await expect(workspace.loadStatusWhatsAppSuggestion(21)).rejects.toThrow(
+            'Pesanan belum tersedia',
+        );
+        expect(apiHarness.fetchWhatsAppSuggestion).not.toHaveBeenCalled();
+    });
+
+    it.each([21, -1])('does not request a missing or optimistic order %s', async (orderId) => {
+        const workspace = createWorkspace();
+        workspace.setOrders([makeOrder(-1)]);
+        await expect(workspace.loadStatusWhatsAppSuggestion(orderId)).rejects.toThrow(
+            'Pesanan belum tersedia',
+        );
+        expect(apiHarness.fetchWhatsAppSuggestion).not.toHaveBeenCalled();
+    });
+
     it('fetches a price message after actual weight confirmation succeeds', async () => {
         const pickupOrder: MobileOrder = {
             ...makeOrder(21, 'pickup_requested'),

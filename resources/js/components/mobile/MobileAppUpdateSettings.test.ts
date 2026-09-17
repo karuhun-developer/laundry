@@ -1,5 +1,5 @@
-import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DOMWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import MobileAppUpdateSettings from '@/components/mobile/organisms/MobileAppUpdateSettings.vue';
 import type { MobileAppUpdate } from '@/composables/useMobileAppUpdate';
@@ -9,6 +9,8 @@ const updaterMocks = vi.hoisted(() => ({
     installUpdate: vi.fn(async () => undefined),
     useMobileAppUpdate: vi.fn(),
 }));
+
+enableAutoUnmount(afterEach);
 
 vi.mock('@/composables/useMobileAppUpdate', () => ({
     useMobileAppUpdate: updaterMocks.useMobileAppUpdate,
@@ -48,6 +50,7 @@ const setUpdaterState = (
 };
 
 beforeEach(() => {
+    document.body.innerHTML = '';
     vi.clearAllMocks();
     updaterMocks.checkForUpdates.mockResolvedValue(true);
     updaterMocks.installUpdate.mockResolvedValue(undefined);
@@ -64,11 +67,77 @@ describe('mobile app update settings', () => {
         expect(wrapper.get('[data-test="app-update-available"]').text()).toContain(
             'Pembaruan v1.0.14 tersedia',
         );
-        expect(wrapper.text()).toContain('Perbaikan WhatsApp Android.');
-        expect(wrapper.text()).toContain('Pembaruan otomatis Android.');
+        expect(wrapper.text()).not.toContain('Perbaikan WhatsApp Android.');
+        expect(wrapper.text()).not.toContain('Pembaruan otomatis Android.');
 
         await wrapper.get('[data-test="install-app-update"]').trigger('click');
         expect(updaterMocks.installUpdate).toHaveBeenCalledOnce();
+    });
+
+    it('opens the current and latest changelogs only in a dismissible modal', async () => {
+        setUpdaterState(makeUpdate());
+        const wrapper = mount(MobileAppUpdateSettings, {
+            attachTo: document.body,
+        });
+        const body = new DOMWrapper(document.body);
+
+        expect(body.find('[data-test="app-changelog-dialog"]').exists()).toBe(false);
+        await wrapper.get('[data-test="view-app-changelog"]').trigger('click');
+        await vi.waitFor(() =>
+            expect(body.find('[data-test="app-changelog-dialog"]').exists()).toBe(true),
+        );
+
+        const dialog = body.get('[data-test="app-changelog-dialog"]');
+        expect(dialog.attributes('role')).toBe('dialog');
+        expect(dialog.text()).toContain('Versi terpasang v1.0.13');
+        expect(dialog.text()).toContain('Perbaikan WhatsApp Android.');
+        expect(dialog.text()).toContain('Pembaruan v1.0.14');
+        expect(dialog.text()).toContain('Pembaruan otomatis Android.');
+
+        expect(dialog.find('[data-slot="dialog-footer"]').exists()).toBe(false);
+        expect(dialog.findAll('[data-slot="dialog-close"]')).toHaveLength(1);
+        const closeButton = dialog.get('[data-slot="dialog-close"]');
+        expect(closeButton.text()).toBe('Tutup');
+        expect(closeButton.get('span').classes()).not.toContain('sr-only');
+        expect(closeButton.find('svg').exists()).toBe(true);
+
+        await closeButton.trigger('click');
+        await vi.waitFor(() =>
+            expect(body.find('[data-test="app-changelog-dialog"]').exists()).toBe(false),
+        );
+
+        expect(wrapper.text()).not.toContain('Perbaikan WhatsApp Android.');
+        expect(updaterMocks.installUpdate).not.toHaveBeenCalled();
+        expect(updaterMocks.checkForUpdates).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+        { current_changelog: ['Versi stabil.'], latest_changelog: [], update_available: false },
+        { current_changelog: [], latest_changelog: ['Perbaikan terbaru.'], update_available: true },
+    ])('supports changelogs from just one available version', async (notes) => {
+        setUpdaterState(makeUpdate(notes));
+        const wrapper = mount(MobileAppUpdateSettings, {
+            attachTo: document.body,
+        });
+        const body = new DOMWrapper(document.body);
+
+        await wrapper.get('[data-test="view-app-changelog"]').trigger('click');
+        await vi.waitFor(() =>
+            expect(body.find('[data-test="app-changelog-dialog"]').exists()).toBe(true),
+        );
+
+        expect(body.get('[data-test="app-changelog-dialog"]').findAll('section')).toHaveLength(1);
+    });
+
+    it.each([
+        null,
+        makeUpdate({ current_changelog: [], latest_changelog: [] }),
+        makeUpdate({ current_changelog: [], update_available: false }),
+    ])('hides the changelog action when there are no relevant notes', (update) => {
+        setUpdaterState(update);
+        const wrapper = mount(MobileAppUpdateSettings);
+
+        expect(wrapper.find('[data-test="view-app-changelog"]').exists()).toBe(false);
     });
 
     it('shows current, unavailable, and permission guidance states', () => {

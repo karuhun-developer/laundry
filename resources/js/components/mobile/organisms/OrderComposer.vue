@@ -259,7 +259,7 @@ const submit = (): void => {
         class="overflow-hidden rounded-3xl border border-line bg-surface shadow-raised"
         aria-labelledby="new-order-title"
     >
-        <div class="bg-brand-700 px-5 py-6 text-white">
+        <div class="mobile-hero px-5 py-6 text-white">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <p class="text-xs font-semibold tracking-[0.18em] text-white/70 uppercase">

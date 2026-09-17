@@ -191,9 +191,9 @@ describe('customer pickup address dialog', () => {
         const primaryCard = wrapper.get(`[data-test="address-card-${homeAddress.id}"]`);
         const primaryBadge = wrapper.get(`[data-test="primary-address-badge-${homeAddress.id}"]`);
 
-        expect(primaryCard.classes()).toContain('border-amber-500/40');
+        expect(primaryCard.classes()).toContain('border-brand-600/40');
         expect(primaryBadge.text()).toBe('Alamat utama');
-        expect(primaryBadge.classes()).toContain('bg-amber-500/10');
+        expect(primaryBadge.classes()).toContain('bg-brand-100');
 
         await wrapper.get(`[data-test="default-address-${officeAddress.id}"]`).trigger('click');
         await flushPromises();

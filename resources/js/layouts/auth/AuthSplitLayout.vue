@@ -14,28 +14,24 @@ defineProps<{
 
 <template>
     <div
-        class="auth-surface bg-surface text-ink-950 relative grid min-h-dvh lg:grid-cols-2"
+        class="auth-surface relative grid min-h-dvh bg-canvas text-ink-950 lg:grid-cols-2 lg:gap-6 lg:p-6"
     >
         <div
-            class="bg-brand-700 text-surface relative hidden min-h-dvh overflow-hidden p-12 lg:flex lg:flex-col"
+            class="relative hidden min-h-[calc(100dvh-3rem)] flex-col overflow-hidden rounded-3xl border border-brand-700 bg-brand-700 p-10 text-white lg:flex xl:p-12"
         >
-            <div
-                class="bg-sky-400/25 absolute -top-28 -right-24 size-96 rounded-full blur-2xl"
-            />
-            <div
-                class="bg-ink-950/35 absolute -bottom-32 -left-24 size-[28rem] rounded-full blur-3xl"
-            />
             <Link
                 :href="login()"
-                class="relative z-20 flex min-h-11 items-center text-lg font-medium"
+                class="flex min-h-11 items-center gap-3 font-display text-lg font-semibold"
             >
-                <AppLogoIcon class="text-surface mr-2 size-8 fill-current" />
+                <span class="flex size-11 items-center justify-center rounded-xl bg-mint-accent text-brand-700">
+                    <AppLogoIcon class="size-8" />
+                </span>
                 {{ name }}
             </Link>
 
-            <div class="relative z-10 my-auto max-w-lg">
+            <div class="my-auto max-w-lg py-12">
                 <p
-                    class="text-surface bg-surface/10 border-surface/20 mb-5 inline-flex rounded-full border px-4 py-2 text-sm font-medium backdrop-blur"
+                    class="mb-5 inline-flex rounded-full border border-white/15 px-4 py-2 text-xs font-semibold tracking-wider text-mint-accent uppercase"
                 >
                     Laundry multi-cabang, satu kendali
                 </p>
@@ -44,54 +40,56 @@ defineProps<{
                 >
                     Operasional laundry yang terasa ringan.
                 </h2>
-                <p class="text-surface/85 mt-5 max-w-md text-base leading-7">
+                <p class="mt-5 max-w-md text-base leading-7 text-white/75">
                     Kelola pesanan, harga kiloan, antar jemput, dan progres
                     tiap cabang dari satu sistem yang selalu terhubung.
                 </p>
 
                 <div class="mt-10 grid max-w-md gap-3 sm:grid-cols-2">
                     <div
-                        class="bg-surface/10 border-surface/15 rounded-2xl border p-4 backdrop-blur"
+                        class="rounded-3xl border border-sky-400 bg-sky-400 p-5 text-ink-950"
                     >
-                        <p class="text-2xl font-semibold">Real-time</p>
-                        <p class="text-surface/85 mt-1 text-sm">
+                        <p class="font-display text-2xl font-semibold">Real-time</p>
+                        <p class="mt-2 text-sm leading-5 text-ink-700">
                             Status pesanan terpantau
                         </p>
                     </div>
                     <div
-                        class="bg-surface/10 border-surface/15 rounded-2xl border p-4 backdrop-blur"
+                        class="rounded-3xl border border-white/15 bg-white/5 p-5"
                     >
-                        <p class="text-2xl font-semibold">Multi-role</p>
-                        <p class="text-surface/85 mt-1 text-sm">
+                        <p class="font-display text-2xl font-semibold text-mint-accent">Multi-role</p>
+                        <p class="mt-2 text-sm leading-5 text-white/75">
                             Customer sampai owner
                         </p>
                     </div>
                 </div>
             </div>
 
-            <p class="text-surface/75 relative z-10 text-sm">
+            <p class="text-sm text-white/60">
                 Dibuat untuk bisnis laundry Indonesia.
             </p>
         </div>
-        <div class="flex items-center px-6 py-8 sm:px-10 lg:p-12">
+        <div class="flex items-center px-4 py-6 sm:px-8 lg:px-6 lg:py-8">
             <div
-                class="mx-auto flex w-full max-w-md flex-col justify-center space-y-6"
+                class="mx-auto flex w-full max-w-md flex-col justify-center space-y-6 rounded-3xl border border-line bg-surface px-5 py-6 shadow-low sm:px-8 sm:py-8"
             >
                 <Link
                     :href="login()"
-                    class="text-ink-950 mx-auto flex min-h-11 items-center gap-2 text-base font-semibold lg:hidden"
+                    class="mx-auto flex min-h-11 items-center gap-3 font-display text-base font-semibold text-ink-950 lg:hidden"
                 >
-                    <AppLogoIcon class="text-brand-700 size-8 fill-current" />
+                    <span class="flex size-11 items-center justify-center rounded-xl bg-mint-accent text-brand-700">
+                        <AppLogoIcon class="size-8" />
+                    </span>
                     {{ name }}
                 </Link>
                 <div class="flex flex-col space-y-2 text-center">
                     <h1
-                        class="font-display text-xl font-semibold tracking-tight"
+                        class="font-display text-2xl leading-tight font-semibold tracking-tight"
                         v-if="title"
                     >
                         {{ title }}
                     </h1>
-                    <p class="text-muted-foreground text-sm" v-if="description">
+                    <p class="text-sm leading-6 text-ink-500" v-if="description">
                         {{ description }}
                     </p>
                 </div>

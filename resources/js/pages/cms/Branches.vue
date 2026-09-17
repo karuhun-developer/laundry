@@ -58,7 +58,7 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                 <CmsMetricCard label="Kota layanan" :value="cities.length" detail="Area operasional" :icon="MapPinned" />
             </section>
 
-            <section class="border-line bg-surface rounded-xl border p-5 shadow-sm">
+            <section class="border-line bg-surface rounded-3xl border p-5 shadow-low">
                 <div>
                     <h2 class="font-display text-ink-950 font-semibold">Area tersedia</h2>
                     <p class="text-ink-500 mt-1 text-sm">Kota yang dapat dipakai saat membuat cabang.</p>
@@ -91,7 +91,7 @@ const activeBranches = computed(() => props.branches.filter((branch) => branch.i
                 <p v-else class="text-ink-500 mt-4 text-sm">Belum ada kota.</p>
             </section>
 
-            <section class="border-line bg-surface overflow-hidden rounded-xl border shadow-sm">
+            <section class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low">
                 <div class="border-line border-b px-5 py-4">
                     <h2 class="font-display text-ink-950 font-semibold">Daftar cabang</h2>
                     <p class="text-ink-500 mt-1 text-sm">Konfigurasi wilayah dan biaya delivery tiap outlet.</p>

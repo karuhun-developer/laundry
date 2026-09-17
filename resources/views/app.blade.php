@@ -1,5 +1,7 @@
 @php
     $isLandingPage = request()->is('/');
+    $component = $page['component'];
+    $isWorkspace = $component === 'Dashboard' || str_starts_with($component, 'cms/') || str_starts_with($component, 'mobile/') || str_starts_with($component, 'settings/') || str_starts_with($component, 'auth/');
     $landingTitle = 'LaundryHub | Aplikasi Laundry, Antar-Jemput, QRIS & Multi-Cabang';
     $landingDescription = 'LaundryHub menyatukan antrean laundry, antar-jemput, cabang terdekat, pembayaran QRIS dinamis, WhatsApp, printer thermal, dan laporan multi-cabang.';
     $landingUrl = url('/');
@@ -25,44 +27,28 @@
 <!DOCTYPE html>
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-    @class(['dark' => ! $isLandingPage && ($appearance ?? 'system') === 'dark'])
+    data-workspace-style="{{ $isWorkspace ? 'stitch' : 'default' }}"
 >
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        @unless ($isLandingPage)
-            {{-- Inline script to detect system dark mode preference and apply it immediately. --}}
-            <script>
-                (function() {
-                    const appearance = '{{ $appearance ?? "system" }}';
-
-                    if (appearance === 'system') {
-                        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                        if (prefersDark) {
-                            document.documentElement.classList.add('dark');
-                        }
-                    }
-                })();
-            </script>
-        @endunless
-
         <style>
             html {
-                background-color: #f7f9ef;
+                color-scheme: light;
+                background-color: #f6faf8;
             }
 
-            html.dark {
-                background-color: oklch(0.145 0 0);
+            html[data-workspace-style='stitch'] {
+                background-color: #f8f9fb;
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="32x32">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="/favicon.ico" sizes="32x32">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
-        <meta name="theme-color" content="#40513b">
-        <meta name="color-scheme" content="{{ $isLandingPage ? 'light' : 'light dark' }}">
+        <meta name="theme-color" content="{{ $isWorkspace ? '#f8f9fb' : '#103d2e' }}">
+        <meta name="color-scheme" content="light">
 
         @fonts
 

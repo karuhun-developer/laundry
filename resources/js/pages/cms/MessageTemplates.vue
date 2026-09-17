@@ -86,7 +86,7 @@ const deletionConfirmation = (template: MessageTemplateSummary): string =>
                 />
             </section>
 
-            <section class="border-line bg-surface overflow-hidden rounded-xl border shadow-sm">
+            <section class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low">
                 <div class="border-line border-b px-5 py-4">
                     <h2 class="font-display text-ink-950 font-semibold">Daftar template</h2>
                     <p class="text-ink-500 mt-1 text-sm">

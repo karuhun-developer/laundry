@@ -67,7 +67,8 @@ defineEmits<{
 
 <template>
     <section aria-labelledby="mobile-account-title">
-        <div class="rounded-3xl bg-brand-700 p-6 text-white shadow-raised">
+        <div class="mobile-hero rounded-3xl p-6 text-white">
+            <p class="mb-4 text-xs font-semibold tracking-[0.16em] text-brand-100 uppercase">Akun</p>
             <span class="flex size-14 items-center justify-center rounded-2xl bg-white/12">
                 <UserRound class="size-7" aria-hidden="true" />
             </span>
@@ -75,7 +76,7 @@ defineEmits<{
             <p class="mt-1 text-sm text-white/75">{{ role === 'customer' ? 'Pelanggan' : 'Admin cabang' }}</p>
         </div>
 
-        <dl class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface shadow-low">
+        <dl class="mobile-card mt-5 grid overflow-hidden sm:grid-cols-2">
             <div class="flex items-start gap-3 border-b border-line p-4">
                 <Mail class="mt-0.5 size-5 text-brand-700" aria-hidden="true" />
                 <div>

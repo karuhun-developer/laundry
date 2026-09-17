@@ -7,9 +7,9 @@ defineProps<{
 </script>
 
 <template>
-    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div class="space-y-2">
-            <p class="text-brand-700 text-xs font-semibold tracking-[0.16em] uppercase">
+    <header class="relative overflow-hidden rounded-3xl border border-line bg-surface px-5 py-6 shadow-low sm:flex sm:items-end sm:justify-between sm:gap-6 sm:px-7">
+        <div class="relative space-y-2">
+            <p class="inline-flex rounded-md bg-brand-100 px-2 py-1 text-brand-600 text-[11px] font-semibold tracking-[0.12em] uppercase">
                 {{ eyebrow }}
             </p>
             <div class="max-w-3xl space-y-2">
@@ -21,7 +21,7 @@ defineProps<{
                 </p>
             </div>
         </div>
-        <div v-if="$slots.actions" class="flex shrink-0 flex-wrap gap-2">
+        <div v-if="$slots.actions" class="relative mt-5 flex shrink-0 flex-wrap gap-2 sm:mt-0">
             <slot name="actions" />
         </div>
     </header>

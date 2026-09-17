@@ -1,13 +1,14 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { DOMWrapper, flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
+import CustomerAddressDialog from '@/components/mobile/organisms/CustomerAddressDialog.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
 import { makeOrder } from '@/composables/mobileOrderTestFixtures';
 import MobileApp from '@/pages/mobile/App.vue';
-import type { MobileOrder, MobileTab, WhatsAppSuggestion } from '@/types/mobile';
+import type { MobileOrder, MobileService, MobileTab, WhatsAppSuggestion } from '@/types/mobile';
 
 const mobileWorkspace = vi.hoisted(() => ({
     context: {
@@ -29,7 +30,7 @@ const mobileWorkspace = vi.hoisted(() => ({
     customers: { value: [] },
     nearestBranches: { value: [] },
     deliveryCoordinates: { value: null },
-    services: { value: [] },
+    services: { value: [] as MobileService[] },
     selectedBranch: { value: null },
     selectedBranchId: { value: null },
     selectedBranchDeliveryFee: { value: 0 },
@@ -38,6 +39,7 @@ const mobileWorkspace = vi.hoisted(() => ({
     selectedCustomerId: { value: null },
     whatsAppSuggestion: { value: null as WhatsAppSuggestion | null },
     whatsAppSuggestionError: { value: null as string | null },
+    loadStatusWhatsAppSuggestion: vi.fn(),
     createProcessing: { value: false },
     pricingProcessing: { value: false },
     transitionProcessing: { value: false },
@@ -112,6 +114,14 @@ vi.mock('@inertiajs/vue3', () => ({
 vi.mock('@/composables/useMobileWorkspace', () => ({
     useMobileWorkspace: () => mobileWorkspace,
 }));
+vi.mock('@/composables/useGeolocation', () => ({
+    useGeolocation: () => ({
+        coordinates: { value: null },
+        error: { value: null },
+        locating: { value: false },
+        locate: vi.fn(async () => ({ latitude: -6.26, longitude: 106.81 })),
+    }),
+}));
 vi.mock('@/composables/usePushNotifications', () => ({
     usePushNotifications: () => ({
         available: true,
@@ -144,21 +154,24 @@ const passThroughStub = defineComponent({
 
 const mountedMobileApps: VueWrapper[] = [];
 
-const mountMobileApp = (): VueWrapper => {
+const mountMobileApp = (realDialogs = false): VueWrapper => {
     const wrapper = mount(MobileApp, {
+        attachTo: realDialogs ? document.body : undefined,
         global: {
             stubs: {
                 BranchExplorer: true,
                 CustomerCredentialDialog: true,
-                CustomerAddressDialog: true,
+                CustomerAddressDialog: !realDialogs,
                 CustomerFormDialog: true,
+                CustomerPinSettings: true,
                 CustomerResetPinDialog: true,
-                Dialog: dialogStub,
-                DialogContent: passThroughStub,
-                DialogClose: passThroughStub,
-                DialogDescription: passThroughStub,
-                DialogHeader: passThroughStub,
-                DialogTitle: passThroughStub,
+                Dialog: realDialogs ? false : dialogStub,
+                DialogContent: realDialogs ? false : passThroughStub,
+                DialogClose: realDialogs ? false : passThroughStub,
+                DialogDescription: realDialogs ? false : passThroughStub,
+                DialogHeader: realDialogs ? false : passThroughStub,
+                DialogTitle: realDialogs ? false : passThroughStub,
+                LocationPicker: true,
                 MobileAppUpdateSettings: true,
                 MobileWorkspaceSwitcher: true,
                 WhatsAppSuggestionDialog: whatsAppDialogStub,
@@ -246,6 +259,169 @@ afterEach(() => {
 });
 
 describe('customer mobile navigation', () => {
+    it('keeps order details out of Home while retaining all orders in the Orders shortcut', async () => {
+        mobileWorkspace.context.value.role = 'customer';
+        mobileWorkspace.orders.value = [makeOrder(42), makeOrder(43), makeOrder(44)];
+        const wrapper = mountMobileApp();
+
+        expect(wrapper.findComponent(OrderListPanel).exists()).toBe(false);
+        for (const order of mobileWorkspace.orders.value) {
+            expect(wrapper.text()).not.toContain(order.order_number);
+        }
+
+        await wrapper.get('[data-test="view-orders-shortcut"]').trigger('click');
+
+        expect(wrapper.getComponent(OrderListPanel).props('orders')).toEqual(
+            mobileWorkspace.orders.value,
+        );
+        expect(wrapper.get('[data-test="mobile-tab-orders"]').attributes('aria-current')).toBe(
+            'page',
+        );
+    });
+
+    it('opens customer addresses and account from Home shortcuts', async () => {
+        mobileWorkspace.context.value.role = 'customer';
+        const wrapper = mountMobileApp();
+
+        await wrapper.get('[data-test="manage-addresses-shortcut"]').trigger('click');
+        expect(wrapper.getComponent(CustomerAddressDialog).props('open')).toBe(true);
+        wrapper.getComponent(CustomerAddressDialog).vm.$emit('update:open', false);
+        await flushPromises();
+        await wrapper.get('[data-test="view-account-shortcut"]').trigger('click');
+
+        expect(wrapper.getComponent(MobileAccount).props('role')).toBe('customer');
+        expect(wrapper.get('[data-test="mobile-tab-account"]').attributes('aria-current')).toBe(
+            'page',
+        );
+    });
+
+    it.each(['home', 'orders'] as const)(
+        'opens the same customer composer from %s and keeps the tab after creation',
+        async (tab) => {
+            mobileWorkspace.context.value.role = 'customer';
+            mobileWorkspace.createOrder.mockResolvedValue(true);
+            const wrapper = mountMobileApp();
+            await selectTab(wrapper, tab);
+            const trigger =
+                tab === 'home'
+                    ? 'open-customer-order-composer'
+                    : 'open-customer-order-composer-orders';
+
+            await wrapper.get(`[data-test="${trigger}"]`).trigger('click');
+            const composer = wrapper.getComponent(OrderComposer);
+            expect(composer.props('role')).toBe('customer');
+            const payload = { items: [{ price_option_id: 31 }], customer_address_id: 41 };
+            composer.vm.$emit('submit', payload, null);
+            await flushPromises();
+
+            expect(mobileWorkspace.createOrder).toHaveBeenCalledWith(payload, null);
+            expect(wrapper.findComponent(OrderComposer).exists()).toBe(false);
+            expect(wrapper.get(`[data-test="mobile-tab-${tab}"]`).attributes('aria-current')).toBe(
+                'page',
+            );
+        },
+    );
+
+    it('keeps filtered empty orders and the composer accessible when creation fails', async () => {
+        mobileWorkspace.context.value.role = 'customer';
+        const wrapper = mountMobileApp();
+        await selectTab(wrapper, 'orders');
+        await wrapper.get('[data-test="customer-order-search"]').setValue('Tidak ada');
+
+        await wrapper.get('[data-test="open-customer-order-composer-orders"]').trigger('click');
+        wrapper.getComponent(OrderComposer).vm.$emit(
+            'submit',
+            {
+                items: [{ price_option_id: 31 }],
+                customer_address_id: 41,
+            },
+            null,
+        );
+        await flushPromises();
+
+        expect(wrapper.findComponent(OrderComposer).exists()).toBe(true);
+        await wrapper.get('[data-test="close-order-composer"]').trigger('click');
+        expect(
+            wrapper.get<HTMLInputElement>('[data-test="customer-order-search"]').element.value,
+        ).toBe('Tidak ada');
+        expect(wrapper.text()).toContain('Pesanan tidak ditemukan');
+        expect(wrapper.get('[data-test="mobile-tab-orders"]').attributes('aria-current')).toBe(
+            'page',
+        );
+    });
+
+    it('layers the address form above the composer, retains input on failure, and restores focus on Escape', async () => {
+        mobileWorkspace.context.value.role = 'customer';
+        mobileWorkspace.createAddress.mockRejectedValueOnce(new Error('Alamat belum lengkap.'));
+        mobileWorkspace.services.value = [
+            {
+                id: 2,
+                name: 'Cuci lipat',
+                code: 'CL',
+                description: null,
+                price_options: [
+                    {
+                        id: 31,
+                        name: 'Reguler',
+                        type: 'fixed_package',
+                        pricing: {
+                            package_weight_grams: 1000,
+                            base_price_rupiah: 12000,
+                            excess_price_per_kilogram_rupiah: 5000,
+                        },
+                    },
+                ],
+            },
+        ];
+        const wrapper = mountMobileApp(true);
+        const body = new DOMWrapper(document.body);
+        await wrapper.get('[data-test="open-customer-order-composer"]').trigger('click');
+        await flushPromises();
+        const composer = wrapper.getComponent(OrderComposer);
+        await composer.get('select').setValue('31');
+        const addressButton = composer.get<HTMLButtonElement>(
+            '[data-test="manage-pickup-address"]',
+        );
+        addressButton.element.focus();
+
+        await addressButton.trigger('click');
+        await flushPromises();
+        const nestedDialog = body.get('[role="dialog"][data-dialog-layer="nested"]');
+        expect(nestedDialog.classes()).toContain('z-61');
+        expect(
+            body
+                .findAll('[data-slot="dialog-overlay"]')
+                .some((overlay) => overlay.classes().includes('z-60')),
+        ).toBe(true);
+        await nestedDialog.get('[data-test="add-address"]').trigger('click');
+        await flushPromises();
+        await nestedDialog.get('#address-text').setValue('Jl. Melati No. 10');
+        await nestedDialog.get('[data-test="address-form"]').trigger('submit');
+        await flushPromises();
+
+        expect(mobileWorkspace.createAddress).toHaveBeenCalledOnce();
+        expect(nestedDialog.text()).toContain('Alamat belum lengkap.');
+        expect(nestedDialog.get<HTMLTextAreaElement>('#address-text').element.value).toBe(
+            'Jl. Melati No. 10',
+        );
+        expect(composer.get<HTMLSelectElement>('select').element.value).toBe('31');
+        await vi.waitFor(() =>
+            expect(nestedDialog.element.contains(document.activeElement)).toBe(true),
+        );
+        document.activeElement?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+        );
+
+        await vi.waitFor(() => {
+            expect(body.find('[role="dialog"][data-dialog-layer="nested"]').exists()).toBe(false);
+            expect(document.activeElement).toBe(addressButton.element);
+        });
+        expect(
+            wrapper.getComponent(OrderComposer).get<HTMLSelectElement>('select').element.value,
+        ).toBe('31');
+        expect(mobileWorkspace.createOrder).not.toHaveBeenCalled();
+    });
+
     it('searches customer orders without rendering date filters', async () => {
         vi.useFakeTimers();
         const matchingOrder = {
@@ -498,11 +674,12 @@ describe('branch-admin mobile tab rendering', () => {
         expectNoAccountContent(wrapper);
     });
 
-    it('renders the real account, organization, printer, and logout content only on More', async () => {
+    it('renders the real account, organization, printer, and logout content only on Akun', async () => {
         const wrapper = mountMobileApp();
 
         await selectTab(wrapper, 'more');
 
+        expect(wrapper.get('[data-test="mobile-tab-more"]').text()).toBe('Akun');
         expect(wrapper.findComponent(OrderListPanel).exists()).toBe(false);
         expect(wrapper.findComponent(OrderComposer).exists()).toBe(false);
         expect(wrapper.findComponent(CustomerDirectory).exists()).toBe(false);
@@ -525,6 +702,9 @@ describe('branch-admin mobile tab rendering', () => {
         await selectTab(wrapper, 'queue');
 
         expect(wrapper.findComponent(OrderListPanel).exists()).toBe(true);
+        expect(wrapper.getComponent(OrderListPanel).props('loadStatusWhatsAppSuggestion')).toBe(
+            mobileWorkspace.loadStatusWhatsAppSuggestion,
+        );
         expectNoAccountContent(wrapper);
         expect(wrapper.get('[data-test="reopen-whatsapp-suggestion"]').text()).toContain(
             'Buka preview WhatsApp terakhir',

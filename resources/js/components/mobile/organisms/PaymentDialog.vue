@@ -68,12 +68,12 @@ const isBusy = computed(
     () => props.processing || actionProcessing.value || orderRefreshProcessing.value,
 );
 const paymentTriggerLabel = computed(() => {
-    if (latestPendingPayment.value?.qris_image_data_uri) {
-        return 'Lihat QRIS pembayaran';
+    if (props.role === 'branch_admin') {
+        return latestPendingPayment.value ? 'Verifikasi / kirim tagihan' : 'Pembayaran & struk';
     }
 
-    if (props.role === 'branch_admin') {
-        return 'Pembayaran & struk';
+    if (latestPendingPayment.value?.qris_image_data_uri) {
+        return 'Lihat QRIS pembayaran';
     }
 
     return props.order.payment_summary.is_paid ? 'Lihat pembayaran' : 'Bayar dengan QRIS';
@@ -378,8 +378,7 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
         <DialogTrigger as-child>
             <Button
                 type="button"
-                variant="outline"
-                class="min-h-11 w-full border-brand-600/25 text-brand-700"
+                class="mobile-primary h-auto min-h-11 w-full rounded-xl px-3 whitespace-normal"
                 data-test="open-payment-dialog"
             >
                 <ReceiptText class="size-4" aria-hidden="true" />
@@ -388,9 +387,9 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
         </DialogTrigger>
 
         <DialogScrollContent
-            class="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto rounded-2xl bg-surface"
+            class="mobile-dialog my-4 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-3xl bg-surface md:w-[calc(100%-2rem)]"
         >
-            <DialogHeader>
+            <DialogHeader class="pr-8">
                 <span
                     class="mb-2 flex size-11 items-center justify-center rounded-xl bg-surface-blue text-brand-700"
                 >
@@ -542,6 +541,7 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
                 :busy="isBusy"
                 :printer-configured="printerConfigured && role === 'branch_admin'"
                 :show-print-action="role === 'branch_admin'"
+                :show-branch-contact="role === 'customer'"
                 @load="loadReceipt"
                 @print="printReceipt"
                 @share="shareReceipt"

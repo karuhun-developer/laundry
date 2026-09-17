@@ -3,7 +3,7 @@ import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
+import { bunny, google } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
 export default defineConfig({
@@ -19,6 +19,14 @@ export default defineConfig({
                 bunny('Poppins', {
                     optimizedFallbacks: false,
                     weights: [500, 600],
+                }),
+                google('Hanken Grotesk', {
+                    optimizedFallbacks: false,
+                    weights: [400, 500, 600, 700],
+                }),
+                google('Space Grotesk', {
+                    optimizedFallbacks: false,
+                    weights: [500, 600, 700],
                 }),
             ],
         }),
