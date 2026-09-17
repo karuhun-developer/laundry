@@ -3,14 +3,17 @@ import { Inbox } from '@lucide/vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import type {
     ConfirmOrderPricingPayload,
+    MobileBranch,
     MobileOrder,
     MobileOrderStatus,
     MobilePaymentActions,
     MobileRole,
+    WhatsAppSuggestion,
 } from '@/types/mobile';
 
 type Props = {
     orders: readonly MobileOrder[];
+    branches?: readonly MobileBranch[];
     role: MobileRole;
     processing?: boolean;
     title?: string;
@@ -21,9 +24,11 @@ type Props = {
     paymentProcessing?: boolean;
     pricingProcessing?: boolean;
     printerConfigured?: boolean;
+    loadStatusWhatsAppSuggestion?: (orderId: number) => Promise<WhatsAppSuggestion>;
 };
 
 withDefaults(defineProps<Props>(), {
+    branches: () => [],
     processing: false,
     title: 'Pesanan laundry',
     description: 'Status terbaru dan riwayat proses ada di satu tempat.',
@@ -34,6 +39,7 @@ withDefaults(defineProps<Props>(), {
     paymentProcessing: false,
     pricingProcessing: false,
     printerConfigured: false,
+    loadStatusWhatsAppSuggestion: undefined,
 });
 
 const emit = defineEmits<{
@@ -68,11 +74,13 @@ const onConfirmPricing = (orderId: number, payload: ConfirmOrderPricingPayload):
                 :key="order.id"
                 :order="order"
                 :role="role"
+                :branches="branches"
                 :processing="processing"
                 :payment-actions="paymentActions"
                 :payment-processing="paymentProcessing"
                 :pricing-processing="pricingProcessing"
                 :printer-configured="printerConfigured"
+                :load-status-whats-app-suggestion="loadStatusWhatsAppSuggestion"
                 @confirm-pricing="onConfirmPricing"
                 @transition="onTransition"
             />

@@ -175,6 +175,16 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         return paymentApi.loadPaymentWhatsAppSuggestion(order.organization.slug, order, payment);
     };
 
+    const loadStatusWhatsAppSuggestion = async (orderId: number): Promise<WhatsAppSuggestion> => {
+        const order = optimistic.orders.value.find((entry) => entry.id === orderId);
+
+        if (state.context.value?.role !== 'branch_admin' || !order || order.pending) {
+            throw new Error('Pesanan belum tersedia untuk notifikasi. Muat ulang daftar pesanan.');
+        }
+
+        return api.fetchWhatsAppSuggestion(order.organization.slug, order);
+    };
+
     const clearWhatsAppSuggestion = (): void => {
         whatsAppSuggestionGeneration += 1;
         whatsAppSuggestion.value = null;
@@ -272,6 +282,7 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         createPayment,
         createProcessing: api.createProcessing,
         loadPaymentWhatsAppSuggestion,
+        loadStatusWhatsAppSuggestion,
         loadReceipt,
         loadPaymentGatewayMethods: paymentApi.loadPaymentGatewayMethods,
         loadOrders: api.loadOrders,

@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import {
-    Building2,
-    ClipboardList,
-    House,
-    ListChecks,
-    MoreHorizontal,
-    UserRound,
-    UsersRound,
-} from '@lucide/vue';
+import { Building2, ClipboardList, House, ListChecks, UserRound, UsersRound } from '@lucide/vue';
 import type { MobileRole, MobileTab } from '@/types/mobile';
 
 defineProps<{
@@ -26,16 +18,16 @@ const customerTabs: { id: MobileTab; label: string }[] = [
     { id: 'account', label: 'Akun' },
 ];
 const adminTabs: { id: MobileTab; label: string }[] = [
+    { id: 'home', label: 'Beranda' },
     { id: 'queue', label: 'Antrean' },
     { id: 'customers', label: 'Pelanggan' },
-    { id: 'more', label: 'Lainnya' },
+    { id: 'more', label: 'Akun' },
 ];
 </script>
 
 <template>
     <nav
-        class="safe-bottom fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-3xl border-t border-line bg-surface/95 px-2 pt-2 shadow-raised backdrop-blur"
-        :class="role === 'customer' ? 'grid-cols-4' : 'grid-cols-3'"
+        class="mobile-glass safe-bottom fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-3xl grid-cols-4 rounded-t-3xl border border-white/70 px-2 pt-2 shadow-low"
         aria-label="Navigasi aplikasi"
     >
         <template v-if="role === 'customer'">
@@ -76,13 +68,14 @@ const adminTabs: { id: MobileTab; label: string }[] = [
                 :data-test="`mobile-tab-${item.id}`"
                 @click="emit('update:modelValue', item.id)"
             >
-                <ListChecks v-if="item.id === 'queue'" class="size-5" aria-hidden="true" />
+                <House v-if="item.id === 'home'" class="size-5" aria-hidden="true" />
+                <ListChecks v-else-if="item.id === 'queue'" class="size-5" aria-hidden="true" />
                 <UsersRound
                     v-else-if="item.id === 'customers'"
                     class="size-5"
                     aria-hidden="true"
                 />
-                <MoreHorizontal v-else class="size-5" aria-hidden="true" />
+                <UserRound v-else class="size-5" aria-hidden="true" />
                 {{ item.label }}
             </button>
         </template>

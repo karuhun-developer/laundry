@@ -11,7 +11,7 @@ defineProps<{
 
 <template>
     <article
-        class="border-line bg-surface flex min-h-28 items-start justify-between gap-4 rounded-xl border p-5 shadow-sm"
+        class="group border-line bg-surface flex min-h-32 items-start justify-between gap-4 rounded-2xl border p-5 shadow-low transition hover:-translate-y-0.5 hover:shadow-raised"
     >
         <div>
             <p class="text-ink-500 text-sm font-medium">{{ label }}</p>
@@ -21,7 +21,7 @@ defineProps<{
             <p class="text-ink-500 mt-1 text-xs">{{ detail }}</p>
         </div>
         <span
-            class="bg-surface-blue text-brand-700 grid size-10 shrink-0 place-items-center rounded-lg"
+            class="bg-brand-100 text-brand-700 grid size-11 shrink-0 place-items-center rounded-xl ring-1 ring-brand-600/10 transition group-hover:bg-brand-700 group-hover:text-white"
         >
             <component :is="icon" class="size-5" />
         </span>

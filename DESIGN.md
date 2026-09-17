@@ -2,14 +2,16 @@
 
 Status: Active product contract
 
-Last updated: 2026-09-15
+Last updated: 2026-09-17
 
 ## 0. Research Log
 
 - Live reference: Kireiwash service page inspected at 375, 768, and 1280 px. Harvested Poppins-led hierarchy, service segmentation, city/outlet grouping, medium radii, and restrained depth shadows.
 - Live reference: LaundryGO mobile app page inspected at 375, 768, and 1280 px. Harvested mobile-first cards and feature taxonomy covering orders, customers, reports, roles, QRIS, printer, receipts, tracking, and WhatsApp.
 - Local product reference: `../pos-kacaw` printer capability and QRIS modules inspected for future transport boundaries. No source code is copied in Phase 1.
-- Direction: a **clean garment-care command center**. The atmosphere is bright, natural, reassuring, and operational; forest green carries trust, soft leaf tones create workspace depth, and a receipt-like order ticket is the memorable product object.
+- User reference: Kasmini laundry app inspected for laundry-specific information hierarchy and operational shortcuts; its yellow identity is intentionally not reused.
+- User reference: Laundry Services App Design on Behance inspected for deep-forest framing, emerald accents, white cards, rounded mobile surfaces, and prominent shortcut navigation.
+- Direction: a **forest-and-mint laundry command center**. Deep forest framing provides calm authority, emerald actions feel fresh and modern, soft mint separates operational layers, and the washer-with-folded-fabric mark is the memorable product object.
 - Personas considered: customer in a hurry on a phone; branch admin working with wet hands and intermittent attention; owner comparing branches on desktop; superadmin investigating access and audit history.
 
 ## 1. Foundations
@@ -18,18 +20,18 @@ Last updated: 2026-09-15
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `ink-950` | `#1F2A1C` | Primary text |
-| `ink-700` | `#40513B` | Secondary text |
-| `ink-500` | `#687663` | Muted text |
-| `canvas` | `#F7F9EF` | Application background |
+| `ink-950` | `#10231C` | Primary text |
+| `ink-700` | `#315346` | Secondary text |
+| `ink-500` | `#688078` | Muted text |
+| `canvas` | `#F6FAF8` | Application background |
 | `surface` | `#FFFFFF` | Primary surface |
-| `surface-blue` | `#F1F5DF` | Soft operational grouping |
-| `line` | `#DCE5CF` | Borders and separators |
-| `brand-700` | `#40513B` | Primary actions and selected state |
-| `brand-600` | `#52764A` | Hover and emphasis |
-| `brand-100` | `#EDF1D6` | Soft selected background |
-| `sky-400` | `#9DC08B` | Informational highlight |
-| `mint-500` | `#609966` | Success and completed state |
+| `surface-blue` | `#ECF8F3` | Soft operational grouping |
+| `line` | `#D7E7E0` | Borders and separators |
+| `brand-700` | `#103D2E` | Deep framing, primary actions, selected state |
+| `brand-600` | `#126B4D` | Hover, links, and operational emphasis |
+| `brand-100` | `#DFF5EC` | Soft selected background |
+| `sky-400` | `#76CFAB` | Informational highlight |
+| `mint-500` | `#1DB67A` | Success and completed state |
 | `amber-500` | `#E98A15` | Warning and in-progress emphasis |
 | `red-600` | `#D92D20` | Destructive and error state |
 
@@ -47,8 +49,9 @@ All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds onl
 
 - Base spacing unit: 4 px. Product spacing uses 4, 8, 12, 16, 20, 24, 32, and 48 px.
 - Radius: 8 px controls, 12 px compact cards, 16 px content cards, 20 px feature/ticket surfaces, and full pills only for tags or segmented controls.
-- Shadow low: `0 8px 24px rgba(64, 81, 59, 0.10)`.
-- Shadow raised: `0 18px 48px rgba(64, 81, 59, 0.16)`.
+- Shadow low: `0 10px 30px rgba(16, 61, 46, 0.08)`.
+- Shadow raised: `0 24px 64px rgba(16, 61, 46, 0.16)`.
+- Signature material: white cards use a thin cool-green rim, layered forest shadow, and occasional mint glow; no yellow or olive is used as a brand surface.
 - Map marker shadow: `0 4px 14px rgba(15, 23, 42, 0.35)`, exposed as `--laundry-map-marker-shadow`.
 - Focus ring: 3 px translucent `brand-600` halo plus visible 1 px edge.
 
@@ -56,7 +59,7 @@ All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds onl
 
 ### CMS shell
 
-- Desktop: fixed 264 px sidebar, fixed utility header, one scrolling main content region.
+- Desktop: fixed 264 px deep-forest sidebar, compact utility header, and one scrolling mint-canvas content region.
 - Tablet: compact 80 px navigation rail and one scrolling main region.
 - Mobile: sidebar becomes a modal drawer; actions that affect the current record remain in reach.
 - Content max width is 1440 px with fluid gutters. Tables switch to cards when horizontal comparison is no longer useful.
@@ -64,8 +67,9 @@ All combinations must meet WCAG 2.2 AA. Pale semantic colors are backgrounds onl
 ### Mobile application shell
 
 - Bounded `100dvh` shell with one scroll owner.
-- Fixed contextual header and bottom navigation.
+- Fixed branded header with the washer-and-fabric mark and fixed bottom navigation.
 - Content respects safe-area insets.
+- Home uses an asymmetric bento grid with forest-to-emerald gradients; glass is limited to the header and navigation with a solid fallback and a maximum 12 px blur.
 - No horizontal overflow at 375 px, including long names, rupiah totals, and order numbers.
 
 ### Breakpoints
@@ -105,6 +109,8 @@ Components respond to their container where possible; viewport breakpoints own o
 - Orders
 - Branches
 - Account
+- Home is a shortcut dashboard, not a second copy of every workflow. It surfaces the selected branch, primary order action, active order summary, and direct links to existing tabs.
+- Both Home and Orders open the same order-composer dialog without changing the active tab or search filter.
 
 ### Location and branch discovery
 
@@ -189,7 +195,9 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Order tracking and optimistic transitions
 
-- The order detail shows the current status before the timeline, with oldest-to-newest events including actor, timestamp, and optional note.
+- The order detail starts with branch identity and address. Customers see a WhatsApp-icon Chat Cabang action when branch contact is available; branch admins do not see redundant branch phone rows.
+- The current work status remains always visible. The journey sits immediately below it in a native collapsible disclosure, with oldest-to-newest events including actor, timestamp, and optional note.
+- The total and payment summary remain visible below the journey. Separate one-tap dialogs provide read-only order details and existing payment, verification, billing, and receipt actions without another disclosure.
 - Customers receive a read-only timeline. Authorized staff see only the valid next action plus cancellation while the order is active.
 - After staff confirms a transition, the selected status appears immediately with a pending marker while the previous canonical order remains available for rollback.
 - Success replaces the entire local order and timeline with the canonical API response. Failure restores both, explains the validation, access, network, or state-conflict cause, and exposes retry where safe.
@@ -198,11 +206,12 @@ Components respond to their container where possible; viewport breakpoints own o
 
 ### Branch admin mobile navigation
 
+- Home owns a compact operational summary and shortcuts into the existing queue, counter-order, customer, WhatsApp-preview, and account surfaces. It derives counts only from data already loaded in the workspace.
 - Queue owns the assigned order list, debounced search, status/pricing work, the focused counter-order dialog, and the latest complete WhatsApp destination/message preview shortcut.
 - Customers owns the current-organization customer directory and its create, edit, reset, and credential dialogs.
-- More owns the signed-in identity, WhatsApp phone, organization, printer/device settings, and logout.
+- Akun (internal tab id `more`) owns the signed-in identity, WhatsApp phone, organization, printer/device settings, and logout.
 
-Content does not leak between these tabs: Queue does not render account controls, Customers does not render order or device controls, and More does not render queue/customer-management work. Successful and failed mobile mutations produce visible toast feedback while inline validation remains near the affected control. The role switch changes available navigation; it never hides authorization failures behind client-only logic.
+Content does not leak between these tabs: Queue does not render account controls, Customers does not render order or device controls, and Akun does not render queue/customer-management work. Successful and failed mobile mutations produce visible toast feedback while inline validation remains near the affected control. The role switch changes available navigation; it never hides authorization failures behind client-only logic.
 
 ## 4. Content and Voice
 
@@ -253,13 +262,16 @@ Every primitive must be demonstrated in a development showcase before product sc
 ### `OrderTicket`
 
 - Signature component inspired by a physical laundry receipt without copying a brand asset.
-- Contains order number, branch, status, total, and next action.
-- Uses a dashed internal separator and paired edge notches; depth must remain subtle and legible.
+- Contains order number, branch contact context, status, current balance, and next action.
+- Uses a forest status rail, dashed internal separators, and restrained receipt notches; depth must remain subtle and legible.
+- Branch contact is matched client-side by `order.branch.id` against the already-loaded branch context. Missing contact data is omitted rather than inferred.
+- The journey uses native `details`/`summary`, preserves keyboard behavior, and rotates only its chevron indicator. Order detail and payment buttons remain outside it.
 
 ### `StatusTimeline`
 
 - Vertical on compact screens, horizontal only when every label remains readable.
 - Current step is emphasized; future steps remain visible; completed steps include timestamps.
+- The collapsed summary still states the current status and latest update so hiding the full history never hides the order state.
 
 ### `DataTable` and `RecordList`
 
@@ -275,7 +287,9 @@ Every primitive must be demonstrated in a development showcase before product sc
 ### `Dialog` and `Drawer`
 
 - Focus is trapped and restored. Escape closes non-destructive dialogs.
+- Address dialogs launched from the order composer use an explicit nested layer. Closing them restores focus to the composer without clearing its fields.
 - Destructive confirmation names the affected record and requires an exact typed value; native JavaScript confirmation dialogs are not used.
+- Form dialogs use balanced inline padding, `max-height` constrained by `100dvh`, one scrollable body, aligned header icon/title/close controls, and stacked credential fields below 640 px.
 
 ### Authentication selector
 
@@ -313,12 +327,13 @@ Every primitive must be demonstrated in a development showcase before product sc
 - A successful pricing confirmation may reveal a WhatsApp preview containing the measured `{weight}` and confirmed `{total}`; a successful later status transition may reveal its matching status template.
 - A failed or rolled-back pricing confirmation or status transition never reveals a WhatsApp preview.
 - The dialog shows the destination and complete rendered message before exposing `Buka WhatsApp`. No page load, transition, or suggestion fetch opens an external application automatically.
+- Branch admins can reopen notifications from each saved status in the journey. Future steps have no action and optimistic steps cannot send. The existing endpoint supplies the current template and recipient; earlier events prepend their status and timestamp, clearly separated from the latest branch message. No historical-template API or status mutation is introduced.
 - Unavailable templates and invalid customer numbers remain recoverable inline states instead of disabled controls without explanation.
 
 ### Android shell and external links
 
-- The launcher uses the brand-700 field with a high-contrast washing-machine mark, leaf-green water, and mint completion accent. Adaptive foreground artwork stays inside the Android safe zone.
-- Splash resources use the canvas and soft-green `surface-blue` palette in both portrait and landscape orientations.
+- The launcher uses a deep-forest field with a high-contrast washer-and-folded-fabric mark and emerald/mint accents. Adaptive foreground artwork stays inside the Android safe zone.
+- Splash resources use a deep-forest-to-primary-green field, centered washer-and-fabric mark, and restrained mint glow in both portrait and landscape orientations.
 - The native external-link bridge accepts only exact `https://wa.me` destinations without credentials or custom ports. All other external navigation is rejected before an Android intent is created.
 - External applications open only from an explicit user action. The web fallback follows the same validation contract before calling `window.open`.
 

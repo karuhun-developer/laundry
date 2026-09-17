@@ -7,13 +7,14 @@ const name = usePage().props.name;
 
 <template>
     <div
-        class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md"
+        class="flex aspect-square size-10 items-center justify-center rounded-xl bg-white/12 text-brand-100 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.16),0_10px_24px_rgb(0_0_0/0.18)]"
     >
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
+        <AppLogoIcon class-name="size-7" />
     </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{
+    <div class="ml-1 grid flex-1 text-left">
+        <span class="font-display truncate text-sm leading-tight font-semibold text-white">{{
             name
         }}</span>
+        <span class="truncate text-[10px] font-medium tracking-[0.12em] text-brand-100/60 uppercase">Laundry operations</span>
     </div>
 </template>

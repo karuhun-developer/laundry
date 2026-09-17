@@ -19,7 +19,9 @@
         <meta name="robots" content="noindex,nofollow,noarchive">
         <link rel="canonical" href="{{ $canonicalUrl }}">
         <link rel="icon" href="/favicon.ico" sizes="32x32">
-        <meta name="theme-color" content="#40513b">
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+        <meta name="theme-color" content="#103d2e">
 
         <meta property="og:title" content="{{ $title }}">
         <meta property="og:description" content="{{ $description }}">
@@ -43,17 +45,29 @@
                 body { background-color: #ffffff !important; padding: 0 !important; color: #000000 !important; }
                 main { border: none !important; box-shadow: none !important; max-width: 100% !important; border-radius: 0 !important; }
                 .no-print { display: none !important; }
-                header { background-color: #2e3b2b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                header { background-color: #103d2e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
         </style>
     </head>
-    <body class="min-h-screen bg-canvas px-4 py-8 font-sans text-ink-950 antialiased">
+    <body class="min-h-screen bg-surface-blue px-4 py-6 font-sans text-ink-950 antialiased sm:py-10">
         <main class="mx-auto max-w-lg overflow-hidden rounded-3xl border border-line bg-surface shadow-raised">
             {{-- Header Struk & Pesanan --}}
-            <header class="bg-brand-700 px-6 py-7 text-center text-white">
-                <p class="text-xs font-semibold tracking-[0.24em] text-white/80 uppercase">LaundryHub &middot; Struk &amp; Detail</p>
-                <h1 class="mt-2 font-display text-2xl font-bold tracking-tight">Detail &amp; Struk Pesanan</h1>
-                <p class="mt-1 font-mono text-sm tracking-wide text-white/90">{{ $order->order_number }}</p>
+            <header class="bg-gradient-to-br from-brand-700 to-brand-600 px-6 py-8 text-white">
+                <div class="flex items-center gap-3">
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+                        <svg class="size-7" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                            <rect x="9" y="6" width="30" height="36" rx="8" class="fill-white" />
+                            <circle cx="24" cy="26" r="10" class="fill-brand-100" />
+                            <path d="M15 27c3-4 6 2 9 0s6-4 9 0a9 9 0 0 1-18 0Z" class="fill-mint-500" />
+                            <circle cx="33" cy="13" r="2" class="fill-brand-600" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold tracking-[0.2em] text-white/70 uppercase">LaundryHub</p>
+                        <h1 class="mt-1 font-display text-2xl font-bold tracking-tight">Detail &amp; Struk Pesanan</h1>
+                        <p class="mt-1 font-mono text-sm tracking-wide text-white/80">{{ $order->order_number }}</p>
+                    </div>
+                </div>
             </header>
 
             <div class="space-y-6 p-6">
@@ -69,17 +83,25 @@
                 @endif
 
                 {{-- Identitas Outlet & Pelanggan --}}
-                <section class="rounded-2xl bg-canvas p-5">
-                    <div class="text-center">
-                        <h2 class="font-display text-xl font-bold text-ink-950">{{ $order->branch->name }}</h2>
-                        @if ($order->branch->address)
-                            <p class="mt-1 text-xs leading-relaxed text-ink-500">
-                                {{ $order->branch->address }}{{ $order->branch->city ? ', '.$order->branch->city->name : '' }}
-                            </p>
-                        @endif
-                        @if ($order->branch->phone)
-                            <p class="mt-0.5 text-xs text-ink-400">Telp/WA: {{ $order->branch->phone }}</p>
-                        @endif
+                <section class="rounded-2xl border border-line bg-canvas p-5">
+                    <div class="flex items-start gap-3">
+                        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m15 0V8.25a3 3 0 0 0-3-3h-.75m3.75 5.25-1.5 9h-12l-1.5-9h15Z" />
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-semibold tracking-[0.16em] text-brand-600 uppercase">Cabang laundry</p>
+                            <h2 class="mt-1 font-display text-lg font-bold text-ink-950">{{ $order->branch->name }}</h2>
+                            @if ($order->branch->address)
+                                <p class="mt-1 text-sm leading-relaxed text-ink-500">
+                                    {{ $order->branch->address }}{{ $order->branch->city ? ', '.$order->branch->city->name : '' }}
+                                </p>
+                            @endif
+                            @if ($order->branch->phone)
+                                <p class="mt-1 text-sm font-medium text-brand-700">Telp/WA {{ $order->branch->phone }}</p>
+                            @endif
+                        </div>
                     </div>
 
                     <dl class="mt-4 space-y-2 border-t border-dashed border-line pt-3 text-sm">
@@ -91,12 +113,61 @@
                             <dt class="text-ink-500">Waktu Pesanan</dt>
                             <dd class="font-medium text-ink-700">{{ $order->created_at->translatedFormat('d F Y, H:i') }}</dd>
                         </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-ink-500">Status Pengerjaan</dt>
-                            <dd class="font-semibold text-brand-700">{{ $order->status->label() }}</dd>
-                        </div>
                     </dl>
                 </section>
+
+                {{-- Status Pengerjaan Selalu Terlihat --}}
+                <section aria-labelledby="current-status-title" class="overflow-hidden rounded-2xl bg-brand-700 text-white shadow-low">
+                    <div class="flex items-start gap-4 p-5">
+                        <span class="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-mint-500 text-brand-700">
+                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <p id="current-status-title" class="text-[11px] font-semibold tracking-[0.18em] text-white/65 uppercase">Status pengerjaan saat ini</p>
+                            <p class="mt-1 font-display text-xl font-bold">{{ $order->status->label() }}</p>
+                            <p class="mt-1 text-xs leading-5 text-white/70">Diperbarui dari perjalanan laundry yang tercatat.</p>
+                        </div>
+                    </div>
+                </section>
+
+                {{-- Perjalanan Laundry (Timeline) --}}
+                <details class="group/journey overflow-hidden rounded-2xl border border-line bg-surface">
+                    <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
+                        <div>
+                            <p class="font-display font-semibold text-ink-950">Perjalanan laundry</p>
+                            <p class="mt-0.5 text-xs text-ink-500">{{ $order->statusEvents->count() }} pembaruan status</p>
+                        </div>
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 transition group-open/journey:rotate-180" aria-hidden="true">&#9662;</span>
+                    </summary>
+                    <div class="border-t border-line px-5 py-5">
+                        @if ($order->statusEvents->isEmpty())
+                            <p class="rounded-xl bg-canvas px-4 py-3 text-sm text-ink-500">
+                                Status terbaru adalah {{ $order->status->label() }}.
+                            </p>
+                        @else
+                            <ol class="space-y-4">
+                                @foreach ($order->statusEvents as $event)
+                                    <li class="relative border-l-2 border-brand-100 pl-4">
+                                        <span class="absolute top-1 -left-[7px] size-3 rounded-full border-2 border-surface bg-brand-600"></span>
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-semibold text-ink-950">{{ $event->status->label() }}</p>
+                                                @if ($event->note)
+                                                    <p class="mt-1 text-sm leading-6 text-ink-700">{{ $event->note }}</p>
+                                                @endif
+                                            </div>
+                                            <time class="shrink-0 text-right text-xs text-ink-500" datetime="{{ $event->created_at->toISOString() }}">
+                                                {{ $event->created_at->translatedFormat('d M Y, H:i') }}
+                                            </time>
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        @endif
+                    </div>
+                </details>
 
                 {{-- KOTAK UTAMA: TOTAL YANG HARUS DIBAYAR & STATUS PEMBAYARAN --}}
                 <section aria-labelledby="billing-summary-title" class="rounded-2xl border-2 border-line bg-surface p-5 shadow-sm">
@@ -370,10 +441,10 @@
                                     <p class="mb-3 text-sm text-ink-600" role="status">Gateway sementara tidak tersedia. Gunakan QRIS cabang atau hubungi kasir.</p>
                                 @endif
                                 @if ($canSelectQris || ! empty($gatewayMethods))
-                                    <details class="group">
+                                    <details class="group/payment-methods">
                                         <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-brand-700 uppercase hover:underline">
                                             <span>Pilih metode pembayaran lain</span>
-                                            <span class="text-ink-400 transition group-open:rotate-180">&#9662;</span>
+                                            <span class="text-ink-400 transition group-open/payment-methods:rotate-180">&#9662;</span>
                                         </summary>
                                         <div class="mt-3 space-y-3 pt-2">
                                             {{-- Form ganti ke QRIS --}}
@@ -432,37 +503,6 @@
                         @endif
                     </section>
                 @endif
-
-                {{-- Perjalanan Laundry (Timeline) --}}
-                <section aria-labelledby="tracking-history-title">
-                    <h2 id="tracking-history-title" class="font-display text-lg font-semibold">Perjalanan laundry</h2>
-
-                    @if ($order->statusEvents->isEmpty())
-                        <p class="mt-3 rounded-xl border border-line px-4 py-3 text-sm text-ink-500">
-                            Status terbaru adalah {{ $order->status->label() }}.
-                        </p>
-                    @else
-                        <ol class="mt-4 space-y-4">
-                            @foreach ($order->statusEvents as $event)
-                                <li class="relative border-l-2 border-brand-100 pl-4">
-                                    <span class="absolute top-1 -left-[7px] size-3 rounded-full border-2 border-surface bg-brand-600"></span>
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p class="text-sm font-semibold">{{ $event->status->label() }}</p>
-                                            @if ($event->note)
-                                                <p class="mt-1 text-sm leading-6 text-ink-700">{{ $event->note }}</p>
-                                            @endif
-                                        </div>
-                                        <time class="shrink-0 text-right text-xs text-ink-500" datetime="{{ $event->created_at->toISOString() }}">
-                                            {{ $event->created_at->translatedFormat('d M Y, H:i') }}
-                                        </time>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ol>
-                    @endif
-                </section>
-
                 <p class="text-center text-xs leading-5 text-ink-500 no-print">
                     Simpan tautan ini untuk memantau status pesanan, melihat struk digital, dan melakukan pembayaran tanpa perlu masuk ke aplikasi.
                 </p>

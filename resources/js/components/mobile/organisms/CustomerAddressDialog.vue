@@ -18,20 +18,24 @@ import { useGeolocation } from '@/composables/useGeolocation';
 import { MobileCustomerAddressValidationError } from '@/composables/useMobileCustomerAddressApi';
 import type { MobileCustomerAddress, MobileCustomerAddressPayload } from '@/types/mobile';
 
-const props = defineProps<{
-    addresses: readonly MobileCustomerAddress[];
-    selectedAddressId: number | null;
-    customerName: string;
-    customerPhone?: string | null;
-    createAddress: (payload: MobileCustomerAddressPayload) => Promise<MobileCustomerAddress>;
-    updateAddress: (
-        addressId: number,
-        payload: MobileCustomerAddressPayload,
-    ) => Promise<MobileCustomerAddress>;
-    deleteAddress: (addressId: number) => Promise<void>;
-    setDefaultAddress: (addressId: number) => Promise<MobileCustomerAddress>;
-    selectAddress: (addressId: number) => Promise<boolean>;
-}>();
+const props = withDefaults(
+    defineProps<{
+        layer?: 'default' | 'nested';
+        addresses: readonly MobileCustomerAddress[];
+        selectedAddressId: number | null;
+        customerName: string;
+        customerPhone?: string | null;
+        createAddress: (payload: MobileCustomerAddressPayload) => Promise<MobileCustomerAddress>;
+        updateAddress: (
+            addressId: number,
+            payload: MobileCustomerAddressPayload,
+        ) => Promise<MobileCustomerAddress>;
+        deleteAddress: (addressId: number) => Promise<void>;
+        setDefaultAddress: (addressId: number) => Promise<MobileCustomerAddress>;
+        selectAddress: (addressId: number) => Promise<boolean>;
+    }>(),
+    { layer: 'default' },
+);
 
 const open = defineModel<boolean>('open', { required: true });
 const emit = defineEmits<{ success: [message: string] }>();
@@ -41,6 +45,18 @@ const processing = ref(false);
 const requestError = ref<string | null>(null);
 const fieldErrors = ref<Partial<Record<keyof MobileCustomerAddressPayload, string>>>({});
 const geolocation = useGeolocation();
+let returnFocusTo: HTMLElement | null = null;
+
+const rememberFocus = (): void => {
+    returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+};
+
+const restoreFocus = (event: Event): void => {
+    if (returnFocusTo?.isConnected) {
+        event.preventDefault();
+        returnFocusTo.focus();
+    }
+};
 const label = ref('Rumah');
 const recipientName = ref('');
 const whatsappPhone = ref('');
@@ -215,7 +231,12 @@ const remove = async (): Promise<void> => {
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent class="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-2xl bg-surface p-0">
+        <DialogContent
+            :layer="layer"
+            class="mobile-dialog max-h-[92dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-3xl bg-surface p-0 sm:p-0"
+            @open-auto-focus="rememberFocus"
+            @close-auto-focus="restoreFocus"
+        >
             <div class="p-5 sm:p-6">
                 <DialogHeader>
                     <span class="mb-2 flex size-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
@@ -239,7 +260,7 @@ const remove = async (): Promise<void> => {
                         class="rounded-2xl border p-4"
                         :class="[
                             address.is_default
-                                ? 'border-amber-500/40 bg-amber-500/5'
+                                ? 'border-brand-600/40 bg-brand-100/40'
                                 : 'border-line bg-surface',
                             address.id === selectedAddressId
                                 ? 'ring-2 ring-brand-100'
@@ -256,7 +277,7 @@ const remove = async (): Promise<void> => {
                                     <h3 class="font-semibold text-ink-950">{{ address.label }}</h3>
                                     <span
                                         v-if="address.is_default"
-                                        class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-700"
+                                        class="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-1 text-[11px] font-semibold text-brand-700"
                                         :data-test="`primary-address-badge-${address.id}`"
                                     >
                                         <Star class="size-3 fill-current" aria-hidden="true" />

@@ -108,22 +108,22 @@
 }
 
 :root {
-    --laundry-ink-950: #1f2a1c;
-    --laundry-ink-700: #40513b;
-    --laundry-ink-500: #687663;
-    --laundry-canvas: #f7f9ef;
+    --laundry-ink-950: #10231c;
+    --laundry-ink-700: #315346;
+    --laundry-ink-500: #688078;
+    --laundry-canvas: #f6faf8;
     --laundry-surface: #ffffff;
-    --laundry-surface-blue: #f1f5df;
-    --laundry-line: #dce5cf;
-    --laundry-brand-700: #40513b;
-    --laundry-brand-600: #52764a;
-    --laundry-brand-100: #edf1d6;
-    --laundry-sky-400: #9dc08b;
-    --laundry-mint-500: #609966;
+    --laundry-surface-blue: #ecf8f3;
+    --laundry-line: #d7e7e0;
+    --laundry-brand-700: #103d2e;
+    --laundry-brand-600: #126b4d;
+    --laundry-brand-100: #dff5ec;
+    --laundry-sky-400: #76cfab;
+    --laundry-mint-500: #1db67a;
     --laundry-amber-500: #e98a15;
     --laundry-red-600: #d92d20;
-    --laundry-shadow-low: 0 8px 24px rgb(64 81 59 / 10%);
-    --laundry-shadow-raised: 0 18px 48px rgb(64 81 59 / 16%);
+    --laundry-shadow-low: 0 10px 30px rgb(16 61 46 / 8%);
+    --laundry-shadow-raised: 0 24px 64px rgb(16 61 46 / 16%);
     --laundry-map-marker-shadow: 0 4px 14px rgb(15 23 42 / 35%);
 
     --background: var(--laundry-surface);
@@ -134,8 +134,8 @@
     --popover-foreground: var(--laundry-ink-950);
     --primary: var(--laundry-brand-700);
     --primary-foreground: var(--laundry-surface);
-    --secondary: hsl(0 0% 92.1%);
-    --secondary-foreground: hsl(0 0% 9%);
+    --secondary: var(--laundry-surface-blue);
+    --secondary-foreground: var(--laundry-brand-700);
     --muted: var(--laundry-canvas);
     --muted-foreground: var(--laundry-ink-500);
     --accent: var(--laundry-surface-blue);
@@ -145,21 +145,21 @@
     --border: var(--laundry-line);
     --input: var(--laundry-line);
     --ring: var(--laundry-brand-600);
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
-    --radius: 0.5rem;
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 0% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 30%);
-    --sidebar-border: hsl(0 0% 91%);
+    --chart-1: #126b4d;
+    --chart-2: #1db67a;
+    --chart-3: #76cfab;
+    --chart-4: #315346;
+    --chart-5: #e98a15;
+    --radius: 0.75rem;
+    --sidebar-background: #103d2e;
+    --sidebar-foreground: #eaf7f2;
+    --sidebar-primary: #1db67a;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #185a43;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgb(223 245 236 / 14%);
     --sidebar-ring: var(--laundry-brand-600);
-    --sidebar: hsl(0 0% 98%);
+    --sidebar: #103d2e;
 }
 
 .dark {
@@ -238,22 +238,69 @@
         @apply border-border outline-ring/50;
     }
     body {
-        @apply bg-background text-foreground;
+        @apply bg-canvas text-foreground antialiased;
+        background-image:
+            radial-gradient(circle at 92% 2%, rgb(118 207 171 / 14%), transparent 24rem),
+            linear-gradient(180deg, rgb(255 255 255 / 72%), transparent 20rem);
+        background-attachment: fixed;
     }
 
     :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
         outline: 1px solid var(--laundry-brand-600);
         outline-offset: 2px;
-        box-shadow: 0 0 0 3px rgb(82 118 74 / 24%);
+        box-shadow: 0 0 0 3px rgb(18 107 77 / 24%);
     }
 }
 
 @layer utilities {
     .mobile-shell {
+        background-image: radial-gradient(ellipse at top right, #dff5ec 0, transparent 55%);
         height: 100dvh;
         overflow: hidden;
         padding-right: env(safe-area-inset-right);
         padding-left: env(safe-area-inset-left);
+    }
+
+    .mobile-glass {
+        background: #f6faf8;
+    }
+
+    .mobile-hero {
+        background: linear-gradient(125deg, #103d2e 0%, #126b4d 70%, #27845e 100%);
+        box-shadow: 0 12px 32px rgb(16 61 46 / 12%);
+    }
+
+    .mobile-card {
+        min-width: 0;
+        border: 1px solid var(--laundry-line);
+        border-radius: 1.5rem;
+        background: var(--laundry-surface);
+        box-shadow: 0 4px 20px rgb(16 61 46 / 4%);
+    }
+
+    .mobile-primary {
+        color: #fff;
+        background: #103d2e;
+    }
+
+    .mobile-primary:hover {
+        background: #126b4d;
+    }
+
+    .mobile-bento {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .mobile-bento-feature {
+        grid-row: span 2;
+        background: linear-gradient(155deg, #e1f5ec, #f4fbf7);
+    }
+
+    .mobile-dialog {
+        border-color: var(--laundry-line);
+        background-image: linear-gradient(180deg, #f0faf5, #fff 12rem);
     }
 
     .mobile-fixed-header {
@@ -274,6 +321,23 @@
 
     .safe-bottom {
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+}
+
+@supports (backdrop-filter: blur(12px)) {
+    .mobile-glass {
+        background: rgb(246 250 248 / 88%);
+        backdrop-filter: blur(12px);
+    }
+}
+
+@media (max-width: 359px) {
+    .mobile-bento {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mobile-bento-feature {
+        grid-row: auto;
     }
 }
 

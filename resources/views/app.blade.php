@@ -50,7 +50,7 @@
 
         <style>
             html {
-                background-color: #f7f9ef;
+                background-color: #f6faf8;
             }
 
             html.dark {
@@ -58,10 +58,10 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="32x32">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="/favicon.ico" sizes="32x32">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
-        <meta name="theme-color" content="#40513b">
+        <meta name="theme-color" content="#103d2e">
         <meta name="color-scheme" content="{{ $isLandingPage ? 'light' : 'light dark' }}">
 
         @fonts

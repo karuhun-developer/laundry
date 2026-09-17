@@ -10,10 +10,10 @@ defineProps<{
 
 <template>
     <div
-        class="border-line bg-canvas/70 flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center"
+        class="border-line bg-canvas/70 flex min-h-52 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center"
     >
         <span
-            class="bg-surface-blue text-brand-700 grid size-12 place-items-center rounded-xl"
+            class="bg-brand-100 text-brand-700 grid size-12 place-items-center rounded-xl ring-1 ring-brand-600/10"
         >
             <component :is="icon" class="size-6" />
         </span>
