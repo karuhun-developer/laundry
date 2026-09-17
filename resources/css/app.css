@@ -8,11 +8,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans:
-        Inter, ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
-    --font-display: Poppins, ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--laundry-font-sans);
+    --font-display: var(--laundry-font-display);
 
     --color-ink-950: var(--laundry-ink-950);
     --color-ink-700: var(--laundry-ink-700);
@@ -26,6 +23,7 @@
     --color-brand-100: var(--laundry-brand-100);
     --color-sky-400: var(--laundry-sky-400);
     --color-mint-500: var(--laundry-mint-500);
+    --color-mint-accent: var(--laundry-mint-accent);
     --color-amber-500: var(--laundry-amber-500);
     --color-red-600: var(--laundry-red-600);
     --shadow-low: var(--laundry-shadow-low);
@@ -97,17 +95,13 @@
     }
 }
 
-@layer utilities {
-    body,
-    html {
-        --font-sans:
-            Inter, ui-sans-serif, system-ui, sans-serif,
-            'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-            'Noto Color Emoji';
-    }
-}
-
 :root {
+    color-scheme: light;
+    --laundry-font-sans:
+        Inter, ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --laundry-font-display: Poppins, ui-sans-serif, system-ui, sans-serif;
     --laundry-ink-950: #10231c;
     --laundry-ink-700: #315346;
     --laundry-ink-500: #688078;
@@ -120,6 +114,7 @@
     --laundry-brand-100: #dff5ec;
     --laundry-sky-400: #76cfab;
     --laundry-mint-500: #1db67a;
+    --laundry-mint-accent: #00e29d;
     --laundry-amber-500: #e98a15;
     --laundry-red-600: #d92d20;
     --laundry-shadow-low: 0 10px 30px rgb(16 61 46 / 8%);
@@ -162,40 +157,97 @@
     --sidebar: #103d2e;
 }
 
-.dark {
-    --background: hsl(0 0% 3.9%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(0 0% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(0 0% 3.9%);
-    --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
-    --secondary: hsl(0 0% 14.9%);
-    --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(0 0% 16.08%);
-    --muted-foreground: hsl(0 0% 63.9%);
-    --accent: hsl(0 0% 14.9%);
-    --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
-    --ring: hsl(0 0% 83.1%);
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(0 0% 7%);
-    --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(0 0% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+:root[data-workspace-style='stitch'] {
+    --laundry-font-sans:
+        'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --laundry-font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --laundry-ink-950: #161c28;
+    --laundry-ink-700: #414b5c;
+    --laundry-ink-500: #626d7b;
+    --laundry-canvas: #f8f9fb;
+    --laundry-surface-blue: #edf5fa;
+    --laundry-line: #e2e7ed;
+    --laundry-brand-700: #161c28;
+    --laundry-brand-600: #1e667f;
+    --laundry-brand-100: #def2fd;
+    --laundry-sky-400: #a1e0fd;
+    --laundry-mint-500: #007d58;
+    --laundry-amber-500: #a65b08;
+    --laundry-shadow-low: 0 2px 4px rgb(22 28 40 / 3%);
+    --laundry-shadow-raised: 0 16px 48px rgb(22 28 40 / 12%);
+    --chart-1: #161c28;
+    --chart-2: #1e667f;
+    --chart-3: #a1e0fd;
+    --chart-4: #00e29d;
+    --chart-5: #a65b08;
+    --sidebar-background: #161c28;
+    --sidebar-foreground: #edf1f7;
+    --sidebar-primary: #00e29d;
+    --sidebar-primary-foreground: #161c28;
+    --sidebar-accent: #293344;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #303948;
+    --sidebar-ring: #a1e0fd;
+    --sidebar: #161c28;
+}
+
+:root[data-workspace-style='stitch'] body {
+    background-image: none;
+}
+
+:root[data-workspace-style='stitch'] :where(h1, h2, h3) {
+    font-family: var(--laundry-font-display);
+    letter-spacing: -0.025em;
+}
+
+:root[data-workspace-style='stitch'] :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--laundry-brand-600);
+    outline-offset: 3px;
+    box-shadow: none;
+}
+
+:root[data-workspace-style='stitch'] [data-slot='button'] {
+    border-radius: 9999px;
+}
+
+:root[data-workspace-style='stitch'] :where([data-slot='card'], [data-slot='dialog-content']) {
+    border-radius: 1.5rem;
+}
+
+:root[data-workspace-style='stitch'] :where([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'], select) {
+    background-color: var(--laundry-canvas);
+    border-radius: 0.875rem;
+    box-shadow: none;
+}
+
+:root[data-workspace-style='stitch'] [data-slot='dialog-overlay'] {
+    background: rgb(22 28 40 / 65%);
+    backdrop-filter: blur(8px);
+}
+
+:root[data-workspace-style='stitch'] thead {
+    background: var(--laundry-canvas);
+    color: var(--laundry-ink-500);
+}
+
+:root[data-workspace-style='stitch'] th {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+:root[data-workspace-style='stitch'] .mobile-shell {
+    background-image: none;
+}
+
+:root[data-workspace-style='stitch'] .cms-metric-featured {
+    --laundry-surface: var(--laundry-brand-700);
+    --laundry-line: var(--laundry-brand-700);
+    --laundry-ink-950: #ffffff;
+    --laundry-ink-500: #c4ccd8;
 }
 
 .auth-surface {
@@ -262,12 +314,13 @@
     }
 
     .mobile-glass {
-        background: #f6faf8;
+        background: var(--laundry-surface);
     }
 
     .mobile-hero {
-        background: linear-gradient(125deg, #103d2e 0%, #126b4d 70%, #27845e 100%);
-        box-shadow: 0 12px 32px rgb(16 61 46 / 12%);
+        background: var(--laundry-brand-700);
+        border: 1px solid var(--laundry-brand-700);
+        box-shadow: var(--laundry-shadow-low);
     }
 
     .mobile-card {
@@ -275,16 +328,16 @@
         border: 1px solid var(--laundry-line);
         border-radius: 1.5rem;
         background: var(--laundry-surface);
-        box-shadow: 0 4px 20px rgb(16 61 46 / 4%);
+        box-shadow: var(--laundry-shadow-low);
     }
 
     .mobile-primary {
         color: #fff;
-        background: #103d2e;
+        background: var(--laundry-brand-700);
     }
 
     .mobile-primary:hover {
-        background: #126b4d;
+        background: var(--laundry-brand-600);
     }
 
     .mobile-bento {
@@ -295,12 +348,13 @@
 
     .mobile-bento-feature {
         grid-row: span 2;
-        background: linear-gradient(155deg, #e1f5ec, #f4fbf7);
+        border-color: var(--laundry-sky-400);
+        background: var(--laundry-sky-400);
     }
 
     .mobile-dialog {
         border-color: var(--laundry-line);
-        background-image: linear-gradient(180deg, #f0faf5, #fff 12rem);
+        background: var(--laundry-surface);
     }
 
     .mobile-fixed-header {
@@ -321,13 +375,6 @@
 
     .safe-bottom {
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-    }
-}
-
-@supports (backdrop-filter: blur(12px)) {
-    .mobile-glass {
-        background: rgb(246 250 248 / 88%);
-        backdrop-filter: blur(12px);
     }
 }
 

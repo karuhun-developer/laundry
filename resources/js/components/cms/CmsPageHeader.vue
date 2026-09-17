@@ -7,10 +7,9 @@ defineProps<{
 </script>
 
 <template>
-    <header class="relative overflow-hidden rounded-2xl border border-line bg-surface px-5 py-6 shadow-low sm:flex sm:items-end sm:justify-between sm:gap-6 sm:px-7">
-        <div class="pointer-events-none absolute -top-20 -right-16 size-48 rounded-full bg-brand-100/80 blur-3xl" />
+    <header class="relative overflow-hidden rounded-3xl border border-line bg-surface px-5 py-6 shadow-low sm:flex sm:items-end sm:justify-between sm:gap-6 sm:px-7">
         <div class="relative space-y-2">
-            <p class="text-brand-600 text-xs font-semibold tracking-[0.16em] uppercase">
+            <p class="inline-flex rounded-md bg-brand-100 px-2 py-1 text-brand-600 text-[11px] font-semibold tracking-[0.12em] uppercase">
                 {{ eyebrow }}
             </p>
             <div class="max-w-3xl space-y-2">

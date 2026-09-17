@@ -129,7 +129,7 @@ const handleCityChange = (): void => {
                 </template>
             </CmsPageHeader>
 
-            <section class="border-line bg-surface rounded-xl border p-5 shadow-sm">
+            <section class="border-line bg-surface rounded-3xl border p-5 shadow-low">
                 <div>
                     <h2 class="font-display text-ink-950 font-semibold">Filter laporan</h2>
                     <p class="text-ink-500 mt-1 text-sm">
@@ -250,6 +250,7 @@ const handleCityChange = (): void => {
 
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Ringkasan performa">
                 <CmsMetricCard
+                    class="cms-metric-featured"
                     label="Pendapatan lunas"
                     :value="formatRupiah(summary.paid_revenue_rupiah)"
                     detail="Pembayaran berstatus lunas"
@@ -275,7 +276,7 @@ const handleCityChange = (): void => {
                 />
             </section>
 
-            <section class="border-line bg-surface overflow-hidden rounded-xl border shadow-sm">
+            <section class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low">
                 <div class="border-line border-b px-5 py-4">
                     <h2 class="font-display text-ink-950 font-semibold">Perbandingan cabang</h2>
                     <p class="text-ink-500 mt-1 text-sm">

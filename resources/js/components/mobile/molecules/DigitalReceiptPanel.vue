@@ -119,7 +119,7 @@ const emit = defineEmits<{
             <div class="mt-4 grid gap-2" :class="showPrintAction ? 'sm:grid-cols-2' : ''">
                 <Button
                     type="button"
-                    class="w-full bg-mint-500 text-brand-700 hover:bg-mint-500/90"
+                    class="w-full bg-mint-accent text-ink-950 hover:bg-mint-accent/90"
                     :disabled="busy"
                     data-test="share-receipt-whatsapp"
                     @click="emit('share')"

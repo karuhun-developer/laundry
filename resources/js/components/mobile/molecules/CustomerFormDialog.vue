@@ -123,12 +123,13 @@ const save = async (): Promise<void> => {
     <Dialog :open="open" @update:open="updateOpen">
         <DialogContent
             class="w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-surface"
+            close-label="Tutup"
             :show-close-button="!processing"
             @escape-key-down="preventDismissal"
             @interact-outside="preventDismissal"
         >
             <form class="space-y-6" data-test="customer-form" @submit.prevent="save">
-                <DialogHeader class="pr-11 text-left">
+                <DialogHeader class="text-left">
                     <span
                         class="mb-2 flex size-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700"
                     >

@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { DOMWrapper, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
 import CustomerCredentialDialog from '@/components/mobile/molecules/CustomerCredentialDialog.vue';
@@ -126,6 +126,49 @@ afterEach(() => {
 });
 
 describe('mobile customer management dialogs', () => {
+    it.each(['create', 'edit', 'reset'] as const)(
+        'closes the %s dialog with the labeled X button without submitting',
+        async (mode) => {
+            const submit = vi.fn(async (): Promise<MobileCustomerMutationResult> => mutationResult);
+            const reset = vi.fn(async () => ({
+                customer,
+                credential: {
+                    temporary_pin: '731204',
+                    expires_at: '2026-09-15T11:00:00+07:00',
+                },
+            }));
+            const wrapper =
+                mode === 'reset'
+                    ? mount(CustomerResetPinDialog, {
+                          attachTo: document.body,
+                          props: { open: true, customer, reset },
+                      })
+                    : mount(CustomerFormDialog, {
+                          attachTo: document.body,
+                          props: { open: true, mode, customer, submit },
+                      });
+            const body = new DOMWrapper(document.body);
+
+            try {
+                await vi.waitFor(() =>
+                    expect(body.find('[data-slot="dialog-close"]').exists()).toBe(true),
+                );
+                const closeButton = body.get('[data-slot="dialog-close"]');
+                expect(closeButton.text()).toBe('Tutup');
+                expect(closeButton.get('span').classes()).not.toContain('sr-only');
+                expect(closeButton.find('svg').exists()).toBe(true);
+
+                await closeButton.trigger('click');
+
+                expect(wrapper.emitted('update:open')).toEqual([[false]]);
+                expect(submit).not.toHaveBeenCalled();
+                expect(reset).not.toHaveBeenCalled();
+            } finally {
+                wrapper.unmount();
+            }
+        },
+    );
+
     it('shows the required create fields and submits only profile data', async () => {
         const submit = vi.fn(async (): Promise<MobileCustomerMutationResult> => mutationResult);
         const wrapper = mount(CustomerFormDialog, {

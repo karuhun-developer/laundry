@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useHttp } from '@inertiajs/vue3';
-import { KeyRound, LoaderCircle } from '@lucide/vue';
+import { KeyRound, LoaderCircle, Save } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import InputError from '@/components/InputError.vue';
@@ -235,6 +235,7 @@ const submitPinChange = async (): Promise<void> => {
                 :disabled="pinForm.processing"
             >
                 <LoaderCircle v-if="pinForm.processing" class="size-4 animate-spin" aria-hidden="true" />
+                <Save v-else class="size-4" aria-hidden="true" />
                 {{ pinForm.processing ? 'Menyimpan...' : 'Simpan PIN baru' }}
             </Button>
         </form>

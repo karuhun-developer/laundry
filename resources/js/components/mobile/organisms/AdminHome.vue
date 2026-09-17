@@ -47,7 +47,7 @@ const readyCount = computed(
             <p class="text-xs font-semibold tracking-[0.16em] text-brand-100 uppercase">{{ branch?.name ?? 'Cabang aktif' }}</p>
             <h1 id="admin-home-title" class="mt-3 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Selamat bekerja, {{ firstName }}.</h1>
             <p class="mt-2 max-w-sm text-sm leading-6 text-white/80">Semua kebutuhan cabang, satu tempat.</p>
-            <button type="button" class="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-brand-700 transition hover:bg-brand-100" data-test="open-order-composer-home" @click="emit('create-order')">
+            <button type="button" class="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-mint-accent px-5 text-sm font-semibold text-ink-950 transition hover:bg-mint-accent/90" data-test="open-order-composer-home" @click="emit('create-order')">
                 <PackagePlus class="size-5" aria-hidden="true" />Catat pesanan baru
             </button>
         </div>
@@ -64,7 +64,7 @@ const readyCount = computed(
                 <p class="mt-1 text-xs leading-5 text-ink-700">Belum ditimbang</p>
             </article>
             <article class="mobile-card p-4 sm:p-5">
-                <p class="font-display text-3xl font-semibold text-brand-700">{{ readyCount }}</p>
+                <p class="font-display text-3xl font-semibold text-mint-500">{{ readyCount }}</p>
                 <p class="mt-1 text-xs leading-5 text-ink-700">Siap diambil</p>
             </article>
         </div>

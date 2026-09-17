@@ -1,6 +1,7 @@
 import { DOMWrapper, flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
+import CustomerAddressDialog from '@/components/mobile/organisms/CustomerAddressDialog.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
@@ -162,6 +163,7 @@ const mountMobileApp = (realDialogs = false): VueWrapper => {
                 CustomerCredentialDialog: true,
                 CustomerAddressDialog: !realDialogs,
                 CustomerFormDialog: true,
+                CustomerPinSettings: true,
                 CustomerResetPinDialog: true,
                 Dialog: realDialogs ? false : dialogStub,
                 DialogContent: realDialogs ? false : passThroughStub,
@@ -257,6 +259,42 @@ afterEach(() => {
 });
 
 describe('customer mobile navigation', () => {
+    it('keeps order details out of Home while retaining all orders in the Orders shortcut', async () => {
+        mobileWorkspace.context.value.role = 'customer';
+        mobileWorkspace.orders.value = [makeOrder(42), makeOrder(43), makeOrder(44)];
+        const wrapper = mountMobileApp();
+
+        expect(wrapper.findComponent(OrderListPanel).exists()).toBe(false);
+        for (const order of mobileWorkspace.orders.value) {
+            expect(wrapper.text()).not.toContain(order.order_number);
+        }
+
+        await wrapper.get('[data-test="view-orders-shortcut"]').trigger('click');
+
+        expect(wrapper.getComponent(OrderListPanel).props('orders')).toEqual(
+            mobileWorkspace.orders.value,
+        );
+        expect(wrapper.get('[data-test="mobile-tab-orders"]').attributes('aria-current')).toBe(
+            'page',
+        );
+    });
+
+    it('opens customer addresses and account from Home shortcuts', async () => {
+        mobileWorkspace.context.value.role = 'customer';
+        const wrapper = mountMobileApp();
+
+        await wrapper.get('[data-test="manage-addresses-shortcut"]').trigger('click');
+        expect(wrapper.getComponent(CustomerAddressDialog).props('open')).toBe(true);
+        wrapper.getComponent(CustomerAddressDialog).vm.$emit('update:open', false);
+        await flushPromises();
+        await wrapper.get('[data-test="view-account-shortcut"]').trigger('click');
+
+        expect(wrapper.getComponent(MobileAccount).props('role')).toBe('customer');
+        expect(wrapper.get('[data-test="mobile-tab-account"]').attributes('aria-current')).toBe(
+            'page',
+        );
+    });
+
     it.each(['home', 'orders'] as const)(
         'opens the same customer composer from %s and keeps the tab after creation',
         async (tab) => {

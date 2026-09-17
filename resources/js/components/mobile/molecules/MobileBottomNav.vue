@@ -27,7 +27,7 @@ const adminTabs: { id: MobileTab; label: string }[] = [
 
 <template>
     <nav
-        class="mobile-glass safe-bottom fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-3xl grid-cols-4 rounded-t-3xl border border-white/70 px-2 pt-2 shadow-low"
+        class="mobile-glass safe-bottom fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-3xl grid-cols-4 rounded-t-3xl border border-line px-2 pt-2 shadow-low"
         aria-label="Navigasi aplikasi"
     >
         <template v-if="role === 'customer'">
@@ -36,7 +36,7 @@ const adminTabs: { id: MobileTab; label: string }[] = [
                 :key="item.id"
                 type="button"
                 class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold transition-colors"
-                :class="modelValue === item.id ? 'bg-brand-100 text-brand-700' : 'text-ink-500 hover:bg-canvas hover:text-ink-950'"
+                :class="modelValue === item.id ? 'bg-brand-700 text-white' : 'text-ink-500 hover:bg-canvas hover:text-ink-950'"
                 :aria-current="modelValue === item.id ? 'page' : undefined"
                 :data-test="`mobile-tab-${item.id}`"
                 @click="emit('update:modelValue', item.id)"
@@ -63,7 +63,7 @@ const adminTabs: { id: MobileTab; label: string }[] = [
                 :key="item.id"
                 type="button"
                 class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold transition-colors"
-                :class="modelValue === item.id ? 'bg-brand-100 text-brand-700' : 'text-ink-500 hover:bg-canvas hover:text-ink-950'"
+                :class="modelValue === item.id ? 'bg-brand-700 text-white' : 'text-ink-500 hover:bg-canvas hover:text-ink-950'"
                 :aria-current="modelValue === item.id ? 'page' : undefined"
                 :data-test="`mobile-tab-${item.id}`"
                 @click="emit('update:modelValue', item.id)"

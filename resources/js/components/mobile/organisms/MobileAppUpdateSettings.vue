@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { Download, LoaderCircle, RefreshCw, Smartphone } from '@lucide/vue';
+import { Download, FileText, LoaderCircle, RefreshCw, Smartphone } from '@lucide/vue';
 import { onMounted } from 'vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { useMobileAppUpdate } from '@/composables/useMobileAppUpdate';
 
 const { checkForUpdates, checking, error, installUpdate, installing, message, update } =
@@ -13,7 +22,7 @@ onMounted(() => {
 
 <template>
     <section
-        class="mt-5 rounded-2xl border border-line bg-surface p-5 shadow-low"
+        class="mt-5 rounded-3xl border border-line bg-surface p-5 shadow-low"
         aria-labelledby="app-update-settings-title"
         data-test="app-update-settings"
     >
@@ -36,12 +45,48 @@ onMounted(() => {
             </div>
         </div>
 
-        <div v-if="update?.current_changelog.length" class="mt-4 rounded-xl bg-canvas p-4">
-            <p class="text-sm font-semibold text-ink-950">Perubahan di versi ini</p>
-            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-ink-500">
-                <li v-for="entry in update.current_changelog" :key="entry">{{ entry }}</li>
-            </ul>
-        </div>
+        <Dialog
+            v-if="update && (update.current_changelog.length || (update.update_available && update.latest_changelog.length))"
+        >
+            <DialogTrigger as-child>
+                <Button type="button" variant="outline" class="mt-4" data-test="view-app-changelog">
+                    <FileText class="size-4" aria-hidden="true" />
+                    Lihat changelog
+                </Button>
+            </DialogTrigger>
+            <DialogContent
+                class="mobile-dialog max-h-[85dvh] overflow-y-auto"
+                close-label="Tutup"
+                data-test="app-changelog-dialog"
+            >
+                <DialogHeader class="text-left">
+                    <DialogTitle class="flex min-h-11 items-center pr-24 leading-snug">Changelog aplikasi</DialogTitle>
+                    <DialogDescription>Catatan perubahan dan perbaikan LaundryHub.</DialogDescription>
+                </DialogHeader>
+                <div class="space-y-5">
+                    <section v-if="update.current_changelog.length" aria-labelledby="current-changelog-title">
+                        <h3 id="current-changelog-title" class="font-display text-sm font-semibold text-ink-950">
+                            Versi terpasang v{{ update.current_version }}
+                        </h3>
+                        <ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-ink-700">
+                            <li v-for="entry in update.current_changelog" :key="entry" class="break-words whitespace-pre-line">{{ entry }}</li>
+                        </ul>
+                    </section>
+                    <section
+                        v-if="update.update_available && update.latest_changelog.length"
+                        aria-labelledby="latest-changelog-title"
+                        class="rounded-2xl border border-line bg-canvas p-4"
+                    >
+                        <h3 id="latest-changelog-title" class="font-display text-sm font-semibold text-ink-950">
+                            Pembaruan v{{ update.latest_version }}
+                        </h3>
+                        <ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-ink-700">
+                            <li v-for="entry in update.latest_changelog" :key="entry" class="break-words whitespace-pre-line">{{ entry }}</li>
+                        </ul>
+                    </section>
+                </div>
+            </DialogContent>
+        </Dialog>
 
         <div
             v-if="update?.update_available"
@@ -51,12 +96,6 @@ onMounted(() => {
             <p class="font-semibold text-mint-500">
                 Pembaruan v{{ update.latest_version }} tersedia
             </p>
-            <ul
-                v-if="update.latest_changelog.length"
-                class="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-ink-700"
-            >
-                <li v-for="entry in update.latest_changelog" :key="entry">{{ entry }}</li>
-            </ul>
             <button
                 type="button"
                 class="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60 motion-safe:active:scale-[0.98]"
@@ -94,7 +133,7 @@ onMounted(() => {
 
         <button
             type="button"
-            class="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 motion-safe:active:scale-[0.98]"
+            class="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60 motion-safe:active:scale-[0.98]"
             :disabled="checking || installing"
             data-test="check-app-update"
             @click="checkForUpdates"

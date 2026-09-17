@@ -137,13 +137,6 @@ const handleLogout = async (): Promise<void> => {
     }
 };
 
-const recentOrders = computed(() => workspace.orders.value.slice(0, 2));
-const activeCustomerOrder = computed(
-    () =>
-        workspace.orders.value.find(
-            (order) => !['completed', 'cancelled'].includes(order.status),
-        ) ?? null,
-);
 const filteredCustomerOrders = computed(() =>
     filterCustomerOrders(workspace.orders.value, customerOrderFilters.value),
 );
@@ -371,7 +364,7 @@ const clearQueueSearch = (): void => {
     <Head title="LaundryHub Mobile" />
 
     <div class="mobile-shell bg-canvas text-ink-950">
-        <header class="mobile-glass mobile-fixed-header fixed inset-x-0 top-0 z-30 border-b border-white/70">
+        <header class="mobile-glass mobile-fixed-header fixed inset-x-0 top-0 z-30 border-b border-line">
             <div class="mx-auto flex min-h-16 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
                 <div class="flex min-w-0 items-center gap-3">
                     <span class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-brand-100 shadow-low">
@@ -460,29 +453,17 @@ const clearQueueSearch = (): void => {
                 </p>
 
                 <template v-if="workspace.context.value.role === 'customer'">
-                    <div v-if="activeTab === 'home'" class="space-y-8">
-                        <CustomerHome
-                            :user-name="page.props.auth.user.name"
-                            :branch="workspace.selectedBranch.value"
-                            :active-order="activeCustomerOrder"
-                            :address-label="workspace.selectedAddress.value?.label"
-                            @create-order="orderComposerOpen = true"
-                            @view-orders="activeTab = 'orders'"
-                            @view-branches="activeTab = 'branches'"
-                            @manage-addresses="addressDialogOpen = true"
-                        />
-                        <OrderListPanel
-                            v-if="recentOrders.length"
-                            :orders="recentOrders"
-                            :branches="workspace.context.value.branches"
-                            role="customer"
-                            title="Pesanan terbaru"
-                            description="Pantau dua pesanan terakhir tanpa meninggalkan beranda."
-                            :payment-actions="workspace.paymentActions"
-                            :payment-processing="workspace.paymentProcessing.value"
-                            :pricing-processing="workspace.pricingProcessing.value"
-                        />
-                    </div>
+                    <CustomerHome
+                        v-if="activeTab === 'home'"
+                        :user-name="page.props.auth.user.name"
+                        :branch="workspace.selectedBranch.value"
+                        :address-label="workspace.selectedAddress.value?.label"
+                        @create-order="orderComposerOpen = true"
+                        @view-orders="activeTab = 'orders'"
+                        @view-branches="activeTab = 'branches'"
+                        @manage-addresses="addressDialogOpen = true"
+                        @view-account="activeTab = 'account'"
+                    />
 
                     <template v-else-if="activeTab === 'orders'">
                         <div class="mb-5 flex flex-wrap items-center justify-between gap-3">

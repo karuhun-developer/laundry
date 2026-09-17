@@ -4,6 +4,15 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-17
+
+- Applied the Stitch-inspired slate, cyan, and mint visual system to CMS, mobile, login, and registration screens without changing backend behavior.
+- Made light mode the default and only appearance, including the initial page render and previously saved dark-mode preferences.
+- Simplified the customer home screen into shortcuts and pickup information, keeping active and recent order details in the Orders tab.
+- Moved installed and available-version changelogs into a dedicated modal with a single labeled close control.
+- Standardized the X Tutup controls in customer create, edit, and PIN-reset dialogs, and added a save icon to the new-PIN action.
+- Included the original .stitch design references for future visual consistency.
+
 ## [1.1.0] - 2026-09-17
 
 - Redesigned CMS, mobile, and public order-tracking interfaces with a cohesive visual system.

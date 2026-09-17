@@ -16,6 +16,7 @@ const props = withDefaults(
         DialogContentProps & {
             class?: HTMLAttributes['class'];
             showCloseButton?: boolean;
+            closeLabel?: string;
             layer?: 'default' | 'nested';
         }
     >(),
@@ -26,7 +27,7 @@ const props = withDefaults(
 );
 const emits = defineEmits<DialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class', 'showCloseButton', 'layer');
+const delegatedProps = reactiveOmit(props, 'class', 'showCloseButton', 'closeLabel', 'layer');
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
@@ -50,10 +51,15 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
       <DialogClose
         v-if="showCloseButton"
         data-slot="dialog-close"
-        class="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 flex size-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-500 shadow-sm transition hover:bg-brand-100 hover:text-brand-700 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none sm:top-5 sm:right-5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+        class="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute flex items-center justify-center border border-line bg-surface text-ink-500 shadow-sm transition hover:bg-brand-100 hover:text-brand-700 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0"
+        :class="
+          closeLabel
+            ? 'top-5 right-5 min-h-11 gap-2 rounded-full px-3 text-sm font-medium sm:top-6 sm:right-6'
+            : 'top-4 right-4 size-9 rounded-lg sm:top-5 sm:right-5'
+        "
       >
-        <X />
-        <span class="sr-only">Close</span>
+        <X class="size-4" aria-hidden="true" />
+        <span :class="closeLabel ? undefined : 'sr-only'">{{ closeLabel ?? 'Close' }}</span>
       </DialogClose>
     </DialogContent>
   </DialogPortal>

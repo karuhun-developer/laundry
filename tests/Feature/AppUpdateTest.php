@@ -250,6 +250,14 @@ it('uses the last successful release when GitHub is temporarily unavailable', fu
 });
 
 it('returns controlled unavailable states without exposing server errors', function (): void {
+    $service = new class extends AppUpdateService
+    {
+        protected function changelogContents(): string
+        {
+            return "## [1.0.20] - 2026-09-15\n\n- Fixed update checks.\n";
+        }
+    };
+    $this->app->instance(AppUpdateService::class, $service);
     Sanctum::actingAs(User::factory()->create());
     config()->set([
         'services.github_releases.repository' => null,
