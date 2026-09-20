@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cms;
 use App\Actions\Organizations\CreateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
 use App\Actions\Organizations\UpdateOrganization;
+use App\Actions\MessageTemplates\GenerateDefaultMessageTemplate;
 use App\Data\OrganizationData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\DeleteOrganizationRequest;
@@ -33,8 +34,11 @@ class OrganizationController extends Controller
     public function store(
         StoreOrganizationRequest $request,
         CreateOrganization $createOrganization,
+        GenerateDefaultMessageTemplate $generateDefaultMessageTemplate,
     ): RedirectResponse {
-        $createOrganization->handle(OrganizationData::fromRequest($request));
+        $generateDefaultMessageTemplate->handle(
+            $createOrganization->handle(OrganizationData::fromRequest($request))
+        );
 
         return back()->with('success', 'Organisasi berhasil dibuat.');
     }
