@@ -8,6 +8,7 @@ import {
     MessageSquareText,
     PackageOpen,
     UsersRound,
+    Wallet,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes/cms';
 import { index as branchesIndex } from '@/routes/cms/branches';
+import { index as cashflowIndex } from '@/routes/cms/cashflow';
 import { index as messageTemplatesIndex } from '@/routes/cms/message-templates';
 import { index as ordersIndex } from '@/routes/cms/orders';
 import { index as organizationsIndex } from '@/routes/cms/organizations';
@@ -70,6 +72,11 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     if (canManageTenant.value) {
         items.push(
+            {
+                title: 'Cashflow',
+                href: cashflowIndex(),
+                icon: Wallet,
+            },
             {
                 title: 'Kota & cabang',
                 href: branchesIndex(),

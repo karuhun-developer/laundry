@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payments;
 
+use App\Actions\Cashflow\RecordPaymentCashflow;
 use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\TransitionPaymentStatusData;
 use App\Enums\PaymentStatus;
@@ -77,6 +78,8 @@ final readonly class TransitionPaymentStatus
                 $currentStatus !== PaymentStatus::Paid
                 && $data->status === PaymentStatus::Paid
             ) {
+                app(RecordPaymentCashflow::class)->handle($lockedPayment);
+
                 $this->dispatchOrderPushNotification->handle(
                     $lockedOrder,
                     PushNotificationEvent::PaymentVerified,

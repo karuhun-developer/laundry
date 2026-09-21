@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payments;
 
+use App\Actions\Cashflow\RecordPaymentCashflow;
 use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\Payments\PaymentGatewayWebhookData;
 use App\Data\Payments\PaymentGatewayWebhookResultData;
@@ -131,6 +132,8 @@ final readonly class HandlePaymentGatewayWebhook
                 $currentStatus !== PaymentStatus::Paid
                 && $nextStatus === PaymentStatus::Paid
             ) {
+                app(RecordPaymentCashflow::class)->handle($payment);
+
                 $this->dispatchOrderPushNotification->handle(
                     $payment->order,
                     PushNotificationEvent::PaymentVerified,

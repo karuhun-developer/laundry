@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AppUpdateDownloadController;
 use App\Http\Controllers\Cms\BranchController;
+use App\Http\Controllers\Cms\CashflowCategoryController;
+use App\Http\Controllers\Cms\CashflowController;
 use App\Http\Controllers\Cms\CityController;
 use App\Http\Controllers\Cms\MessageTemplateController;
 use App\Http\Controllers\Cms\OrderController;
@@ -72,6 +74,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+        Route::post('cashflow', [CashflowController::class, 'store'])->name('cashflow.store');
+        Route::delete('cashflow/{cashflowEntry}', [CashflowController::class, 'destroy'])->name('cashflow.destroy');
+        Route::post('cashflow/categories', [CashflowCategoryController::class, 'store'])->name('cashflow.categories.store');
+        Route::patch('cashflow/categories/{cashflowCategory}', [CashflowCategoryController::class, 'update'])->name('cashflow.categories.update');
+        Route::delete('cashflow/categories/{cashflowCategory}', [CashflowCategoryController::class, 'destroy'])->name('cashflow.categories.destroy');
         Route::get('message-templates', [MessageTemplateController::class, 'index'])
             ->name('message-templates.index');
         Route::post('message-templates', [MessageTemplateController::class, 'store'])

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payments;
 
+use App\Actions\Cashflow\RecordPaymentCashflow;
 use App\Data\CreatePaymentData;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -139,6 +140,10 @@ final readonly class CreatePayment
                     'amount_rupiah' => $data->amountRupiah,
                 ])
                 ->log('payment created');
+
+            if ($payment->status === PaymentStatus::Paid) {
+                app(RecordPaymentCashflow::class)->handle($payment);
+            }
 
             return $payment->load('statusEvents');
         });

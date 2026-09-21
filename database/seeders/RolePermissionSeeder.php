@@ -35,6 +35,7 @@ class RolePermissionSeeder extends Seeder
             PermissionName::ManageMessageTemplates->value,
             PermissionName::UpdateOrderStatus->value,
             PermissionName::ViewAudit->value,
+            PermissionName::ManageCashflow->value,
         ]);
 
         Role::findOrCreate(RoleName::BranchAdmin->value)->syncPermissions([

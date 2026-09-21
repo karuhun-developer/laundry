@@ -12,4 +12,5 @@ enum PermissionName: string
     case ManageMessageTemplates = 'manage message templates';
     case UpdateOrderStatus = 'update order status';
     case ViewAudit = 'view audit';
+    case ManageCashflow = 'manage cashflow';
 }

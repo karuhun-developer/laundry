@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Cms;
 
+use App\Actions\Cashflow\GenerateDefaultCashflowCategories;
 use App\Actions\MessageTemplates\GenerateDefaultMessageTemplate;
 use App\Actions\Organizations\CreateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
@@ -35,10 +36,12 @@ class OrganizationController extends Controller
         StoreOrganizationRequest $request,
         CreateOrganization $createOrganization,
         GenerateDefaultMessageTemplate $generateDefaultMessageTemplate,
+        GenerateDefaultCashflowCategories $generateDefaultCashflowCategories,
     ): RedirectResponse {
-        $generateDefaultMessageTemplate->handle(
-            $createOrganization->handle(OrganizationData::fromRequest($request))
-        );
+        $organization = $createOrganization->handle(OrganizationData::fromRequest($request));
+
+        $generateDefaultMessageTemplate->handle($organization);
+        $generateDefaultCashflowCategories->handle($organization);
 
         return back()->with('success', 'Organisasi berhasil dibuat.');
     }

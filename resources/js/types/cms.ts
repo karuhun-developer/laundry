@@ -261,3 +261,81 @@ export type OrdersPageProps = {
     organizations: OrganizationOption[];
     orderStatuses: OrderStatusOption[];
 };
+
+export type CashflowCategoryOption = {
+    id: number;
+    organization_id: number;
+    name: string;
+    type: 'debit' | 'credit';
+    group: 'rutin' | 'non_rutin';
+    is_system?: boolean;
+};
+
+export type CashflowBranchOption = {
+    id: number;
+    organization_id: number;
+    name: string;
+};
+
+export type CashflowEntrySummary = {
+    id: number;
+    organization_id: number;
+    branch_id: number;
+    cashflow_category_id: number;
+    payment_id: number | null;
+    type: 'debit' | 'credit';
+    amount_rupiah: number;
+    description: string;
+    entry_date: string;
+    created_at: string;
+    category: {
+        id: number;
+        name: string;
+        type: 'debit' | 'credit';
+        group: 'rutin' | 'non_rutin';
+    };
+    branch: {
+        id: number;
+        name: string;
+    };
+    pending?: boolean;
+};
+
+export type CashflowStatementCategory = {
+    id: number;
+    name: string;
+    type: 'debit' | 'credit';
+    group: 'rutin' | 'non_rutin';
+    monthly: Record<number, number>;
+    total: number;
+};
+
+export type CashflowStatement = {
+    year: number;
+    total_debit: number;
+    total_credit: number;
+    net_profit: number;
+    months: Record<
+        number,
+        {
+            month: number;
+            debit: number;
+            credit: number;
+            net: number;
+        }
+    >;
+    categories: CashflowStatementCategory[];
+};
+
+export type CashflowPageProps = {
+    statement: CashflowStatement;
+    entries: CashflowEntrySummary[];
+    branches: CashflowBranchOption[];
+    organizations: OrganizationOption[];
+    categories: CashflowCategoryOption[];
+    filters: {
+        year: number;
+        branch_id: string | null;
+        organization_id: string | null;
+    };
+};
