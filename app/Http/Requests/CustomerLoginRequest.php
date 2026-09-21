@@ -34,10 +34,17 @@ class CustomerLoginRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $phone = app(WhatsAppPhoneNormalizer::class)->normalize($this->input('whatsapp_phone'));
+        $rawPhone = $this->input('whatsapp_phone');
+        if (is_string($rawPhone)) {
+            $rawPhone = trim($rawPhone);
+        }
+
+        $phone = app(WhatsAppPhoneNormalizer::class)->normalize($rawPhone);
 
         if ($phone !== null) {
             $this->merge(['whatsapp_phone' => $phone]);
+        } elseif (is_string($rawPhone)) {
+            $this->merge(['whatsapp_phone' => $rawPhone]);
         }
     }
 

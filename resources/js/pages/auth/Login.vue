@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormDataConvertible } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
@@ -63,6 +64,14 @@ const useDemoAccount = (account: DemoAccount): void => {
     email.value = account.email ?? '';
     password.value = props.demoPassword ?? '';
 };
+
+const transformCustomerLogin = (
+    data: Record<string, FormDataConvertible>,
+): Record<string, FormDataConvertible> => ({
+    ...data,
+    whatsapp_phone:
+        typeof data.whatsapp_phone === 'string' ? data.whatsapp_phone.trim() : data.whatsapp_phone,
+});
 </script>
 
 <template>
@@ -106,6 +115,7 @@ const useDemoAccount = (account: DemoAccount): void => {
     <Form
         v-if="mode === 'customer'"
         v-bind="customerLoginStore.form()"
+        :transform="transformCustomerLogin"
         :reset-on-success="['pin']"
         v-slot="{ errors, processing }"
         class="flex flex-col gap-6"
@@ -123,7 +133,7 @@ const useDemoAccount = (account: DemoAccount): void => {
                     autofocus
                     autocomplete="tel"
                     inputmode="tel"
-                    placeholder="08xxxxxxxxxx"
+                    placeholder="08xxxxxxxxxx atau 628xxxxxxxxxx"
                 />
                 <InputError :message="errors.whatsapp_phone" />
             </div>

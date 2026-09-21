@@ -16,10 +16,14 @@ class WhatsAppPhoneNormalizer
             return null;
         }
 
-        if (str_starts_with($digits, '0')) {
+        if (str_starts_with($digits, '6208')) {
+            $digits = '62'.substr($digits, 3);
+        } elseif (str_starts_with($digits, '0')) {
             $digits = '62'.substr($digits, 1);
+        } elseif (str_starts_with($digits, '8')) {
+            $digits = '62'.$digits;
         }
 
-        return preg_match('/^628[1-9][0-9]{7,11}$/', $digits) === 1 ? $digits : null;
+        return preg_match('/^628[1-9][0-9]{5,11}$/', $digits) === 1 ? $digits : null;
     }
 }

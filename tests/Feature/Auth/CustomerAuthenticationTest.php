@@ -11,7 +11,7 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('authenticates a customer with a normalized WhatsApp number and PIN', function (): void {
+it('authenticates a customer with varied WhatsApp number formats and PIN', function (string $inputPhone): void {
     $customer = User::factory()->withCustomerPin()->create([
         'email' => null,
         'password' => null,
@@ -20,7 +20,7 @@ it('authenticates a customer with a normalized WhatsApp number and PIN', functio
     $customer->assignRole(RoleName::Customer->value);
 
     $response = $this->post(route('customer-login.store'), [
-        'whatsapp_phone' => '0812 3456-7890',
+        'whatsapp_phone' => $inputPhone,
         'pin' => '123456',
     ]);
 
@@ -28,6 +28,47 @@ it('authenticates a customer with a normalized WhatsApp number and PIN', functio
     $response
         ->assertRedirect(route('mobile.app', absolute: false))
         ->assertSessionHas('customer_session_version', 1);
+})->with([
+    'local format with spaces and dash' => '0812 3456-7890',
+    'local format clean' => '081234567890',
+    'international format' => '6281234567890',
+    'international format with plus' => '+6281234567890',
+    'shorthand without leading zero' => '81234567890',
+    'double prefix 620' => '62081234567890',
+]);
+
+it('authenticates a customer with a shorter valid phone number such as test numbers', function (): void {
+    $customer = User::factory()->withCustomerPin()->create([
+        'email' => null,
+        'password' => null,
+        'whatsapp_phone' => '628123123',
+    ]);
+    $customer->assignRole(RoleName::Customer->value);
+
+    $response = $this->post(route('customer-login.store'), [
+        'whatsapp_phone' => '08123123',
+        'pin' => '123456',
+    ]);
+
+    $this->assertAuthenticatedAs($customer);
+    $response->assertRedirect(route('mobile.app', absolute: false));
+});
+
+it('authenticates when customer was stored with local format in database', function (): void {
+    $customer = User::factory()->withCustomerPin()->create([
+        'email' => null,
+        'password' => null,
+        'whatsapp_phone' => '081234567890',
+    ]);
+    $customer->assignRole(RoleName::Customer->value);
+
+    $response = $this->post(route('customer-login.store'), [
+        'whatsapp_phone' => '081234567890',
+        'pin' => '123456',
+    ]);
+
+    $this->assertAuthenticatedAs($customer);
+    $response->assertRedirect(route('mobile.app', absolute: false));
 });
 
 it('returns the same error for an unknown customer and an invalid PIN', function (array $credentials): void {

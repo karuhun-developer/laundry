@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormDataConvertible } from '@inertiajs/core';
 import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -15,6 +16,14 @@ defineOptions({
         description: 'Daftar dengan nomor WhatsApp dan PIN 6 digit.',
     },
 });
+
+const transformRegister = (
+    data: Record<string, FormDataConvertible>,
+): Record<string, FormDataConvertible> => ({
+    ...data,
+    whatsapp_phone:
+        typeof data.whatsapp_phone === 'string' ? data.whatsapp_phone.trim() : data.whatsapp_phone,
+});
 </script>
 
 <template>
@@ -22,6 +31,7 @@ defineOptions({
 
     <Form
         v-bind="store.form()"
+        :transform="transformRegister"
         :reset-on-success="['pin', 'pin_confirmation']"
         v-slot="{ errors, processing }"
         class="flex flex-col gap-6"
@@ -50,7 +60,7 @@ defineOptions({
                     autocomplete="tel"
                     inputmode="tel"
                     name="whatsapp_phone"
-                    placeholder="08xxxxxxxxxx"
+                    placeholder="08xxxxxxxxxx atau 628xxxxxxxxxx"
                 />
                 <InputError :message="errors.whatsapp_phone" />
             </div>

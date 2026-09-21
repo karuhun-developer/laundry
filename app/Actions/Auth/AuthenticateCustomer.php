@@ -4,6 +4,7 @@ namespace App\Actions\Auth;
 
 use App\Enums\RoleName;
 use App\Models\User;
+use App\Services\WhatsAppPhoneNormalizer;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
@@ -12,6 +13,10 @@ final class AuthenticateCustomer
     private const int MAX_ATTEMPTS = 5;
 
     private const int DECAY_SECONDS = 60;
+
+    public function __construct(
+        private readonly WhatsAppPhoneNormalizer $phoneNormalizer = new WhatsAppPhoneNormalizer,
+    ) {}
 
     public function handle(string $whatsappPhone, string $pin, string $throttleKey): User
     {
@@ -26,8 +31,17 @@ final class AuthenticateCustomer
             ])->status(429);
         }
 
+        $normalizedPhone = $this->phoneNormalizer->normalize($whatsappPhone) ?? $whatsappPhone;
+        $rawDigits = preg_replace('/\D+/', '', $whatsappPhone) ?: $whatsappPhone;
+        $localPhone = str_starts_with($rawDigits, '62') ? '0'.substr($rawDigits, 2) : $rawDigits;
+
         $customer = User::query()
-            ->where('whatsapp_phone', $whatsappPhone)
+            ->where(function ($query) use ($whatsappPhone, $normalizedPhone, $rawDigits, $localPhone): void {
+                $query->where('whatsapp_phone', $normalizedPhone)
+                    ->orWhere('whatsapp_phone', $whatsappPhone)
+                    ->orWhere('whatsapp_phone', $rawDigits)
+                    ->orWhere('whatsapp_phone', $localPhone);
+            })
             ->whereHas('roles', fn ($query) => $query->where('name', RoleName::Customer->value))
             ->first();
 

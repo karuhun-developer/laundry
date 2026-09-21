@@ -79,4 +79,21 @@ class RegistrationTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_user_can_register_with_various_phone_formats(): void
+    {
+        $response = $this->post(route('register.store'), [
+            'name' => 'Shorter Phone User',
+            'whatsapp_phone' => '08123123',
+            'pin' => '123456',
+            'pin_confirmation' => '123456',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('mobile.app', absolute: false));
+        $this->assertDatabaseHas('users', [
+            'name' => 'Shorter Phone User',
+            'whatsapp_phone' => '628123123',
+        ]);
+    }
 }
