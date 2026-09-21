@@ -17,7 +17,8 @@ class OrderPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->can(PermissionName::ManageOrders->value)
+            && ($user->hasRole(RoleName::Superadmin->value) || $user->organization_id !== null);
     }
 
     /**

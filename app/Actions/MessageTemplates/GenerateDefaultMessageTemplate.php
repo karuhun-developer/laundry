@@ -3,8 +3,8 @@
 namespace App\Actions\MessageTemplates;
 
 use App\Enums\OrderStatus;
-use App\Models\Organization;
 use App\Models\MessageTemplate;
+use App\Models\Organization;
 
 final class GenerateDefaultMessageTemplate
 {

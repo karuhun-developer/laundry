@@ -31,6 +31,7 @@ class OrderResource extends JsonResource
             'organization_id' => $this->organization_id,
             'organization' => [
                 'id' => $this->organization_id,
+                'name' => $this->organization->name,
                 'slug' => $this->organization->slug,
             ],
             'branch' => [
@@ -42,8 +43,12 @@ class OrderResource extends JsonResource
             'customer' => [
                 'id' => $this->customer_id,
                 'name' => $this->customer_name_snapshot,
+                'whatsapp_phone' => $this->customer_whatsapp_phone_snapshot,
             ],
-            'items' => OrderItemResource::collection($this->whenLoaded('items')),
+            'items' => $this->whenLoaded(
+                'items',
+                fn () => OrderItemResource::collection($this->items)->resolve(),
+            ),
             'pricing' => [
                 'confirmed' => $this->priced_at !== null,
                 'confirmed_at' => $this->priced_at?->toISOString(),
@@ -71,10 +76,14 @@ class OrderResource extends JsonResource
                     'fee_per_km_rupiah_snapshot' => $this->delivery_fee_per_km_rupiah_snapshot,
                     'fee_rupiah' => $this->delivery_fee_rupiah,
                 ],
-            'status_history' => OrderStatusEventResource::collection(
-                $this->whenLoaded('statusEvents'),
+            'status_history' => $this->whenLoaded(
+                'statusEvents',
+                fn () => OrderStatusEventResource::collection($this->statusEvents)->resolve(),
             ),
-            'payments' => PaymentResource::collection($this->whenLoaded('payments')),
+            'payments' => $this->whenLoaded(
+                'payments',
+                fn () => PaymentResource::collection($this->payments)->resolve(),
+            ),
             'payment_summary' => $this->when($this->relationLoaded('payments'), [
                 'paid_rupiah' => $paidRupiah,
                 'outstanding_rupiah' => max(0, $this->total_rupiah - $paidRupiah),

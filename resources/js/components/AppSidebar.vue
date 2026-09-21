@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Building2,
+    ClipboardList,
     LayoutGrid,
     MapPinned,
     MessageSquareText,
@@ -24,6 +25,7 @@ import {
 import { dashboard } from '@/routes/cms';
 import { index as branchesIndex } from '@/routes/cms/branches';
 import { index as messageTemplatesIndex } from '@/routes/cms/message-templates';
+import { index as ordersIndex } from '@/routes/cms/orders';
 import { index as organizationsIndex } from '@/routes/cms/organizations';
 import { index as servicesIndex } from '@/routes/cms/services';
 import { index as usersIndex } from '@/routes/cms/users';
@@ -33,6 +35,12 @@ const page = usePage();
 const roles = computed(() => page.props.auth.user.roles);
 const canManageTenant = computed(
     () => roles.value.includes('superadmin') || roles.value.includes('owner'),
+);
+const canManageOrders = computed(
+    () =>
+        roles.value.includes('superadmin') ||
+        roles.value.includes('owner') ||
+        roles.value.includes('branch_admin'),
 );
 
 const mainNavItems = computed<NavItem[]>(() => {
@@ -49,6 +57,14 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Organisasi',
             href: organizationsIndex(),
             icon: Building2,
+        });
+    }
+
+    if (canManageOrders.value) {
+        items.push({
+            title: 'Antrean pesanan',
+            href: ordersIndex(),
+            icon: ClipboardList,
         });
     }
 

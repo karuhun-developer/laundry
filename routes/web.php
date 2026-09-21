@@ -4,6 +4,7 @@ use App\Http\Controllers\AppUpdateDownloadController;
 use App\Http\Controllers\Cms\BranchController;
 use App\Http\Controllers\Cms\CityController;
 use App\Http\Controllers\Cms\MessageTemplateController;
+use App\Http\Controllers\Cms\OrderController;
 use App\Http\Controllers\Cms\OrganizationController;
 use App\Http\Controllers\Cms\PriceOptionController;
 use App\Http\Controllers\Cms\ServiceController;
@@ -70,6 +71,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('message-templates', [MessageTemplateController::class, 'index'])
             ->name('message-templates.index');
         Route::post('message-templates', [MessageTemplateController::class, 'store'])

@@ -145,3 +145,119 @@ export type ServicesPageProps = {
     branches: CatalogBranchSummary[];
     organizations: OrganizationOption[];
 };
+
+export type CmsOrderItemSummary = {
+    id: number;
+    service: {
+        id: number;
+        name: string;
+        code: string;
+    };
+    price_option: {
+        id: number;
+        name: string;
+        type: string;
+        pricing_snapshot: {
+            package_weight_grams: number | null;
+            base_price_rupiah: number | null;
+            price_per_kilogram_rupiah: number | null;
+            min_price_per_kilogram_rupiah: number | null;
+            minimum_chargeable_grams: number | null;
+        };
+    };
+    calculation: {
+        requested_weight_grams: number;
+        chargeable_weight_grams: number;
+        base_price_rupiah: number;
+        excess_weight_grams: number;
+        excess_price_rupiah: number;
+        subtotal_rupiah: number;
+    };
+};
+
+export type CmsOrderStatusEventSummary = {
+    id: number;
+    status: string;
+    actor: {
+        id: number | null;
+        name: string;
+    };
+    note: string | null;
+    occurred_at: string;
+};
+
+export type CmsOrderPaymentSummary = {
+    id: number;
+    payment_number: string | null;
+    method: string;
+    method_label: string;
+    status: string;
+    status_label: string;
+    amount_rupiah: number;
+    qris_payload: string | null;
+    qris_image_data_uri: string | null;
+    note: string | null;
+    settled_at: string | null;
+    created_at: string;
+};
+
+export type CmsOrderSummary = {
+    id: number;
+    order_number: string | null;
+    status: string;
+    organization_id: number;
+    organization: OrganizationOption & { slug: string };
+    branch: Pick<BranchSummary, 'id' | 'name' | 'code' | 'qris_enabled'>;
+    customer: {
+        id: number | null;
+        name: string;
+        whatsapp_phone?: string | null;
+    };
+    items: CmsOrderItemSummary[];
+    pricing: {
+        confirmed: boolean;
+        confirmed_at: string | null;
+        items_subtotal_rupiah: number;
+        delivery_fee_rupiah: number;
+        total_rupiah: number;
+    };
+    delivery: {
+        customer_latitude: number | null;
+        customer_longitude: number | null;
+        address: {
+            id: number | null;
+            label: string | null;
+            recipient_name: string | null;
+            whatsapp_phone: string | null;
+            address: string | null;
+            notes: string | null;
+        } | null;
+        distance_meters: number | null;
+        free_radius_meters_snapshot: number | null;
+        fee_per_km_rupiah_snapshot: number | null;
+        fee_rupiah: number;
+    } | null;
+    status_history: CmsOrderStatusEventSummary[];
+    payments: CmsOrderPaymentSummary[];
+    payment_summary: {
+        paid_rupiah: number;
+        outstanding_rupiah: number;
+        is_paid: boolean;
+    };
+    created_at: string;
+};
+
+export type OrderBranchOption = {
+    id: number;
+    organization_id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+};
+
+export type OrdersPageProps = {
+    orders: CmsOrderSummary[];
+    branches: OrderBranchOption[];
+    organizations: OrganizationOption[];
+    orderStatuses: OrderStatusOption[];
+};

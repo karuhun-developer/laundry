@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Cms;
 
+use App\Actions\MessageTemplates\GenerateDefaultMessageTemplate;
 use App\Actions\Organizations\CreateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
 use App\Actions\Organizations\UpdateOrganization;
-use App\Actions\MessageTemplates\GenerateDefaultMessageTemplate;
 use App\Data\OrganizationData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\DeleteOrganizationRequest;

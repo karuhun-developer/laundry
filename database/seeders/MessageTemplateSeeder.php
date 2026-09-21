@@ -10,7 +10,7 @@ class MessageTemplateSeeder extends Seeder
 {
     public function run(): void
     {
-        $generateDefaultMessageTemplate = new GenerateDefaultMessageTemplate();
+        $generateDefaultMessageTemplate = new GenerateDefaultMessageTemplate;
 
         Organization::query()->eachById(function (Organization $organization) use ($generateDefaultMessageTemplate): void {
             $generateDefaultMessageTemplate->handle($organization);
