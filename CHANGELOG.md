@@ -4,6 +4,17 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-21
+
+- Added dedicated CMS Cashflow module with a 12-month financial Cashflow Statement (grouped into Rutin and Non-Rutin sub-groups for both Pemasukan and Pengeluaran, with automatic net profit/loss calculation) and an entries Table view.
+- Added multi-tenant filters for cashflow including organization selector for superadmins, branch dropdown, and year picker.
+- Added custom cashflow category management for owners and superadmins to create, edit, and delete custom debit/credit categories.
+- Added strict system protection for the "Pembayaran Pesanan" category, preventing modification and deletion across Policy, Form Request, Action, and UI layers.
+- Automatically provisioned default cashflow categories upon organization creation via `GenerateDefaultCashflowCategories`.
+- Automatically recorded order payment income into cashflow under "Pembayaran Pesanan" when confirmed via cash, QRIS verification, or payment gateway webhooks.
+- Added manual cashflow expense and income recording with masked Rupiah currency input.
+- Added "Cashflow" navigation link in CMS sidebar for tenant managers.
+
 ## [1.2.0] - 2026-09-21
 
 - Added centralized CMS order queue with metric cards, multi-criteria filters (organization, branch, status, search), and full order detail dialogs.
