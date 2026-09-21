@@ -24,6 +24,7 @@ class PriceQuoteRequest extends FormRequest
     {
         return [
             'weight_grams' => ['required', 'integer', 'between:1,1000000'],
+            'custom_price_per_kilogram_rupiah' => ['nullable', 'integer', 'min:0', 'max:999999999999'],
         ];
     }
 }

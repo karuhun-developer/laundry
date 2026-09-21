@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Models\Order;
+use App\Models\PriceOption;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\Attributes\FailOnUnknownFields;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -24,6 +26,28 @@ class StoreOrderPricingRequest extends FormRequest
         return [
             'price_option_id' => ['required', 'integer', 'exists:price_options,id'],
             'weight_grams' => ['required', 'integer', 'between:1,1000000'],
+            'custom_price_per_kilogram_rupiah' => ['nullable', 'integer', 'min:0', 'max:999999999999'],
+        ];
+    }
+
+    /** @return array<callable(Validator): void> */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($this->filled('custom_price_per_kilogram_rupiah') && $this->filled('price_option_id')) {
+                    $priceOption = PriceOption::query()->find($this->integer('price_option_id'));
+                    if ($priceOption) {
+                        $floor = $priceOption->effectiveMinPricePerKilogram();
+                        if ($floor !== null && $this->integer('custom_price_per_kilogram_rupiah') < $floor) {
+                            $validator->errors()->add(
+                                'custom_price_per_kilogram_rupiah',
+                                'Harga per kilogram tidak boleh lebih rendah dari harga bawah (Rp '.number_format($floor, 0, ',', '.').').',
+                            );
+                        }
+                    }
+                }
+            },
         ];
     }
 

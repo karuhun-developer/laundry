@@ -15,6 +15,7 @@ final readonly class PriceOptionData
         public ?int $packageWeightGrams,
         public ?int $basePriceRupiah,
         public ?int $pricePerKilogramRupiah,
+        public ?int $minPricePerKilogramRupiah,
         public ?int $minimumChargeableGrams,
         public bool $isActive,
     ) {}
@@ -33,6 +34,9 @@ final readonly class PriceOptionData
                 : null,
             pricePerKilogramRupiah: $request->filled('price_per_kilogram_rupiah')
                 ? $request->integer('price_per_kilogram_rupiah')
+                : null,
+            minPricePerKilogramRupiah: $request->filled('min_price_per_kilogram_rupiah')
+                ? $request->integer('min_price_per_kilogram_rupiah')
                 : null,
             minimumChargeableGrams: $request->filled('minimum_chargeable_grams')
                 ? $request->integer('minimum_chargeable_grams')

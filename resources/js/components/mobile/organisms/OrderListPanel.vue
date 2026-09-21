@@ -10,6 +10,7 @@ import type {
     MobileOrderStatus,
     MobilePaymentActions,
     MobileRole,
+    MobileService,
     WhatsAppSuggestion,
 } from '@/types/mobile';
 
@@ -17,6 +18,7 @@ type Props = {
     orders: readonly MobileOrder[];
     branches?: readonly MobileBranch[];
     customers?: readonly MobileCustomer[];
+    services?: readonly MobileService[];
     role: MobileRole;
     processing?: boolean;
     title?: string;
@@ -33,6 +35,7 @@ type Props = {
 const props = withDefaults(defineProps<Props>(), {
     branches: () => [],
     customers: () => [],
+    services: () => [],
     processing: false,
     title: 'Pesanan laundry',
     description: 'Status terbaru dan riwayat proses ada di satu tempat.',
@@ -83,6 +86,7 @@ const onConfirmPricing = (orderId: number, payload: ConfirmOrderPricingPayload):
                 :order="order"
                 :role="role"
                 :branches="branches"
+                :services="services"
                 :customer-phone="customerPhones.get(order.customer.id) ?? null"
                 :processing="processing"
                 :payment-actions="paymentActions"

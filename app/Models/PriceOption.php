@@ -21,6 +21,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int|null $package_weight_grams
  * @property int|null $base_price_rupiah
  * @property int|null $price_per_kilogram_rupiah
+ * @property int|null $min_price_per_kilogram_rupiah
  * @property int|null $minimum_chargeable_grams
  * @property bool $is_active
  * @property-read Service $service
@@ -34,6 +35,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
     'package_weight_grams',
     'base_price_rupiah',
     'price_per_kilogram_rupiah',
+    'min_price_per_kilogram_rupiah',
     'minimum_chargeable_grams',
     'is_active',
 ])]
@@ -65,6 +67,11 @@ class PriceOption extends Model
         return LogOptions::defaults()->logFillable()->logOnlyDirty();
     }
 
+    public function effectiveMinPricePerKilogram(): ?int
+    {
+        return $this->min_price_per_kilogram_rupiah ?? $this->price_per_kilogram_rupiah;
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
@@ -73,6 +80,7 @@ class PriceOption extends Model
             'package_weight_grams' => 'integer',
             'base_price_rupiah' => 'integer',
             'price_per_kilogram_rupiah' => 'integer',
+            'min_price_per_kilogram_rupiah' => 'integer',
             'minimum_chargeable_grams' => 'integer',
             'is_active' => 'boolean',
         ];

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\PriceType;
+use App\Enums\RoleName;
 use App\Models\PriceOption;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -29,6 +30,9 @@ class PriceOptionResource extends JsonResource
                 ]
                 : [
                     'price_per_kilogram_rupiah' => $this->price_per_kilogram_rupiah,
+                    ...($request->user()?->hasRole(RoleName::Customer->value)
+                        ? []
+                        : ['min_price_per_kilogram_rupiah' => $this->min_price_per_kilogram_rupiah ?? $this->price_per_kilogram_rupiah]),
                     'minimum_chargeable_grams' => $this->minimum_chargeable_grams,
                 ],
         ];

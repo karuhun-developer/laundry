@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $package_weight_grams_snapshot
  * @property int|null $base_price_rupiah_snapshot
  * @property int|null $price_per_kilogram_rupiah_snapshot
+ * @property int|null $min_price_per_kilogram_rupiah_snapshot
  * @property int|null $minimum_chargeable_grams_snapshot
  * @property int $requested_weight_grams
  * @property int $chargeable_weight_grams
@@ -39,6 +40,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'package_weight_grams_snapshot',
     'base_price_rupiah_snapshot',
     'price_per_kilogram_rupiah_snapshot',
+    'min_price_per_kilogram_rupiah_snapshot',
     'minimum_chargeable_grams_snapshot',
     'requested_weight_grams',
     'chargeable_weight_grams',
@@ -79,6 +81,7 @@ class OrderItem extends Model
             'package_weight_grams_snapshot' => 'integer',
             'base_price_rupiah_snapshot' => 'integer',
             'price_per_kilogram_rupiah_snapshot' => 'integer',
+            'min_price_per_kilogram_rupiah_snapshot' => 'integer',
             'minimum_chargeable_grams_snapshot' => 'integer',
             'requested_weight_grams' => 'integer',
             'chargeable_weight_grams' => 'integer',

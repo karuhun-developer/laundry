@@ -147,6 +147,7 @@ export type MobilePriceOption = {
         base_price_rupiah?: number | null;
         excess_price_per_kilogram_rupiah?: number | null;
         price_per_kilogram_rupiah?: number | null;
+        min_price_per_kilogram_rupiah?: number | null;
         minimum_chargeable_grams?: number | null;
     };
 };
@@ -167,6 +168,7 @@ export type MobilePriceQuote = {
     excess_weight_grams: number;
     excess_price_rupiah: number;
     total_rupiah: number;
+    effective_price_per_kilogram_rupiah?: number | null;
 };
 
 export type MobileOrderItem = {
@@ -184,6 +186,7 @@ export type MobileOrderItem = {
             package_weight_grams: number | null;
             base_price_rupiah: number | null;
             price_per_kilogram_rupiah: number | null;
+            min_price_per_kilogram_rupiah?: number | null;
             minimum_chargeable_grams: number | null;
         };
     };
@@ -250,6 +253,7 @@ export type CreateOrderPayload = {
     items: Array<{
         price_option_id: number;
         weight_grams?: number;
+        custom_price_per_kilogram_rupiah?: number;
     }>;
     delivery?: {
         latitude: number;
@@ -260,6 +264,7 @@ export type CreateOrderPayload = {
 export type ConfirmOrderPricingPayload = {
     price_option_id: number;
     weight_grams: number;
+    custom_price_per_kilogram_rupiah?: number;
 };
 
 export type TransitionOrderPayload = {

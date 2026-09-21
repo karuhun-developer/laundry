@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MapPin, PlusCircle, Scale, Sparkles } from '@lucide/vue';
+import { AlertCircle, ArrowDown, ArrowUp, MapPin, PlusCircle, Scale, Sparkles } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CustomerCombobox from '@/components/mobile/molecules/CustomerCombobox.vue';
 import type { Coordinates } from '@/composables/useGeolocation';
@@ -22,7 +22,11 @@ type Props = {
     deliveryCoordinates: Coordinates | null;
     selectedAddress?: MobileCustomerAddress | null;
     activePickupOrderNumber?: string | null;
-    quoteOrder: (priceOptionId: number, weightGrams: number) => Promise<MobilePriceQuote>;
+    quoteOrder: (
+        priceOptionId: number,
+        weightGrams: number,
+        customPricePerKilogramRupiah?: number,
+    ) => Promise<MobilePriceQuote>;
     deliveryFeeRupiah?: number;
     processing?: boolean;
     selectedCustomerId?: number | null;
@@ -49,6 +53,7 @@ const customerId = computed({
 });
 const priceOptionId = ref<number | null>(null);
 const weightKilograms = ref<number | string>(1);
+const customPricePerKg = ref<number | string>('');
 const includeDelivery = ref(false);
 const formError = ref<string | null>(null);
 const quote = ref<MobilePriceQuote | null>(null);
@@ -64,6 +69,48 @@ const catalogOptions = computed(() =>
         service.price_options.map((option) => ({ service, option })),
     ),
 );
+const currentCatalogEntry = computed(
+    () => catalogOptions.value.find((entry) => entry.option.id === priceOptionId.value) ?? null,
+);
+const selectedOption = computed(() => currentCatalogEntry.value?.option ?? null);
+const isPerKilogram = computed(() => selectedOption.value?.type === 'per_kilogram');
+
+const hargaAtas = computed(() => selectedOption.value?.pricing.price_per_kilogram_rupiah ?? 0);
+const hargaBawah = computed(
+    () =>
+        selectedOption.value?.pricing.min_price_per_kilogram_rupiah ??
+        selectedOption.value?.pricing.price_per_kilogram_rupiah ??
+        0,
+);
+
+const numericPricePerKg = computed(() => {
+    const val = Number(customPricePerKg.value);
+    return Number.isFinite(val) ? val : 0;
+});
+
+const isPriceBelowFloor = computed(
+    () =>
+        props.role === 'branch_admin' &&
+        isPerKilogram.value &&
+        numericPricePerKg.value < hargaBawah.value,
+);
+
+const syncPricesFromOption = (): void => {
+    if (props.role === 'branch_admin' && isPerKilogram.value) {
+        customPricePerKg.value = hargaAtas.value;
+    } else {
+        customPricePerKg.value = '';
+    }
+};
+
+const selectHargaAtas = (): void => {
+    customPricePerKg.value = hargaAtas.value;
+};
+
+const selectHargaBawah = (): void => {
+    customPricePerKg.value = hargaBawah.value;
+};
+
 const isCustomer = computed(() => props.role === 'customer');
 const weightGrams = computed(() => Math.round(Number(weightKilograms.value) * 1000));
 const deliveryFee = computed(() =>
@@ -74,7 +121,10 @@ const hasCurrentQuote = computed(
     () =>
         quote.value !== null &&
         quote.value.price_option.id === priceOptionId.value &&
-        quote.value.requested_weight_grams === weightGrams.value,
+        quote.value.requested_weight_grams === weightGrams.value &&
+        (!isPerKilogram.value ||
+            props.role !== 'branch_admin' ||
+            quote.value.effective_price_per_kilogram_rupiah === numericPricePerKg.value),
 );
 
 watch(
@@ -82,10 +132,15 @@ watch(
     (options) => {
         if (!options.some((entry) => entry.option.id === priceOptionId.value)) {
             priceOptionId.value = options[0]?.option.id ?? null;
+            syncPricesFromOption();
         }
     },
     { immediate: true },
 );
+
+watch(priceOptionId, () => {
+    syncPricesFromOption();
+});
 
 watch(
     () => props.customers,
@@ -138,12 +193,23 @@ const scheduleQuote = (): void => {
 
     const requestedPriceOptionId = priceOptionId.value;
     const requestedWeightGrams = weightGrams.value;
+    const requestedCustomPrice =
+        props.role === 'branch_admin' && isPerKilogram.value ? numericPricePerKg.value : undefined;
+
+    if (props.role === 'branch_admin' && isPriceBelowFloor.value) {
+        quoteError.value = `Harga per kg tidak boleh lebih rendah dari harga bawah (${formatRupiah(hargaBawah.value)}/kg).`;
+        return;
+    }
 
     quoteTimer = setTimeout(async () => {
         quoteLoading.value = true;
 
         try {
-            const response = await props.quoteOrder(requestedPriceOptionId, requestedWeightGrams);
+            const response = await props.quoteOrder(
+                requestedPriceOptionId,
+                requestedWeightGrams,
+                requestedCustomPrice,
+            );
 
             if (requestGeneration === quoteGeneration) {
                 quote.value = response;
@@ -162,7 +228,13 @@ const scheduleQuote = (): void => {
 };
 
 watch(
-    [() => props.branch?.id ?? null, () => props.role, priceOptionId, weightGrams],
+    [
+        () => props.branch?.id ?? null,
+        () => props.role,
+        priceOptionId,
+        weightGrams,
+        customPricePerKg,
+    ],
     scheduleQuote,
     {
         immediate: true,
@@ -218,6 +290,17 @@ const submit = (): void => {
         return;
     }
 
+    if (props.role === 'branch_admin' && isPerKilogram.value) {
+        if (!customPricePerKg.value || numericPricePerKg.value <= 0) {
+            formError.value = 'Masukkan harga per kilogram yang valid.';
+            return;
+        }
+        if (numericPricePerKg.value < hargaBawah.value) {
+            formError.value = `Harga per kg tidak boleh lebih rendah dari harga bawah (${formatRupiah(hargaBawah.value)}/kg).`;
+            return;
+        }
+    }
+
     if (!isCustomer.value && (!quote.value || !hasCurrentQuote.value)) {
         formError.value =
             quoteError.value ?? 'Tunggu rincian harga terbaru sebelum membuat pesanan.';
@@ -228,6 +311,9 @@ const submit = (): void => {
         items: [
             {
                 price_option_id: priceOptionId.value,
+                ...(props.role === 'branch_admin' && isPerKilogram.value
+                    ? { custom_price_per_kilogram_rupiah: numericPricePerKg.value }
+                    : {}),
             },
         ],
     };
@@ -333,6 +419,73 @@ const submit = (): void => {
                 </span>
             </label>
 
+            <!-- Bagian Harga Atas & Harga Bawah (Khusus Admin & Paket Kiloan) -->
+            <div
+                v-if="role === 'branch_admin' && isPerKilogram"
+                class="space-y-3 rounded-2xl border border-line bg-surface-blue/50 p-4"
+                data-test="pricing-bounds-panel"
+            >
+                <div class="flex items-center justify-between text-xs">
+                    <span class="font-semibold text-ink-700">Batas Tarif Paket:</span>
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center gap-1 font-medium text-ink-700">
+                            <ArrowUp class="size-3 text-brand-600" aria-hidden="true" />
+                            Atas: <strong>{{ formatRupiah(hargaAtas) }}</strong>/kg
+                        </span>
+                        <span class="inline-flex items-center gap-1 font-medium text-amber-700">
+                            <ArrowDown class="size-3 text-amber-600" aria-hidden="true" />
+                            Bawah: <strong>{{ formatRupiah(hargaBawah) }}</strong>/kg
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="order-composer-price-per-kg" class="text-xs font-semibold text-ink-950">
+                        Harga per kg untuk Pesanan Ini (Rp)
+                    </label>
+                    <div class="mt-1.5 flex gap-2">
+                        <input
+                            id="order-composer-price-per-kg"
+                            v-model="customPricePerKg"
+                            type="number"
+                            :min="hargaBawah"
+                            step="100"
+                            required
+                            class="min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
+                            :class="isPriceBelowFloor ? 'border-red-500 focus:ring-red-200' : ''"
+                            data-test="order-composer-price-per-kg"
+                        />
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="inline-flex min-h-8 items-center rounded-lg border border-brand-600/30 bg-brand-50 px-2.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
+                            data-test="composer-use-harga-atas"
+                            @click="selectHargaAtas"
+                        >
+                            Gunakan Harga Atas ({{ formatRupiah(hargaAtas) }})
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex min-h-8 items-center rounded-lg border border-amber-600/30 bg-amber-50 px-2.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                            data-test="composer-use-harga-bawah"
+                            @click="selectHargaBawah"
+                        >
+                            Gunakan Harga Bawah ({{ formatRupiah(hargaBawah) }})
+                        </button>
+                    </div>
+                </div>
+
+                <p
+                    v-if="isPriceBelowFloor"
+                    class="flex items-center gap-1.5 text-xs font-medium text-red-600"
+                    role="alert"
+                >
+                    <AlertCircle class="size-3.5 shrink-0" aria-hidden="true" />
+                    Harga tidak boleh lebih rendah dari harga bawah ({{ formatRupiah(hargaBawah) }}/kg).
+                </p>
+            </div>
+
             <div
                 v-if="role === 'customer'"
                 class="rounded-2xl border border-line bg-surface-blue p-4"
@@ -418,6 +571,10 @@ const submit = (): void => {
                         <dt class="text-ink-500">Berat tertagih</dt>
                         <dd class="font-medium text-ink-950">{{ formatWeight(quote.chargeable_weight_grams) }}</dd>
                     </div>
+                    <div v-if="role === 'branch_admin' && isPerKilogram" class="flex items-center justify-between gap-4">
+                        <dt class="text-ink-500">Tarif per kg</dt>
+                        <dd class="font-medium text-ink-950">{{ formatRupiah(numericPricePerKg) }}/kg</dd>
+                    </div>
                     <div class="flex items-center justify-between gap-4">
                         <dt class="text-ink-500">{{ quote.price_option.type === 'fixed_package' ? 'Harga paket' : 'Harga dasar' }}</dt>
                         <dd class="font-medium text-ink-950">{{ formatRupiah(quote.base_price_rupiah) }}</dd>
@@ -449,6 +606,7 @@ const submit = (): void => {
                     submitPending ||
                     !branch ||
                     catalogOptions.length === 0 ||
+                    isPriceBelowFloor ||
                     (role === 'customer'
                         ? !selectedAddress || Boolean(activePickupOrderNumber)
                         : quoteLoading || !hasCurrentQuote)

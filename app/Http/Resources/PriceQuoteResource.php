@@ -26,6 +26,7 @@ class PriceQuoteResource extends JsonResource
             'excess_weight_grams' => $quote->excessWeightGrams,
             'excess_price_rupiah' => $quote->excessPriceRupiah,
             'total_rupiah' => $quote->totalRupiah,
+            'effective_price_per_kilogram_rupiah' => $quote->effectivePricePerKilogramRupiah,
         ];
     }
 }

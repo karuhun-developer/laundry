@@ -41,6 +41,8 @@ const form = useForm({
     package_weight_grams: props.priceOption?.package_weight_grams?.toString() ?? '',
     base_price_rupiah: props.priceOption?.base_price_rupiah?.toString() ?? '',
     price_per_kilogram_rupiah: props.priceOption?.price_per_kilogram_rupiah?.toString() ?? '',
+    min_price_per_kilogram_rupiah:
+        props.priceOption?.min_price_per_kilogram_rupiah?.toString() ?? '',
     minimum_chargeable_grams: props.priceOption?.minimum_chargeable_grams?.toString() ?? '',
     is_active: props.priceOption?.is_active ?? true,
 });
@@ -70,6 +72,8 @@ const restoreValues = (): void => {
     form.package_weight_grams = props.priceOption?.package_weight_grams?.toString() ?? '';
     form.base_price_rupiah = props.priceOption?.base_price_rupiah?.toString() ?? '';
     form.price_per_kilogram_rupiah = props.priceOption?.price_per_kilogram_rupiah?.toString() ?? '';
+    form.min_price_per_kilogram_rupiah =
+        props.priceOption?.min_price_per_kilogram_rupiah?.toString() ?? '';
     form.minimum_chargeable_grams = props.priceOption?.minimum_chargeable_grams?.toString() ?? '';
     form.is_active = props.priceOption?.is_active ?? true;
     form.clearErrors();
@@ -84,6 +88,7 @@ watch(open, (isOpen) => {
 const clearUnusedPricingFields = (): void => {
     if (form.type === 'fixed_package') {
         form.minimum_chargeable_grams = '';
+        form.min_price_per_kilogram_rupiah = '';
 
         return;
     }
@@ -109,6 +114,7 @@ const submit = (): void => {
         package_weight_grams: optionalNumber(form.package_weight_grams),
         base_price_rupiah: optionalNumber(form.base_price_rupiah),
         price_per_kilogram_rupiah: optionalNumber(form.price_per_kilogram_rupiah),
+        min_price_per_kilogram_rupiah: optionalNumber(form.min_price_per_kilogram_rupiah),
         minimum_chargeable_grams: optionalNumber(form.minimum_chargeable_grams),
         is_active: form.is_active,
         branch,
@@ -288,7 +294,7 @@ const submit = (): void => {
 
         <div v-else class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
-                <Label for="kilogram-price">Harga per kg (Rp)</Label>
+                <Label for="kilogram-price">Harga atas / standar per kg (Rp)</Label>
                 <Input
                     id="kilogram-price"
                     v-model="form.price_per_kilogram_rupiah"
@@ -296,12 +302,31 @@ const submit = (): void => {
                     min="0"
                     step="1"
                     required
+                    placeholder="Contoh: 12000"
                     :aria-invalid="Boolean(form.errors.price_per_kilogram_rupiah)"
                     aria-describedby="kilogram-price-error"
                 />
                 <InputError id="kilogram-price-error" :message="form.errors.price_per_kilogram_rupiah" />
             </div>
             <div class="space-y-2">
+                <Label for="kilogram-min-price">Harga bawah / batas nego per kg (Rp)</Label>
+                <Input
+                    id="kilogram-min-price"
+                    v-model="form.min_price_per_kilogram_rupiah"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    placeholder="Contoh: 10000"
+                    :aria-invalid="Boolean(form.errors.min_price_per_kilogram_rupiah)"
+                    aria-describedby="kilogram-min-price-error"
+                />
+                <p class="text-ink-500 text-xs">
+                    Batas harga terendah yang diizinkan saat admin cabang menegosiasikan harga.
+                </p>
+                <InputError id="kilogram-min-price-error" :message="form.errors.min_price_per_kilogram_rupiah" />
+            </div>
+            <div class="space-y-2 sm:col-span-2">
                 <Label for="minimum-weight">Minimum tagihan (kg)</Label>
                 <Input
                     id="minimum-weight"

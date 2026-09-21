@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import MobileStatusBadge from '@/components/mobile/atoms/MobileStatusBadge.vue';
 import WhatsAppIcon from '@/components/mobile/atoms/WhatsAppIcon.vue';
 import OrderDetailsDialog from '@/components/mobile/molecules/OrderDetailsDialog.vue';
+import OrderPricingConfirmationDialog from '@/components/mobile/molecules/OrderPricingConfirmationDialog.vue';
 import WhatsAppContactButton from '@/components/mobile/molecules/WhatsAppContactButton.vue';
 import WhatsAppSuggestionDialog from '@/components/mobile/molecules/WhatsAppSuggestionDialog.vue';
 import PaymentDialog from '@/components/mobile/organisms/PaymentDialog.vue';
@@ -21,6 +22,7 @@ import type {
     MobileOrderStatus,
     MobilePaymentActions,
     MobileRole,
+    MobileService,
     WhatsAppSuggestion,
 } from '@/types/mobile';
 
@@ -28,6 +30,7 @@ type Props = {
     order: MobileOrder;
     role: MobileRole;
     branches?: readonly MobileBranch[];
+    services?: readonly MobileService[];
     customerPhone?: string | null;
     processing?: boolean;
     pricingProcessing?: boolean;
@@ -39,6 +42,7 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     branches: () => [],
+    services: () => [],
     customerPhone: null,
     processing: false,
     pricingProcessing: false,
@@ -54,6 +58,7 @@ const emit = defineEmits<{
 }>();
 
 const actualWeightKilograms = ref<number | string>('');
+const pricingConfirmationOpen = ref(false);
 const statusMessageOpen = ref(false);
 const statusMessageLoading = ref(false);
 const statusMessage = ref<WhatsAppSuggestion | null>(null);
@@ -148,10 +153,12 @@ const confirmPricing = (): void => {
         return;
     }
 
-    emit('confirm-pricing', props.order.id, {
-        price_option_id: item.price_option.id,
-        weight_grams: actualWeightGrams.value,
-    });
+    pricingConfirmationOpen.value = true;
+};
+
+const handlePricingDialogConfirm = (payload: ConfirmOrderPricingPayload): void => {
+    actualWeightKilograms.value = (payload.weight_grams / 1000).toString();
+    emit('confirm-pricing', props.order.id, payload);
 };
 </script>
 
@@ -469,6 +476,15 @@ const confirmPricing = (): void => {
             :load-error="statusMessageError"
             :loading="statusMessageLoading"
             :description="statusMessageDescription"
+        />
+        <OrderPricingConfirmationDialog
+            v-if="role === 'branch_admin' && isPricingPending"
+            v-model:open="pricingConfirmationOpen"
+            :order="order"
+            :services="services"
+            :initial-weight-grams="actualWeightGrams"
+            :processing="pricingProcessing"
+            @confirm="handlePricingDialogConfirm"
         />
     </article>
 </template>

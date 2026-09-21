@@ -485,6 +485,7 @@ const clearQueueSearch = (): void => {
                         <OrderListPanel
                             :orders="filteredCustomerOrders"
                             :branches="workspace.context.value.branches"
+                            :services="workspace.services.value"
                             role="customer"
                             :empty-title="
                                 hasCustomerOrderFilters(customerOrderFilters)
@@ -594,6 +595,7 @@ const clearQueueSearch = (): void => {
                         <OrderListPanel
                             :orders="workspace.orders.value"
                             :branches="workspace.context.value.branches"
+                            :services="workspace.services.value"
                             role="branch_admin"
                             :customers="workspace.customers.value"
                             :load-status-whats-app-suggestion="workspace.loadStatusWhatsAppSuggestion"

@@ -32,6 +32,7 @@ class PriceOptionFactory extends Factory
             'package_weight_grams' => null,
             'base_price_rupiah' => null,
             'price_per_kilogram_rupiah' => 12000,
+            'min_price_per_kilogram_rupiah' => 10000,
             'minimum_chargeable_grams' => 1000,
             'is_active' => true,
         ];
@@ -45,6 +46,7 @@ class PriceOptionFactory extends Factory
             'package_weight_grams' => 12000,
             'base_price_rupiah' => 120000,
             'price_per_kilogram_rupiah' => 12000,
+            'min_price_per_kilogram_rupiah' => null,
             'minimum_chargeable_grams' => null,
         ]);
     }

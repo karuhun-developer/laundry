@@ -105,30 +105,47 @@ it('lets assigned branch staff confirm actual weight and server-calculated prici
     ]);
 });
 
-it('rejects reconfirmation and a different service without changing the pickup request', function (): void {
-    [$organization, $branch, $service, $priceOption, $order, $branchAdmin] = createOrderPricingContext();
-    $otherOption = PriceOption::factory()->for($service)->for($branch)->create([
+it('allows switching service package and custom price per kilogram within floor and ceiling bounds', function (): void {
+    [$organization, $branch, $service, , $order, $branchAdmin] = createOrderPricingContext();
+    $expressOption = PriceOption::factory()->for($service)->for($branch)->create([
         'name' => 'Kiloan express',
+        'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 12000,
+        'minimum_chargeable_grams' => 2000,
     ]);
     Sanctum::actingAs($branchAdmin);
     $route = orderPricingRoute($organization, $branch, $order);
 
+    // Reject price below floor
     $this->postJson($route, [
-        'price_option_id' => $otherOption->id,
+        'price_option_id' => $expressOption->id,
         'weight_grams' => 2000,
-    ])->assertConflict()
-        ->assertJsonPath('code', 'ORDER_PRICING_CANNOT_BE_CONFIRMED');
+        'custom_price_per_kilogram_rupiah' => 11000,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['custom_price_per_kilogram_rupiah']);
 
-    expect($order->fresh()?->status)->toBe(OrderStatus::PickupRequested)
-        ->and($order->fresh()?->priced_at)->toBeNull();
-
+    // Accept custom price at or above floor
     $this->postJson($route, [
-        'price_option_id' => $priceOption->id,
+        'price_option_id' => $expressOption->id,
         'weight_grams' => 2000,
-    ])->assertOk();
+        'custom_price_per_kilogram_rupiah' => 13000,
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.price_option.name', 'Kiloan express')
+        ->assertJsonPath('data.items.0.price_option.pricing_snapshot.price_per_kilogram_rupiah', 13000)
+        ->assertJsonPath('data.items.0.price_option.pricing_snapshot.min_price_per_kilogram_rupiah', 12000)
+        ->assertJsonPath('data.items.0.calculation.subtotal_rupiah', 26000);
 
+    $this->assertDatabaseHas('order_items', [
+        'order_id' => $order->id,
+        'price_option_id' => $expressOption->id,
+        'price_per_kilogram_rupiah_snapshot' => 13000,
+        'min_price_per_kilogram_rupiah_snapshot' => 12000,
+        'subtotal_rupiah' => 26000,
+    ]);
+
+    // Reconfirmation is rejected once confirmed
     $this->postJson($route, [
-        'price_option_id' => $priceOption->id,
+        'price_option_id' => $expressOption->id,
         'weight_grams' => 2500,
     ])->assertConflict()
         ->assertJsonPath('code', 'ORDER_PRICING_CANNOT_BE_CONFIRMED');
@@ -160,7 +177,7 @@ it('rejects invalid, inactive, cross-branch, and cross-tenant pricing input', fu
     $this->postJson($route, [
         'price_option_id' => $otherOption->id,
         'weight_grams' => 2000,
-    ])->assertConflict();
+    ])->assertNotFound();
 
     $otherOrganization = Organization::factory()->create();
     $otherTenantBranch = Branch::factory()->for($otherOrganization)->create();
@@ -169,7 +186,7 @@ it('rejects invalid, inactive, cross-branch, and cross-tenant pricing input', fu
     $this->postJson($route, [
         'price_option_id' => $otherTenantOption->id,
         'weight_grams' => 2000,
-    ])->assertConflict();
+    ])->assertNotFound();
 
     expect($order->fresh()?->status)->toBe(OrderStatus::PickupRequested);
 });

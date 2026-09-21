@@ -72,6 +72,15 @@ class UpdatePriceOptionRequest extends FormRequest
                 'min:0',
                 'max:999999999999',
             ],
+            'min_price_per_kilogram_rupiah' => [
+                Rule::requiredIf(! $isFixedPackage),
+                Rule::prohibitedIf($isFixedPackage),
+                'nullable',
+                'integer',
+                'min:0',
+                'max:999999999999',
+                'lte:price_per_kilogram_rupiah',
+            ],
             'minimum_chargeable_grams' => [
                 Rule::prohibitedIf($isFixedPackage),
                 'nullable',
@@ -80,6 +89,17 @@ class UpdatePriceOptionRequest extends FormRequest
                 'max:1000000',
             ],
             'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'min_price_per_kilogram_rupiah.lte' => 'Harga bawah tidak boleh melebihi harga atas (harga standar).',
+            'min_price_per_kilogram_rupiah.required' => 'Harga bawah wajib diisi untuk layanan per kilogram.',
         ];
     }
 

@@ -121,6 +121,7 @@ export type PriceOptionSummary = {
     package_weight_grams: number | null;
     base_price_rupiah: number | null;
     price_per_kilogram_rupiah: number | null;
+    min_price_per_kilogram_rupiah: number | null;
     minimum_chargeable_grams: number | null;
     is_active: boolean;
     branch: Pick<CatalogBranchSummary, 'id' | 'organization_id' | 'name' | 'code'> | null;

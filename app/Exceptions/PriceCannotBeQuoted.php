@@ -8,18 +8,31 @@ use RuntimeException;
 
 final class PriceCannotBeQuoted extends RuntimeException
 {
+    public function __construct(string $message, private string $field = 'weight_grams')
+    {
+        parent::__construct($message);
+    }
+
     public static function missingPackageExcessRate(): self
     {
-        return new self('Berat melebihi batas paket dan tarif kelebihan belum diatur.');
+        return new self('Berat melebihi batas paket dan tarif kelebihan belum diatur.', 'weight_grams');
+    }
+
+    public static function belowFloorPrice(int $floorPrice): self
+    {
+        return new self(
+            'Harga per kilogram tidak boleh lebih rendah dari harga bawah (Rp '.number_format($floorPrice, 0, ',', '.').').',
+            'custom_price_per_kilogram_rupiah',
+        );
     }
 
     public function render(Request $request): JsonResponse
     {
         return response()->json([
-            'code' => 'PACKAGE_EXCESS_RATE_REQUIRED',
+            'code' => $this->field === 'weight_grams' ? 'PACKAGE_EXCESS_RATE_REQUIRED' : 'PRICE_CANNOT_BE_QUOTED',
             'message' => $this->getMessage(),
             'errors' => [
-                'weight_grams' => [$this->getMessage()],
+                $this->field => [$this->getMessage()],
             ],
         ], 422);
     }

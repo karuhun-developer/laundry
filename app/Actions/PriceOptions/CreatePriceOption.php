@@ -25,6 +25,7 @@ final class CreatePriceOption
             'package_weight_grams' => $data->packageWeightGrams,
             'base_price_rupiah' => $data->basePriceRupiah,
             'price_per_kilogram_rupiah' => $data->pricePerKilogramRupiah,
+            'min_price_per_kilogram_rupiah' => $data->minPricePerKilogramRupiah,
             'minimum_chargeable_grams' => $data->minimumChargeableGrams,
             'is_active' => $data->isActive,
         ]);

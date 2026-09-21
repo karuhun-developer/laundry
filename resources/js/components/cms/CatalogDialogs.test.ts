@@ -155,12 +155,13 @@ describe('catalog dialogs', () => {
             package_weight_grams: '12500',
             base_price_rupiah: 12000,
             price_per_kilogram_rupiah: 5000,
+            min_price_per_kilogram_rupiah: '',
             minimum_chargeable_grams: '',
             is_active: true,
         });
     });
 
-    it('still supports a price for one selected branch', async () => {
+    it('still supports a price for one selected branch and floor price', async () => {
         const wrapper = mount(PriceOptionFormDialog, {
             props: { service, branches },
             global: { stubs: dialogStubs },
@@ -169,12 +170,14 @@ describe('catalog dialogs', () => {
         await wrapper.get('#price-option-branch').setValue('11');
         await wrapper.get('#price-option-name').setValue('Kiloan Kemang');
         await wrapper.get('#kilogram-price').setValue('15000');
+        await wrapper.get('#kilogram-min-price').setValue('12000');
         await wrapper.get('[data-test="price-option-form"]').trigger('submit');
 
         expect(inertiaHarness.submittedData()).toMatchObject({
             branch_id: 11,
             name: 'Kiloan Kemang',
             price_per_kilogram_rupiah: 15000,
+            min_price_per_kilogram_rupiah: 12000,
         });
     });
 });

@@ -26,12 +26,13 @@ final readonly class CreateOrderData
             throw new LogicException('An authenticated user is required to create an order.');
         }
 
-        /** @var list<array{price_option_id: int, weight_grams?: int}> $validatedItems */
+        /** @var list<array{price_option_id: int, weight_grams?: int, custom_price_per_kilogram_rupiah?: int}> $validatedItems */
         $validatedItems = $request->validated('items');
         $items = array_map(
             static fn (array $item): CreateOrderItemData => new CreateOrderItemData(
                 priceOptionId: $item['price_option_id'],
                 weightGrams: $item['weight_grams'] ?? null,
+                customPricePerKilogramRupiah: $item['custom_price_per_kilogram_rupiah'] ?? null,
             ),
             $validatedItems,
         );

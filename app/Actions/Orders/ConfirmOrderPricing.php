@@ -48,18 +48,17 @@ final readonly class ConfirmOrderPricing
 
             $orderItem = $lockedOrder->items()->lockForUpdate()->firstOrFail();
 
-            if ($orderItem->price_option_id !== $data->priceOptionId) {
-                throw OrderPricingCannotBeConfirmed::priceOptionDoesNotMatch();
-            }
-
             $priceOption = PriceOption::query()->findOrFail($data->priceOptionId);
             $quote = $this->quotePriceOption->handle(
                 organization: $organization,
                 branch: $branch,
                 priceOption: $priceOption,
                 weightGrams: $data->weightGrams,
+                customPricePerKilogramRupiah: $data->customPricePerKilogramRupiah,
             );
             $availablePriceOption = $quote->priceOption;
+            $effectivePricePerKilogram = $quote->effectivePricePerKilogramRupiah
+                ?? $availablePriceOption->price_per_kilogram_rupiah;
 
             $orderItem->update([
                 'service_id' => $availablePriceOption->service_id,
@@ -70,7 +69,8 @@ final readonly class ConfirmOrderPricing
                 'price_type_snapshot' => $availablePriceOption->type,
                 'package_weight_grams_snapshot' => $availablePriceOption->package_weight_grams,
                 'base_price_rupiah_snapshot' => $availablePriceOption->base_price_rupiah,
-                'price_per_kilogram_rupiah_snapshot' => $availablePriceOption->price_per_kilogram_rupiah,
+                'price_per_kilogram_rupiah_snapshot' => $effectivePricePerKilogram,
+                'min_price_per_kilogram_rupiah_snapshot' => $availablePriceOption->effectiveMinPricePerKilogram(),
                 'minimum_chargeable_grams_snapshot' => $availablePriceOption->minimum_chargeable_grams,
                 'requested_weight_grams' => $quote->requestedWeightGrams,
                 'chargeable_weight_grams' => $quote->chargeableWeightGrams,

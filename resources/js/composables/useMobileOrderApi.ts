@@ -42,6 +42,7 @@ export const useMobileOrderApi = () => {
     const pricingRequest = useHttp<ConfirmOrderPricingPayload, ApiEnvelope<MobileOrder>>({
         price_option_id: 0,
         weight_grams: 1,
+        custom_price_per_kilogram_rupiah: undefined,
     });
     const whatsAppSuggestionRequest = useHttp<EmptyRequest, ApiEnvelope<WhatsAppSuggestion>>({});
 
@@ -193,6 +194,7 @@ export const useMobileOrderApi = () => {
     ): Promise<MobileOrder> => {
         pricingRequest.price_option_id = payload.price_option_id;
         pricingRequest.weight_grams = payload.weight_grams;
+        pricingRequest.custom_price_per_kilogram_rupiah = payload.custom_price_per_kilogram_rupiah;
         const httpException = { value: null as MobileHttpError | null };
         let response: ApiEnvelope<MobileOrder> | undefined;
 

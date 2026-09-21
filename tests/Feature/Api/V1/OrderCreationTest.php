@@ -569,3 +569,69 @@ it('allows branch staff to create multiple orders for the same customer', functi
 
     $this->assertDatabaseCount('orders', 2);
 });
+
+it('allows branch staff to create order with custom price per kilogram within floor bounds and rejects below floor', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create([
+        'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 12000,
+        'minimum_chargeable_grams' => 2000,
+    ]);
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+    $customer->customerOrganizations()->attach($organization);
+    $branchAdmin = User::factory()->for($organization)->create();
+    $branchAdmin->assignRole(RoleName::BranchAdmin->value);
+    $branchAdmin->branches()->attach($branch);
+
+    $route = route('api.v1.organizations.branches.orders.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+    ]);
+
+    // Customer cannot provide custom price
+    Sanctum::actingAs($customer);
+    $address = CustomerAddress::factory()->default()->for($customer, 'customer')->create();
+    $this->postJson($route, [
+        'customer_address_id' => $address->id,
+        'items' => [[
+            'price_option_id' => $priceOption->id,
+            'custom_price_per_kilogram_rupiah' => 10000,
+        ]],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['items.0.custom_price_per_kilogram_rupiah']);
+
+    // Admin rejects price below floor
+    Sanctum::actingAs($branchAdmin);
+    $this->postJson($route, [
+        'customer_id' => $customer->id,
+        'items' => [[
+            'price_option_id' => $priceOption->id,
+            'weight_grams' => 3000,
+            'custom_price_per_kilogram_rupiah' => 11000,
+        ]],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['items.0.custom_price_per_kilogram_rupiah']);
+
+    // Admin accepts price at or above floor
+    $this->postJson($route, [
+        'customer_id' => $customer->id,
+        'items' => [[
+            'price_option_id' => $priceOption->id,
+            'weight_grams' => 3000,
+            'custom_price_per_kilogram_rupiah' => 13000,
+        ]],
+    ])->assertCreated()
+        ->assertJsonPath('data.items.0.price_option.pricing_snapshot.price_per_kilogram_rupiah', 13000)
+        ->assertJsonPath('data.items.0.calculation.subtotal_rupiah', 39000)
+        ->assertJsonPath('data.pricing.total_rupiah', 39000);
+
+    $this->assertDatabaseHas('order_items', [
+        'price_option_id' => $priceOption->id,
+        'price_per_kilogram_rupiah_snapshot' => 13000,
+        'min_price_per_kilogram_rupiah_snapshot' => 12000,
+        'subtotal_rupiah' => 39000,
+    ]);
+});

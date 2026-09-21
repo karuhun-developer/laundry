@@ -6,6 +6,7 @@ use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Organization;
+use App\Models\PriceOption;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Query\Builder;
@@ -67,6 +68,13 @@ class StoreOrderRequest extends FormRequest
                 'integer',
                 'between:1,1000000',
             ],
+            'items.*.custom_price_per_kilogram_rupiah' => [
+                Rule::prohibitedIf($isCustomer),
+                'nullable',
+                'integer',
+                'min:0',
+                'max:999999999999',
+            ],
             'delivery' => ['sometimes', 'array'],
             'delivery.latitude' => [
                 'required_with:delivery.longitude',
@@ -95,6 +103,24 @@ class StoreOrderRequest extends FormRequest
                         'delivery',
                         'Cabang belum memiliki koordinat untuk menghitung biaya antar jemput.',
                     );
+                }
+
+                $items = $this->input('items', []);
+                if (is_array($items)) {
+                    foreach ($items as $index => $item) {
+                        if (isset($item['custom_price_per_kilogram_rupiah']) && isset($item['price_option_id'])) {
+                            $priceOption = PriceOption::query()->find($item['price_option_id']);
+                            if ($priceOption) {
+                                $floor = $priceOption->effectiveMinPricePerKilogram();
+                                if ($floor !== null && $item['custom_price_per_kilogram_rupiah'] < $floor) {
+                                    $validator->errors()->add(
+                                        "items.{$index}.custom_price_per_kilogram_rupiah",
+                                        'Harga per kilogram tidak boleh lebih rendah dari harga bawah (Rp '.number_format($floor, 0, ',', '.').').',
+                                    );
+                                }
+                            }
+                        }
+                    }
                 }
             },
         ];

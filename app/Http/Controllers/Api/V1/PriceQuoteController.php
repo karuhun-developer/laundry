@@ -24,6 +24,9 @@ class PriceQuoteController extends Controller
             branch: $branch,
             priceOption: $priceOption,
             weightGrams: $request->integer('weight_grams'),
+            customPricePerKilogramRupiah: $request->filled('custom_price_per_kilogram_rupiah')
+                ? $request->integer('custom_price_per_kilogram_rupiah')
+                : null,
         ));
     }
 }

@@ -19,6 +19,7 @@ final readonly class QuotePriceOption
         Branch $branch,
         PriceOption $priceOption,
         int $weightGrams,
+        ?int $customPricePerKilogramRupiah = null,
     ): PriceQuoteData {
         if (! $organization->is_active
             || ! $branch->is_active
@@ -38,6 +39,10 @@ final readonly class QuotePriceOption
                 ->where('is_active', true))
             ->firstOrFail();
 
-        return $this->priceCalculator->quote($availablePriceOption, $weightGrams);
+        return $this->priceCalculator->quote(
+            $availablePriceOption,
+            $weightGrams,
+            $customPricePerKilogramRupiah,
+        );
     }
 }

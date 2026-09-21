@@ -52,6 +52,13 @@ const pricingSummary = (priceOption: PriceOptionSummary): string => {
         return `${formatWeight(priceOption.package_weight_grams ?? 0)} · ${formatRupiah(priceOption.base_price_rupiah ?? 0)}`;
     }
 
+    if (
+        priceOption.min_price_per_kilogram_rupiah &&
+        priceOption.min_price_per_kilogram_rupiah !== priceOption.price_per_kilogram_rupiah
+    ) {
+        return `${formatRupiah(priceOption.price_per_kilogram_rupiah ?? 0)}/kg · Bawah: ${formatRupiah(priceOption.min_price_per_kilogram_rupiah)}/kg`;
+    }
+
     return `${formatRupiah(priceOption.price_per_kilogram_rupiah ?? 0)}/kg`;
 };
 const pricingDetail = (priceOption: PriceOptionSummary): string => {

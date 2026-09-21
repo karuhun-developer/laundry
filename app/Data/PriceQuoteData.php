@@ -14,5 +14,6 @@ final readonly class PriceQuoteData
         public int $excessWeightGrams,
         public int $excessPriceRupiah,
         public int $totalRupiah,
+        public ?int $effectivePricePerKilogramRupiah = null,
     ) {}
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\RoleName;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -31,6 +32,9 @@ class OrderItemResource extends JsonResource
                     'package_weight_grams' => $this->package_weight_grams_snapshot,
                     'base_price_rupiah' => $this->base_price_rupiah_snapshot,
                     'price_per_kilogram_rupiah' => $this->price_per_kilogram_rupiah_snapshot,
+                    'min_price_per_kilogram_rupiah' => $request->user()?->hasRole(RoleName::Customer->value)
+                        ? null
+                        : $this->min_price_per_kilogram_rupiah_snapshot,
                     'minimum_chargeable_grams' => $this->minimum_chargeable_grams_snapshot,
                 ],
             ],

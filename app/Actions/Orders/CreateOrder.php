@@ -106,6 +106,7 @@ final readonly class CreateOrder
                     branch: $branch,
                     priceOption: $priceOption,
                     weightGrams: $item->weightGrams,
+                    customPricePerKilogramRupiah: $item->customPricePerKilogramRupiah,
                 );
             }
 
@@ -166,7 +167,8 @@ final readonly class CreateOrder
                     'price_type_snapshot' => $priceOption->type,
                     'package_weight_grams_snapshot' => $priceOption->package_weight_grams,
                     'base_price_rupiah_snapshot' => $priceOption->base_price_rupiah,
-                    'price_per_kilogram_rupiah_snapshot' => $priceOption->price_per_kilogram_rupiah,
+                    'price_per_kilogram_rupiah_snapshot' => $quote->effectivePricePerKilogramRupiah ?? $priceOption->price_per_kilogram_rupiah,
+                    'min_price_per_kilogram_rupiah_snapshot' => $priceOption->effectiveMinPricePerKilogram(),
                     'minimum_chargeable_grams_snapshot' => $priceOption->minimum_chargeable_grams,
                     'requested_weight_grams' => $quote->requestedWeightGrams,
                     'chargeable_weight_grams' => $quote->chargeableWeightGrams,
@@ -188,6 +190,7 @@ final readonly class CreateOrder
                     'package_weight_grams_snapshot' => $priceOption->package_weight_grams,
                     'base_price_rupiah_snapshot' => $priceOption->base_price_rupiah,
                     'price_per_kilogram_rupiah_snapshot' => $priceOption->price_per_kilogram_rupiah,
+                    'min_price_per_kilogram_rupiah_snapshot' => $priceOption->effectiveMinPricePerKilogram(),
                     'minimum_chargeable_grams_snapshot' => $priceOption->minimum_chargeable_grams,
                     'requested_weight_grams' => 0,
                     'chargeable_weight_grams' => 0,

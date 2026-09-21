@@ -16,7 +16,10 @@ import type {
 
 type EmptyRequest = Record<string, never>;
 type NearestRequest = { latitude: number; longitude: number };
-type PriceQuoteRequest = { weight_grams: number };
+type PriceQuoteRequest = {
+    weight_grams: number;
+    custom_price_per_kilogram_rupiah?: number;
+};
 
 export const useMobileCatalogApi = () => {
     const contextRequest = useHttp<EmptyRequest, ApiEnvelope<MobileContext>>({});
@@ -28,6 +31,7 @@ export const useMobileCatalogApi = () => {
     });
     const quoteRequest = useHttp<PriceQuoteRequest, ApiEnvelope<MobilePriceQuote>>({
         weight_grams: 1,
+        custom_price_per_kilogram_rupiah: undefined,
     });
 
     const loadContext = async (organizationSlug?: string): Promise<MobileContext> => {
@@ -93,9 +97,11 @@ export const useMobileCatalogApi = () => {
         branchId: number,
         priceOptionId: number,
         weightGrams: number,
+        customPricePerKilogramRupiah?: number,
     ): Promise<MobilePriceQuote> => {
         quoteRequest.cancel();
         quoteRequest.weight_grams = weightGrams;
+        quoteRequest.custom_price_per_kilogram_rupiah = customPricePerKilogramRupiah;
         const httpException = { value: null as MobileHttpError | null };
         let response: ApiEnvelope<MobilePriceQuote> | undefined;
 

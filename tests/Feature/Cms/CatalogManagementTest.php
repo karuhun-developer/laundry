@@ -59,6 +59,7 @@ it('allows an owner to create one price for all current and future branches', fu
         'type' => PriceType::PerKilogram->value,
         'name' => 'Kiloan semua cabang',
         'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 12000,
     ];
 
     $this->actingAs($owner)
@@ -69,6 +70,8 @@ it('allows an owner to create one price for all current and future branches', fu
         'service_id' => $service->id,
         'branch_id' => null,
         'name' => 'Kiloan semua cabang',
+        'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 12000,
     ]);
 
     $this->actingAs($owner)
@@ -176,7 +179,53 @@ it('validates fields according to the selected pricing type', function (): void 
         'type' => PriceType::PerKilogram->value,
         'name' => 'Kiloan tidak valid',
         'package_weight_grams' => 12000,
-    ])->assertSessionHasErrors(['package_weight_grams', 'price_per_kilogram_rupiah']);
+    ])->assertSessionHasErrors(['package_weight_grams', 'price_per_kilogram_rupiah', 'min_price_per_kilogram_rupiah']);
+});
+
+it('validates floor price is required and less than or equal to ceiling price for per kilogram packages', function (): void {
+    $organization = Organization::factory()->create();
+    $service = Service::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    // Rejects min_price > price
+    $this->actingAs($owner)->post(route('cms.services.price-options.store', $service), [
+        'type' => PriceType::PerKilogram->value,
+        'name' => 'Kiloan terbalik',
+        'price_per_kilogram_rupiah' => 10000,
+        'min_price_per_kilogram_rupiah' => 15000,
+    ])->assertSessionHasErrors(['min_price_per_kilogram_rupiah']);
+
+    // Accepts valid floor and ceiling price
+    $this->actingAs($owner)->post(route('cms.services.price-options.store', $service), [
+        'type' => PriceType::PerKilogram->value,
+        'name' => 'Kiloan valid',
+        'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 10000,
+    ])->assertRedirect();
+
+    $priceOption = $service->priceOptions()->where('name', 'Kiloan valid')->firstOrFail();
+    expect($priceOption->price_per_kilogram_rupiah)->toBe(15000)
+        ->and($priceOption->min_price_per_kilogram_rupiah)->toBe(10000);
+
+    // Update with invalid floor price
+    $this->actingAs($owner)->patch(route('cms.price-options.update', $priceOption), [
+        'type' => PriceType::PerKilogram->value,
+        'name' => 'Kiloan valid',
+        'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 20000,
+    ])->assertSessionHasErrors(['min_price_per_kilogram_rupiah']);
+
+    // Update with valid floor price
+    $this->actingAs($owner)->patch(route('cms.price-options.update', $priceOption), [
+        'type' => PriceType::PerKilogram->value,
+        'name' => 'Kiloan valid updated',
+        'price_per_kilogram_rupiah' => 16000,
+        'min_price_per_kilogram_rupiah' => 12000,
+    ])->assertRedirect();
+
+    expect($priceOption->fresh()?->price_per_kilogram_rupiah)->toBe(16000)
+        ->and($priceOption->fresh()?->min_price_per_kilogram_rupiah)->toBe(12000);
 });
 
 it('forbids branch admins and customers from managing the catalog', function (RoleName $role): void {

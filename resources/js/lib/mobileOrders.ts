@@ -180,8 +180,13 @@ export const buildDraftOrder = (input: DraftOrderInput): MobileOrder => {
                         package_weight_grams: option.pricing.package_weight_grams ?? null,
                         base_price_rupiah: option.pricing.base_price_rupiah ?? null,
                         price_per_kilogram_rupiah:
+                            input.quote?.effective_price_per_kilogram_rupiah ??
                             option.pricing.price_per_kilogram_rupiah ??
                             option.pricing.excess_price_per_kilogram_rupiah ??
+                            null,
+                        min_price_per_kilogram_rupiah:
+                            option.pricing.min_price_per_kilogram_rupiah ??
+                            option.pricing.price_per_kilogram_rupiah ??
                             null,
                         minimum_chargeable_grams: option.pricing.minimum_chargeable_grams ?? null,
                     },

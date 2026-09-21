@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import MobileBottomNav from '@/components/mobile/molecules/MobileBottomNav.vue';
+import OrderPricingConfirmationDialog from '@/components/mobile/molecules/OrderPricingConfirmationDialog.vue';
 import OrderTicket from '@/components/mobile/molecules/OrderTicket.vue';
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
@@ -501,9 +502,20 @@ describe('mobile role-aware components', () => {
         await wrapper.get<HTMLInputElement>('[data-test="actual-weight"]').setValue('3.5');
         await wrapper.get('[data-test="pricing-controls"]').trigger('submit');
 
+        const dialog = wrapper.findComponent(OrderPricingConfirmationDialog);
+        expect(dialog.exists()).toBe(true);
+        expect(dialog.props('open')).toBe(true);
+
+        const confirmButton = document.body.querySelector<HTMLButtonElement>(
+            '[data-test="submit-pricing-confirmation"]',
+        );
+        expect(confirmButton).not.toBeNull();
+        confirmButton?.click();
+        await wrapper.vm.$nextTick();
+
         expect(wrapper.emitted('confirm-pricing')?.[0]).toEqual([
             21,
-            { price_option_id: 5, weight_grams: 3500 },
+            { price_option_id: 5, weight_grams: 3500, custom_price_per_kilogram_rupiah: 12000 },
         ]);
         expect(wrapper.find('[data-test="status-controls"]').exists()).toBe(false);
     });
@@ -528,9 +540,16 @@ describe('mobile role-aware components', () => {
         await wrapper.get<HTMLInputElement>('[data-test="actual-weight"]').setValue('3.5');
         await wrapper.get('[data-test="pricing-controls"]').trigger('submit');
 
+        const confirmButton = document.body.querySelector<HTMLButtonElement>(
+            '[data-test="submit-pricing-confirmation"]',
+        );
+        expect(confirmButton).not.toBeNull();
+        confirmButton?.click();
+        await wrapper.vm.$nextTick();
+
         expect(wrapper.emitted('confirm-pricing')?.[0]).toEqual([
             21,
-            { price_option_id: 5, weight_grams: 3500 },
+            { price_option_id: 5, weight_grams: 3500, custom_price_per_kilogram_rupiah: 12000 },
         ]);
     });
 });

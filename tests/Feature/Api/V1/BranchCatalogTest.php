@@ -162,3 +162,36 @@ it('validates quote weight as positive integer grams', function (): void {
     ]), ['weight_grams' => 0])->assertUnprocessable()
         ->assertJsonValidationErrors('weight_grams');
 });
+
+it('quotes a per-kilogram option with custom price per kilogram within floor bounds and rejects below floor', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $service = Service::factory()->for($organization)->create();
+    $priceOption = PriceOption::factory()->for($service)->for($branch)->create([
+        'price_per_kilogram_rupiah' => 15000,
+        'min_price_per_kilogram_rupiah' => 12000,
+        'minimum_chargeable_grams' => 2000,
+    ]);
+
+    $route = route('api.v1.organizations.branches.catalog.quote', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'priceOption' => $priceOption,
+    ]);
+
+    // Rejects below floor price
+    $this->postJson($route, [
+        'weight_grams' => 2000,
+        'custom_price_per_kilogram_rupiah' => 11000,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('custom_price_per_kilogram_rupiah');
+
+    // Quotes with custom price at or above floor
+    $this->postJson($route, [
+        'weight_grams' => 2000,
+        'custom_price_per_kilogram_rupiah' => 13000,
+    ])->assertOk()
+        ->assertJsonPath('data.effective_price_per_kilogram_rupiah', 13000)
+        ->assertJsonPath('data.base_price_rupiah', 0)
+        ->assertJsonPath('data.total_rupiah', 26000);
+});

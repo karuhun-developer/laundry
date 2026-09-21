@@ -392,6 +392,7 @@ export const useMobileWorkspace = () => {
     const quoteOrder = async (
         priceOptionId: number,
         weightGrams: number,
+        customPricePerKilogramRupiah?: number,
     ): Promise<MobilePriceQuote> => {
         const branch = selectedBranch.value;
 
@@ -404,6 +405,7 @@ export const useMobileWorkspace = () => {
             branch.id,
             priceOptionId,
             weightGrams,
+            customPricePerKilogramRupiah,
         );
     };
 
