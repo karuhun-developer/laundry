@@ -126,7 +126,7 @@ describe('OrderPricingConfirmationDialog', () => {
         expect(wrapper.text()).toContain(formatRupiah(12000));
 
         const priceInput = wrapper.get<HTMLInputElement>('[data-test="dialog-price-per-kg"]');
-        expect(priceInput.element.value).toBe('15000');
+        expect(priceInput.element.value).toBe('15.000');
     });
 
     it('updates custom price when shortcut buttons are clicked', async () => {
@@ -143,12 +143,12 @@ describe('OrderPricingConfirmationDialog', () => {
         await wrapper.get('[data-test="use-harga-bawah"]').trigger('click');
         expect(
             wrapper.get<HTMLInputElement>('[data-test="dialog-price-per-kg"]').element.value,
-        ).toBe('12000');
+        ).toBe('12.000');
 
         await wrapper.get('[data-test="use-harga-atas"]').trigger('click');
         expect(
             wrapper.get<HTMLInputElement>('[data-test="dialog-price-per-kg"]').element.value,
-        ).toBe('15000');
+        ).toBe('15.000');
     });
 
     it('rejects custom price below floor price and disables confirmation', async () => {
@@ -192,7 +192,7 @@ describe('OrderPricingConfirmationDialog', () => {
 
         expect(
             wrapper.get<HTMLInputElement>('[data-test="dialog-price-per-kg"]').element.value,
-        ).toBe('20000');
+        ).toBe('20.000');
     });
 
     it('emits confirm with custom price and weight when submitted', async () => {

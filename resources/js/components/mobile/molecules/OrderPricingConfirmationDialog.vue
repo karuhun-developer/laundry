@@ -10,7 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Input, RupiahInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type {
@@ -52,7 +52,7 @@ const selectedPriceOptionId = ref<number>(
 const weightKilograms = ref<number | string>(
     props.initialWeightGrams > 0 ? (props.initialWeightGrams / 1000).toString() : '1',
 );
-const customPricePerKg = ref<number | string>('');
+const customPricePerKg = ref<number | null>(null);
 
 const currentCatalogEntry = computed(
     () =>
@@ -91,7 +91,7 @@ const syncPricesFromOption = (): void => {
     if (isPerKilogram.value) {
         customPricePerKg.value = hargaAtas.value;
     } else {
-        customPricePerKg.value = '';
+        customPricePerKg.value = null;
     }
 };
 
@@ -284,12 +284,10 @@ const submitConfirmation = (): void => {
                             Harga per kg untuk Pesanan Ini (Rp)
                         </Label>
                         <div class="mt-1.5 flex gap-2">
-                            <Input
+                            <RupiahInput
                                 id="dialog-price-per-kg"
                                 v-model="customPricePerKg"
-                                type="number"
-                                :min="hargaBawah"
-                                step="100"
+                                placeholder="Contoh: 15.000"
                                 required
                                 class="min-h-11 rounded-xl text-sm"
                                 :class="isPriceBelowFloor ? 'border-red-500 focus-visible:ring-red-200' : ''"

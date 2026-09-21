@@ -458,6 +458,53 @@ describe('mobile role-aware components', () => {
         expect(wrapper.text()).toContain('Rp 14.500');
     });
 
+    it('displays masked price and respects bounds for branch-admin counter order with kiloan package', async () => {
+        const kiloanOption: MobilePriceOption = {
+            id: 8,
+            name: 'Kiloan Reguler',
+            type: 'per_kilogram',
+            pricing: {
+                price_per_kilogram_rupiah: 15000,
+                min_price_per_kilogram_rupiah: 12000,
+            },
+        };
+        const kiloanServices: MobileService[] = [
+            {
+                id: 3,
+                name: 'Cuci Kiloan',
+                code: 'CK',
+                description: null,
+                price_options: [kiloanOption],
+            },
+        ];
+
+        const wrapper = mount(OrderComposer, {
+            props: {
+                role: 'branch_admin',
+                branch,
+                services: kiloanServices,
+                customers,
+                deliveryCoordinates: null,
+                quoteOrder: vi.fn(async () => quote),
+            },
+        });
+
+        await wrapper.get('[data-test="customer-search"]').trigger('focus');
+        await wrapper.get('[data-test="customer-option-9"]').trigger('click');
+        await wrapper.find('select').setValue('8');
+
+        const priceInput = wrapper.get<HTMLInputElement>(
+            '[data-test="order-composer-price-per-kg"]',
+        );
+        expect(priceInput.element.value).toBe('15.000');
+
+        await wrapper.get('[data-test="composer-use-harga-bawah"]').trigger('click');
+        expect(priceInput.element.value).toBe('12.000');
+
+        await priceInput.setValue('14000');
+        expect(priceInput.element.value).toBe('14.000');
+    });
+
     it('hides payment and total until a pickup request is priced', () => {
         const pickupOrder: MobileOrder = {
             ...makeOrder(),

@@ -6,7 +6,7 @@ import CmsFormDialog from '@/components/cms/CmsFormDialog.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { Input, RupiahInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { update } from '@/routes/cms/price-options';
 import { store } from '@/routes/cms/services/price-options';
@@ -261,13 +261,11 @@ const submit = (): void => {
             </div>
             <div class="space-y-2">
                 <Label for="package-base-price">Harga paket (Rp)</Label>
-                <Input
+                <RupiahInput
                     id="package-base-price"
                     v-model="form.base_price_rupiah"
-                    type="number"
-                    min="0"
-                    step="1"
                     required
+                    placeholder="Contoh: 50.000"
                     :aria-invalid="Boolean(form.errors.base_price_rupiah)"
                     aria-describedby="package-base-price-error"
                 />
@@ -275,12 +273,9 @@ const submit = (): void => {
             </div>
             <div class="space-y-2 sm:col-span-2">
                 <Label for="package-excess-price">Harga kelebihan per kg (Rp)</Label>
-                <Input
+                <RupiahInput
                     id="package-excess-price"
                     v-model="form.price_per_kilogram_rupiah"
-                    type="number"
-                    min="0"
-                    step="1"
                     placeholder="Opsional jika tidak menerima kelebihan berat"
                     :aria-invalid="Boolean(form.errors.price_per_kilogram_rupiah)"
                     aria-describedby="package-excess-price-error"
@@ -295,14 +290,11 @@ const submit = (): void => {
         <div v-else class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
                 <Label for="kilogram-price">Harga atas / standar per kg (Rp)</Label>
-                <Input
+                <RupiahInput
                     id="kilogram-price"
                     v-model="form.price_per_kilogram_rupiah"
-                    type="number"
-                    min="0"
-                    step="1"
                     required
-                    placeholder="Contoh: 12000"
+                    placeholder="Contoh: 12.000"
                     :aria-invalid="Boolean(form.errors.price_per_kilogram_rupiah)"
                     aria-describedby="kilogram-price-error"
                 />
@@ -310,14 +302,11 @@ const submit = (): void => {
             </div>
             <div class="space-y-2">
                 <Label for="kilogram-min-price">Harga bawah / batas nego per kg (Rp)</Label>
-                <Input
+                <RupiahInput
                     id="kilogram-min-price"
                     v-model="form.min_price_per_kilogram_rupiah"
-                    type="number"
-                    min="0"
-                    step="1"
                     required
-                    placeholder="Contoh: 10000"
+                    placeholder="Contoh: 10.000"
                     :aria-invalid="Boolean(form.errors.min_price_per_kilogram_rupiah)"
                     aria-describedby="kilogram-min-price-error"
                 />

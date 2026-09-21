@@ -171,6 +171,10 @@ describe('catalog dialogs', () => {
         await wrapper.get('#price-option-name').setValue('Kiloan Kemang');
         await wrapper.get('#kilogram-price').setValue('15000');
         await wrapper.get('#kilogram-min-price').setValue('12000');
+
+        expect(wrapper.get<HTMLInputElement>('#kilogram-price').element.value).toBe('15.000');
+        expect(wrapper.get<HTMLInputElement>('#kilogram-min-price').element.value).toBe('12.000');
+
         await wrapper.get('[data-test="price-option-form"]').trigger('submit');
 
         expect(inertiaHarness.submittedData()).toMatchObject({

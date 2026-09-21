@@ -2,6 +2,7 @@
 import { AlertCircle, ArrowDown, ArrowUp, MapPin, PlusCircle, Scale, Sparkles } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CustomerCombobox from '@/components/mobile/molecules/CustomerCombobox.vue';
+import { RupiahInput } from '@/components/ui/input';
 import type { Coordinates } from '@/composables/useGeolocation';
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type {
@@ -53,7 +54,7 @@ const customerId = computed({
 });
 const priceOptionId = ref<number | null>(null);
 const weightKilograms = ref<number | string>(1);
-const customPricePerKg = ref<number | string>('');
+const customPricePerKg = ref<number | null>(null);
 const includeDelivery = ref(false);
 const formError = ref<string | null>(null);
 const quote = ref<MobilePriceQuote | null>(null);
@@ -99,7 +100,7 @@ const syncPricesFromOption = (): void => {
     if (props.role === 'branch_admin' && isPerKilogram.value) {
         customPricePerKg.value = hargaAtas.value;
     } else {
-        customPricePerKg.value = '';
+        customPricePerKg.value = null;
     }
 };
 
@@ -444,12 +445,10 @@ const submit = (): void => {
                         Harga per kg untuk Pesanan Ini (Rp)
                     </label>
                     <div class="mt-1.5 flex gap-2">
-                        <input
+                        <RupiahInput
                             id="order-composer-price-per-kg"
                             v-model="customPricePerKg"
-                            type="number"
-                            :min="hargaBawah"
-                            step="100"
+                            placeholder="Contoh: 15.000"
                             required
                             class="min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
                             :class="isPriceBelowFloor ? 'border-red-500 focus:ring-red-200' : ''"
