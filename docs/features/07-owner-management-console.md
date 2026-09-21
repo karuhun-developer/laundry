@@ -11,13 +11,15 @@ Owners can manage their organization’s branches, users, roles, and branch assi
 - `superadmin` can create organizations, edit or delete global cities, and manage branches, owners, branch admins, and customers across organizations.
 - `owner` can create global cities and manage branches, branch admins, and customers only inside their authenticated organization.
 - Owners cannot create another owner. Superadmins are never exposed in managed-user lists.
-- `branch_admin` and `customer` do not receive management navigation or route access.
+- `branch_admin` receives scoped read access to the CMS Order Queue (`/cms/orders`) for assigned branches; tenant, branch, user, and catalog mutation routes remain restricted to `owner` and `superadmin`.
+- `customer` does not receive management navigation or route access.
 - Policies and Form Requests remain authoritative; client-side filtering is only interaction guidance.
 
 ## Management surfaces
 
 - Organizations: tenant name, normalized slug, active state, branch count, and user count.
 - Cities and branches: globally shared city selection, outlet details, map-picked or keyboard-entered coordinates, free-delivery radius, excess fee per kilometer, and active state.
+- Order queue (`/cms/orders`): centralized operational queue featuring metric cards (total orders, unpriced, in progress, ready for pickup, completed), multi-criteria filters (organization for superadmin, branch, status, customer/order search), and full order detail dialogs (`OrderDetailDialog`) detailing items, per-kg calculations, status history, and payment events.
 - The branch dialog exposes all confirmed global cities regardless of organization. Owners may add cities, while city edit and delete controls appear only for superadmins.
 - Users and access: organization, role, and one-or-more branch assignments for branch administrators.
 - Tables are used for wide comparison and collapse into record cards on compact screens.
@@ -29,6 +31,7 @@ Owners can manage their organization’s branches, users, roles, and branch assi
 - `GET|POST /cms/branches` and `PATCH|DELETE /cms/branches/{branch}`
 - `POST /cms/cities` and `PATCH|DELETE /cms/cities/{city}`
 - `GET|POST /cms/users` and `PATCH|DELETE /cms/users/{user}`
+- `GET /cms/orders`
 
 All routes require authenticated, verified web sessions. Frontend navigation uses generated Wayfinder helpers.
 

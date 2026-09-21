@@ -36,7 +36,7 @@ The authenticated staff payload is:
 
 `POST /api/v1/organizations/{organization-slug}/branches/{branch}/orders/{order}/pricing`
 
-Assigned branch staff submit the selected `price_option_id` and actual `weight_grams` for an unpriced `pickup_requested` order. The server locks the order and item, verifies the selected option, calculates the canonical price, stores immutable item and total snapshots, sets `priced_at`, advances the order to `weighed`, and appends timeline and audit records atomically. Repeated, mismatched, or out-of-state confirmation returns `409 Conflict`.
+Assigned branch staff submit the selected `price_option_id`, actual `weight_grams`, and an optional negotiated `price_per_kg` for per-kilogram packages. When supplied, `price_per_kg` is validated against the option's configured floor (`min_price_per_kg`) and ceiling (`max_price_per_kg`) tariffs; values lower than the floor price or higher than the ceiling price are rejected. The server locks the order and item, verifies the selected option, calculates the canonical price, stores immutable item and total snapshots, sets `priced_at`, advances the order to `weighed`, and appends timeline and audit records atomically. Repeated, mismatched, or out-of-state confirmation returns `409 Conflict`.
 
 ## Transition rules
 

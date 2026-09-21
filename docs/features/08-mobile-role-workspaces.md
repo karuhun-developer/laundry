@@ -20,8 +20,8 @@ Customers and branch administrators use one authenticated, mobile-first Inertia 
 ## Branch-admin workspace
 
 - Review orders only from assigned branches and advance each order through its allowed status transition.
-- Enter the actual laundry weight for a pickup request and replace the unpriced ticket with the canonical `weighed` order.
-- Record a counter order for an organization customer using the selected branch catalog.
+- Confirm actual laundry weight and pricing for a pickup request through a dedicated modal (`WeightConfirmationDialog`), reviewing package floor/ceiling bounds, adjusting negotiated per-kg rates with masked Rupiah input, and replacing the unpriced ticket with the canonical `weighed` order.
+- Record a counter order for an organization customer using the selected branch catalog with support for custom per-kg negotiation rates.
 - Browse organization customers plus neutral customers who already have an order in the organization.
 - Access the account and logout surface without entering the owner CMS.
 

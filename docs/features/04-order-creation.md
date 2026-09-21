@@ -21,7 +21,7 @@ A customer pickup request accepts exactly one price option. A staff counter orde
 
 `POST /api/v1/organizations/{organization-slug}/branches/{branch}/orders`
 
-The route requires a Sanctum-authenticated request. A staff request includes `customer_id` and `weight_grams` for every item. A customer request must omit both fields, submit exactly one `price_option_id`, and include `delivery.latitude` plus `delivery.longitude`. Unknown fields are rejected, including client-supplied totals, statuses, and snapshots.
+The route requires a Sanctum-authenticated request. A staff request includes `customer_id` and `weight_grams` for every item, and may optionally supply a negotiated `price_per_kg` for per-kilogram options within the service's `min_price_per_kg` and `max_price_per_kg` boundaries. A customer request must omit both fields, submit exactly one `price_option_id`, and include `delivery.latitude` plus `delivery.longitude`. Unknown fields are rejected, including client-supplied totals, statuses, and snapshots.
 
 The successful `201 Created` response includes:
 
@@ -38,6 +38,7 @@ The order number uses `LDR-YYYYMMDD-########`, where the final segment is the ze
 ## Snapshot and transaction rules
 
 - Staff counter creation reuses the catalog quote operation so checkout cannot diverge from the public quote contract.
+- For per-kilogram items with customized rates, the negotiated `price_per_kg` is validated against the option's floor and ceiling rules and permanently recorded into the immutable pricing breakdown snapshot.
 - Customer pickup creation validates the selected option belongs to the active branch catalog but defers its calculated snapshot until actual weight confirmation.
 - Service name/code, price-option name/type/rules, requested and chargeable weight, base/excess calculations, and subtotal are copied to each order item.
 - Customer coordinates, calculated distance, free radius, excess-distance tariff, and delivery fee are copied to the order when delivery is requested.

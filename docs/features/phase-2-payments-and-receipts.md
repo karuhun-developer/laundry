@@ -30,7 +30,8 @@ Branch admins can record cash, present a dynamic QRIS payment, reconcile its sta
 - Paywuz is optional. Cash and branch-managed QRIS remain available when the gateway is disabled or its credentials are incomplete.
 - Paywuz method codes must select QRIS or a bank virtual account directly; provider meta-methods `VA` and `ALL` are rejected.
 - Provider-managed payment states can only be reconciled by an HMAC-signed, idempotent Paywuz webhook. Branch admins cannot mark these payments manually.
-- Full and partial payments are accepted only up to the current outstanding amount.
+- Full and partial payments are accepted only up to the current outstanding amount. Partial down payments (DP) are supported until the outstanding balance is zero.
+- Cash payments can be recorded even while a dynamic QRIS payment remains pending, enabling branch staff to accept cash immediately if the customer opts to pay in person. Cash input forms use masked Rupiah formatting (`RupiahInput`) and enforce that received cash cannot be less than the payment amount.
 - Paid totals include only payments in the paid state. Failed, cancelled, and refunded records remain in history without reducing the outstanding amount.
 - QRIS reconciliation appends an audited status event. Invalid or stale transitions return a conflict instead of overwriting the canonical state.
 - The mobile client applies payment mutations optimistically. Any failure restores the complete previous order and summary; conflicts fetch a fresh canonical order before another mutation.

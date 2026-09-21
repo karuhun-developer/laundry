@@ -29,8 +29,10 @@ Owners can manage tenant-safe WhatsApp templates, branch admins receive an expli
 ## Template rules
 
 - A template belongs to one organization and optionally one branch.
+- Newly created organizations automatically provision default WhatsApp message templates for standard lifecycle statuses (`GenerateDefaultMessageTemplate`).
 - An active branch template overrides the active organization template for the same order status.
 - Only one template may exist for a scope and status combination.
+- In the CMS template manager (`/cms/message-templates`), owners and superadmins can filter by branch or select the organization-wide global scope (`Seluruh organisasi`), which displays organization-level templates (`branch_id === null`) alongside inherited defaults with status deduplication.
 - Supported variables are `{customer_name}`, `{name}`, `{order_number}`, `{status}`, `{branch_name}`, and `{tracking_url}`.
 - Unknown variables and malformed braces are rejected by a dedicated validation rule.
 - Deletion requires the exact value `{scope_key}:{order_status}`, for example `branch:12:ready_for_pickup`.
