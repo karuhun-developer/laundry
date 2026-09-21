@@ -4,6 +4,17 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-21
+
+- Added centralized CMS order queue with metric cards, multi-criteria filters (organization, branch, status, search), and full order detail dialogs.
+- Added floor and ceiling pricing for laundry services, enabling branch administrators to negotiate kiloan rates within configured limits.
+- Added weighing and pricing confirmation modal in mobile app to review customized per-kilogram rates.
+- Added reusable masked RupiahInput component with automatic thousand separator formatting across pricing and cash payment inputs.
+- Allowed cash payments while dynamic QRIS payments remain pending at branch checkout.
+- Fixed organization-wide global message templates filter for owners with status deduplication.
+- Scoped order queue permissions and navigation for superadmin, owner, and branch admin roles.
+- Automatically generated default WhatsApp message templates upon organization creation.
+
 ## [1.1.1] - 2026-09-17
 
 - Applied the Stitch-inspired slate, cyan, and mint visual system to CMS, mobile, login, and registration screens without changing backend behavior.
