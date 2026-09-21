@@ -46,8 +46,22 @@ final readonly class CreatePayment
                 throw PaymentCannotBeCreated::amountExceedsOutstanding($outstandingRupiah);
             }
 
-            if ($lockedOrder->payments()->where('status', PaymentStatus::Pending)->exists()) {
-                throw PaymentCannotBeCreated::pendingPaymentExists();
+            $pendingPayments = $lockedOrder->payments()->where('status', PaymentStatus::Pending)->get();
+
+            if ($pendingPayments->isNotEmpty()) {
+                if ($data->method === PaymentMethod::Cash) {
+                    foreach ($pendingPayments as $pendingPayment) {
+                        $pendingPayment->update(['status' => PaymentStatus::Cancelled]);
+                        $pendingPayment->statusEvents()->create([
+                            'actor_id' => $actor?->id,
+                            'actor_name_snapshot' => $actor instanceof User ? $actor->name : 'Kasir cabang',
+                            'status' => PaymentStatus::Cancelled,
+                            'note' => 'Dibatalkan karena kasir menerima pembayaran tunai.',
+                        ]);
+                    }
+                } else {
+                    throw PaymentCannotBeCreated::pendingPaymentExists();
+                }
             }
 
             $status = $data->method === PaymentMethod::Cash

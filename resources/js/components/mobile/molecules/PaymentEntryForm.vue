@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { Banknote, CreditCard, LoaderCircle, QrCode } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, RupiahInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatRupiah } from '@/lib/mobileOrders';
 import { paymentGatewayMethodLogo } from '@/lib/mobilePayments';
 import type { MobileOrder, MobilePaymentGatewayMethod, MobilePaymentMethod } from '@/types/mobile';
 
-defineProps<{
-    order: MobileOrder;
-    busy: boolean;
-    method: MobilePaymentMethod;
-    amountInput: string;
-    note: string;
-    canSubmit: boolean;
-    gatewayMethods: readonly MobilePaymentGatewayMethod[];
-    selectedGatewayMethod: string;
-}>();
+withDefaults(
+    defineProps<{
+        order: MobileOrder;
+        busy: boolean;
+        method: MobilePaymentMethod;
+        amountInput: string | number | null;
+        note: string;
+        canSubmit: boolean;
+        gatewayMethods: readonly MobilePaymentGatewayMethod[];
+        selectedGatewayMethod: string;
+        hasPendingPayment?: boolean;
+    }>(),
+    {
+        hasPendingPayment: false,
+    },
+);
 
 const emit = defineEmits<{
     'update:method': [method: MobilePaymentMethod];
@@ -40,9 +46,15 @@ const gatewayMethodDescription = (method: MobilePaymentGatewayMethod): string =>
         @submit.prevent="emit('submit')"
     >
         <div>
-            <p class="text-sm font-semibold text-ink-950">Tambah pembayaran</p>
+            <p class="text-sm font-semibold text-ink-950">
+                {{ hasPendingPayment ? 'Terima pembayaran tunai di kasir' : 'Tambah pembayaran' }}
+            </p>
             <p class="mt-1 text-xs leading-5 text-ink-500">
-                Pembayaran sebagian diperbolehkan sampai sisa tagihan habis.
+                {{
+                    hasPendingPayment
+                        ? 'QRIS dinamis sedang aktif di atas. Kasir tetap dapat menerima pembayaran tunai langsung di konter.'
+                        : 'Pembayaran sebagian diperbolehkan sampai sisa tagihan habis.'
+                }}
             </p>
         </div>
 
@@ -62,7 +74,8 @@ const gatewayMethodDescription = (method: MobilePaymentGatewayMethod): string =>
                     type="button"
                     class="flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                     :class="method === 'qris' ? 'border-brand-600 bg-brand-100 text-brand-700' : 'border-line bg-surface text-ink-700'"
-                    :disabled="!order.branch.qris_enabled"
+                    :disabled="!order.branch.qris_enabled || hasPendingPayment"
+                    :title="hasPendingPayment ? 'QRIS dinamis sudah aktif di atas' : undefined"
                     @click="emit('update:method', 'qris')"
                 >
                     <QrCode class="size-5" aria-hidden="true" />
@@ -71,8 +84,9 @@ const gatewayMethodDescription = (method: MobilePaymentGatewayMethod): string =>
                 <button
                     v-if="gatewayMethods.length"
                     type="button"
-                    class="flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold"
+                    class="flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                     :class="method === 'gateway' ? 'border-brand-600 bg-brand-100 text-brand-700' : 'border-line bg-surface text-ink-700'"
+                    :disabled="hasPendingPayment"
                     data-test="payment-method-gateway"
                     @click="emit('update:method', 'gateway')"
                 >
@@ -128,15 +142,15 @@ const gatewayMethodDescription = (method: MobilePaymentGatewayMethod): string =>
 
         <div class="space-y-2">
             <Label :for="`payment-amount-${order.id}`">Nominal</Label>
-            <Input
+            <RupiahInput
                 :id="`payment-amount-${order.id}`"
                 :model-value="amountInput"
-                type="number"
-                min="1"
+                :min="1"
                 :max="order.payment_summary.outstanding_rupiah"
-                step="1"
-                inputmode="numeric"
-                @update:model-value="emit('update:amountInput', String($event))"
+                placeholder="Contoh: 15.000"
+                required
+                data-test="payment-amount-input"
+                @update:model-value="emit('update:amountInput', $event !== null ? String($event) : '')"
             />
         </div>
 

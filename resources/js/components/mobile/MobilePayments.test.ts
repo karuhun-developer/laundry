@@ -566,4 +566,51 @@ describe('mobile payment dialog', () => {
         expect(document.body.querySelector('[data-test="mark-payment-paid"]')).toBeNull();
         wrapper.unmount();
     });
+
+    it('allows branch admin to accept cash payment even when a dynamic QRIS is pending', async () => {
+        const order = makeOrder();
+        const actions = makeActions(order);
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions, role: 'branch_admin' },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        expect(document.body.querySelector('[data-test="qris-image"]')).not.toBeNull();
+
+        const paymentForm = document.body.querySelector('[data-test="payment-form"]');
+        expect(paymentForm).not.toBeNull();
+        expect(document.body.textContent).toContain('Terima pembayaran tunai di kasir');
+
+        const amountInput = document.body.querySelector<HTMLInputElement>(
+            '[data-test="payment-amount-input"]',
+        );
+        expect(amountInput).not.toBeNull();
+        expect(amountInput?.value).toBe('30.000');
+
+        if (amountInput) {
+            amountInput.value = '15000';
+            amountInput.dispatchEvent(new Event('input'));
+        }
+        await wrapper.vm.$nextTick();
+
+        expect(amountInput?.value).toBe('15.000');
+
+        const submitButton = paymentForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
+        expect(submitButton?.disabled).toBe(false);
+        submitButton?.click();
+
+        await vi.waitFor(() =>
+            expect(actions.createPayment).toHaveBeenCalledWith(21, {
+                method: 'cash',
+                amount_rupiah: 15000,
+                note: undefined,
+                gateway_driver: undefined,
+                gateway_method: undefined,
+            }),
+        );
+
+        wrapper.unmount();
+    });
 });

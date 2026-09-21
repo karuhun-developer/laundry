@@ -266,6 +266,48 @@ it('rejects duplicate pending payments and invalid reconciliation transitions', 
         ->assertJsonPath('code', 'INVALID_PAYMENT_STATUS_TRANSITION');
 });
 
+it('allows branch admin to accept cash payment when a dynamic QRIS is pending and cancels the pending QRIS', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create([
+        'qris_enabled' => true,
+        'qris_static_payload' => PAYMENT_TEST_STATIC_QRIS,
+    ]);
+    $admin = User::factory()->for($organization)->create();
+    $admin->assignRole(RoleName::BranchAdmin->value);
+    $admin->branches()->attach($branch);
+    $order = Order::factory()->for($organization)->for($branch)->create([
+        'total_rupiah' => 30000,
+        'items_subtotal_rupiah' => 30000,
+    ]);
+    Sanctum::actingAs($admin);
+    $route = route('api.v1.organizations.branches.orders.payments.store', [
+        'organization' => $organization,
+        'branch' => $branch,
+        'order' => $order,
+    ]);
+
+    $qrisResponse = $this->postJson($route, [
+        'method' => PaymentMethod::Qris->value,
+        'amount_rupiah' => 30000,
+    ])->assertCreated();
+
+    $qrisId = $qrisResponse->json('data.id');
+    expect(Payment::find($qrisId)?->status)->toBe(PaymentStatus::Pending);
+
+    $this->postJson($route, [
+        'method' => PaymentMethod::Cash->value,
+        'amount_rupiah' => 30000,
+        'note' => 'Pelanggan memilih bayar tunai di kasir',
+    ])->assertCreated()
+        ->assertJsonPath('data.method', PaymentMethod::Cash->value)
+        ->assertJsonPath('data.status', PaymentStatus::Paid->value)
+        ->assertJsonPath('data.amount_rupiah', 30000);
+
+    $cancelledQris = Payment::query()->findOrFail($qrisId);
+    expect($cancelledQris->status)->toBe(PaymentStatus::Cancelled);
+    expect($cancelledQris->statusEvents()->where('status', PaymentStatus::Cancelled)->exists())->toBeTrue();
+});
+
 it('enforces branch assignment and customer read-only boundaries', function (): void {
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();

@@ -47,7 +47,7 @@ const currentOrder = ref<MobileOrder>(props.order);
 const method = ref<MobilePaymentMethod>(props.role === 'customer' ? 'qris' : 'cash');
 const gatewayMethods = ref<readonly MobilePaymentGatewayMethod[]>([]);
 const selectedGatewayMethod = ref('');
-const amountInput = ref('');
+const amountInput = ref(String(props.order.payment_summary.outstanding_rupiah));
 const note = ref('');
 const actionProcessing = ref(false);
 const orderRefreshProcessing = ref(false);
@@ -89,15 +89,18 @@ const canCreatePayment = computed(() => {
 
     return (
         !isBusy.value &&
-        !latestPendingPayment.value &&
+        (!latestPendingPayment.value ||
+            (props.role === 'branch_admin' && method.value === 'cash')) &&
         currentOrder.value.payment_summary.outstanding_rupiah > 0 &&
         Number.isInteger(amount) &&
         amount > 0 &&
         amount <= currentOrder.value.payment_summary.outstanding_rupiah &&
         (props.role !== 'customer' || method.value === 'qris') &&
-        (method.value !== 'qris' || currentOrder.value.branch.qris_enabled) &&
+        (method.value !== 'qris' ||
+            (!latestPendingPayment.value && currentOrder.value.branch.qris_enabled)) &&
         (method.value !== 'gateway' ||
-            (selectedGateway.value !== null &&
+            (!latestPendingPayment.value &&
+                selectedGateway.value !== null &&
                 amount >= selectedGateway.value.minimum_rupiah &&
                 amount <= selectedGateway.value.maximum_rupiah))
     );
@@ -468,7 +471,7 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
                 @share-payment="sharePaymentToCustomer"
             />
             <PaymentEntryForm
-                v-else-if="
+                v-if="
                     role === 'branch_admin' &&
                     currentOrder.payment_summary.outstanding_rupiah > 0
                 "
@@ -480,10 +483,14 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
                 :busy="isBusy"
                 :can-submit="canCreatePayment"
                 :gateway-methods="gatewayMethods"
+                :has-pending-payment="Boolean(latestPendingPayment)"
                 @submit="submitPayment"
             />
             <section
-                v-else-if="currentOrder.payment_summary.outstanding_rupiah > 0"
+                v-else-if="
+                    !latestPendingPayment &&
+                    currentOrder.payment_summary.outstanding_rupiah > 0
+                "
                 class="rounded-2xl border border-brand-600/20 bg-surface-blue p-4"
                 data-test="customer-qris-payment"
             >
