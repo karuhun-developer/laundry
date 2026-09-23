@@ -31,7 +31,7 @@ final class GenerateDefaultMessageTemplate
         return match ($status) {
             OrderStatus::PickupRequested => 'Halo {name}, pesanan {order_number} sudah diterima dan menunggu dijemput oleh {branch_name}. Pantau statusnya di {tracking_url}',
             OrderStatus::Received => 'Halo {name}, pesanan {order_number} sudah diterima di {branch_name}.',
-            OrderStatus::Weighed => 'Halo {name}, laundry {order_number} sudah ditimbang {weight}. Total pembayaran {total}. Silakan bayar melalui QRIS yang kami kirimkan.',
+            OrderStatus::Weighed => 'Halo {name}, laundry {order_number} sudah ditimbang {weight}. Total pembayaran {total}. Silakan bayar melalui QRIS yang ada di halaman {tracking_url}.',
             OrderStatus::Washing => 'Halo {name}, pesanan {order_number} sedang dicuci di {branch_name}.',
             OrderStatus::Drying => 'Halo {name}, pesanan {order_number} sedang dikeringkan.',
             OrderStatus::Ironing => 'Halo {name}, pesanan {order_number} sedang disetrika.',
