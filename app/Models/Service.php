@@ -18,8 +18,9 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string $code
  * @property string|null $description
  * @property bool $is_active
+ * @property int $completion_duration_hours
  */
-#[Fillable(['organization_id', 'name', 'code', 'description', 'is_active'])]
+#[Fillable(['organization_id', 'name', 'code', 'description', 'is_active', 'completion_duration_hours'])]
 class Service extends Model
 {
     /** @use HasFactory<ServiceFactory> */
@@ -51,6 +52,6 @@ class Service extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'completion_duration_hours' => 'integer'];
     }
 }

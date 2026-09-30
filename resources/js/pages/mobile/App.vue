@@ -16,6 +16,7 @@ import CustomerAddressDialog from '@/components/mobile/organisms/CustomerAddress
 import CustomerDirectory from '@/components/mobile/organisms/CustomerDirectory.vue';
 import CustomerHome from '@/components/mobile/organisms/CustomerHome.vue';
 import CustomerOrderFilters from '@/components/mobile/organisms/CustomerOrderFilters.vue';
+import DailySummaryDialog from '@/components/mobile/organisms/DailySummaryDialog.vue';
 import MobileAccount from '@/components/mobile/organisms/MobileAccount.vue';
 import OrderComposer from '@/components/mobile/organisms/OrderComposer.vue';
 import OrderListPanel from '@/components/mobile/organisms/OrderListPanel.vue';
@@ -34,7 +35,6 @@ import { usePushNotifications } from '@/composables/usePushNotifications';
 import type { CustomerOrderFilters as CustomerOrderFilterValues } from '@/lib/mobileOrderFilters';
 import {
     emptyCustomerOrderFilters,
-    filterCustomerOrders,
     hasCustomerOrderFilters,
     normalizeCustomerOrderFilters,
 } from '@/lib/mobileOrderFilters';
@@ -51,6 +51,7 @@ import type {
     MobileOrderStatus,
     MobilePriceQuote,
     MobileTab,
+    OrderQueue,
 } from '@/types/mobile';
 
 const page = usePage();
@@ -64,6 +65,25 @@ const resetPinDialogOpen = ref(false);
 const addressDialogOpen = ref(false);
 const orderComposerOpen = ref(false);
 const queueSearch = ref('');
+const queue = ref<OrderQueue>('all');
+const customerQueue = ref<OrderQueue>('all');
+const summaryOpen = ref(false);
+const queueOptions: { value: OrderQueue; label: string }[] = [
+    { value: 'all', label: 'Semua' },
+    { value: 'active', label: 'Aktif' },
+    { value: 'unweighed', label: 'Belum timbang' },
+    { value: 'overdue', label: 'Terlambat' },
+    { value: 'ready', label: 'Siap' },
+    { value: 'history', label: 'Riwayat' },
+];
+const selectQueue = (value: OrderQueue): void => {
+    queue.value = value;
+    void workspace.searchOrders(queueSearch.value.trim(), value);
+};
+const selectCustomerQueue = (value: OrderQueue): void => {
+    customerQueue.value = value;
+    customerOrderFilters.value = { ...customerOrderFilters.value, queue: value };
+};
 const customerOrderFilters = ref<CustomerOrderFilterValues>(emptyCustomerOrderFilters());
 const credentialDialogOpen = ref(false);
 const revealedCredential = ref<{
@@ -82,25 +102,25 @@ const refreshApp = async (showSuccess = true): Promise<void> => {
         return;
     }
 
-    if (workspace.context.value?.role === 'branch_admin' && queueSearch.value.trim()) {
-        await workspace.searchOrders(queueSearch.value.trim());
-    }
-
-    if (
-        workspace.context.value?.role === 'customer' &&
-        hasCustomerOrderFilters(customerOrderFilters.value)
-    ) {
-        await workspace.searchCustomerOrders(
-            normalizeCustomerOrderFilters(customerOrderFilters.value),
-        );
-    }
-
     if (showSuccess && !workspace.requestError.value) {
         toast.success('Data aplikasi berhasil disegarkan.');
     }
 };
 
 const refreshCustomerOrders = async (): Promise<void> => {
+    if (
+        workspace.loading.value ||
+        workspace.refreshing.value ||
+        workspace.queueLoading.value ||
+        workspace.customerOrderLoading.value ||
+        workspace.loadingMore?.value ||
+        workspace.orders.value.some(
+            (order) => order.pending || order.payments.some((payment) => payment.pending),
+        ) ||
+        document.querySelector('[role="dialog"][data-state="open"]')
+    ) {
+        return;
+    }
     const filters =
         activeTab.value === 'orders'
             ? normalizeCustomerOrderFilters(customerOrderFilters.value)
@@ -137,9 +157,7 @@ const handleLogout = async (): Promise<void> => {
     }
 };
 
-const filteredCustomerOrders = computed(() =>
-    filterCustomerOrders(workspace.orders.value, customerOrderFilters.value),
-);
+const filteredCustomerOrders = computed(() => workspace.orders.value);
 const activePickupOrderNumber = computed(
     () =>
         workspace.orders.value.find((order) => order.status === 'pickup_requested')?.order_number ??
@@ -482,8 +500,10 @@ const clearQueueSearch = (): void => {
                             v-model="customerOrderFilters"
                             :loading="workspace.customerOrderLoading.value"
                         />
+                        <div class="mb-4 flex flex-wrap gap-2" aria-label="Filter pesanan"><button v-for="option in queueOptions.filter(option => ['all', 'active', 'history'].includes(option.value))" :key="option.value" type="button" class="min-h-11 rounded-full px-4 text-sm font-semibold" :class="customerQueue === option.value ? 'bg-brand-700 text-white' : 'bg-surface text-ink-700 ring-1 ring-line'" :aria-pressed="customerQueue === option.value" @click="selectCustomerQueue(option.value)">{{ option.label }}</button></div>
                         <OrderListPanel
                             :orders="filteredCustomerOrders"
+                            @saved="workspace.replaceOrder"
                             :branches="workspace.context.value.branches"
                             :services="workspace.services.value"
                             role="customer"
@@ -540,6 +560,8 @@ const clearQueueSearch = (): void => {
                         :whats-app-available="workspace.whatsAppSuggestion.value !== null || workspace.whatsAppSuggestionError.value !== null"
                         @create-order="orderComposerOpen = true"
                         @view-queue="activeTab = 'queue'"
+                        @view-summary="summaryOpen = true"
+                        :statistics="workspace.pagination?.value.statistics"
                         @view-customers="activeTab = 'customers'"
                         @view-whatsapp="whatsAppDialogOpen = true"
                         @view-more="activeTab = 'more'"
@@ -592,8 +614,12 @@ const clearQueueSearch = (): void => {
                             </p>
                         </div>
 
+                        <div class="mb-4 flex flex-wrap gap-2" aria-label="Filter antrean">
+                            <button v-for="option in queueOptions" :key="option.value" type="button" class="min-h-11 rounded-full px-4 text-sm font-semibold" :class="queue === option.value ? 'bg-brand-700 text-white' : 'bg-surface text-ink-700 ring-1 ring-line'" :aria-pressed="queue === option.value" @click="selectQueue(option.value)">{{ option.label }}</button>
+                        </div>
                         <OrderListPanel
                             :orders="workspace.orders.value"
+                            @saved="workspace.replaceOrder"
                             :branches="workspace.context.value.branches"
                             :services="workspace.services.value"
                             role="branch_admin"
@@ -665,6 +691,10 @@ const clearQueueSearch = (): void => {
                     />
                 </template>
             </template>
+            <div v-if="['orders', 'queue'].includes(activeTab) && workspace.pagination?.value && !workspace.loading.value" class="mt-5 grid justify-items-center gap-3 pb-4">
+                <p class="text-sm text-ink-500" role="status">{{ workspace.orders.value.length }} dari {{ workspace.pagination.value.total }} pesanan</p>
+                <button v-if="workspace.pagination.value.current_page < workspace.pagination.value.last_page" type="button" class="min-h-11 rounded-xl border border-line bg-surface px-6 text-sm font-semibold text-brand-700" :disabled="workspace.loadingMore.value || workspace.queueLoading.value || workspace.customerOrderLoading.value" @click="workspace.loadMoreOrders">{{ workspace.loadingMore.value ? 'Memuat…' : 'Muat lainnya' }}</button>
+            </div>
         </main>
 
         <MobileBottomNav
@@ -674,6 +704,7 @@ const clearQueueSearch = (): void => {
         />
 
         <Toaster position="top-center" />
+        <DailySummaryDialog v-if="summaryOpen && workspace.context.value?.role === 'branch_admin'" v-model:open="summaryOpen" :branch-id="workspace.selectedBranchId.value ?? undefined" :organization-id="workspace.context.value.organization.id" />
 
         <WhatsAppSuggestionDialog
             v-model:open="whatsAppDialogOpen"

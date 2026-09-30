@@ -38,6 +38,7 @@ it('allows an owner to create services and branch prices in their organization',
     $this->assertDatabaseHas('services', [
         'organization_id' => $organization->id,
         'code' => 'CKL',
+        'completion_duration_hours' => 72,
     ]);
     $this->assertDatabaseHas('price_options', [
         'service_id' => $service->id,
@@ -47,6 +48,42 @@ it('allows an owner to create services and branch prices in their organization',
         'base_price_rupiah' => 120000,
     ]);
 });
+
+it('preserves a custom service duration when an update omits it', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    $service = Service::factory()->for($organization)->create(['completion_duration_hours' => 24]);
+
+    $this->actingAs($owner)->patch(route('cms.services.update', $service), [
+        'name' => 'Express',
+        'code' => $service->code,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($service->refresh()->completion_duration_hours)->toBe(24);
+
+    $this->patch(route('cms.services.update', $service), [
+        'name' => 'Express',
+        'code' => $service->code,
+        'completion_duration_hours' => 48,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($service->refresh()->completion_duration_hours)->toBe(48);
+});
+
+it('rejects service durations outside the supported range', function (int $duration): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)->post(route('cms.services.store'), [
+        'name' => 'Express',
+        'code' => 'EXP',
+        'completion_duration_hours' => $duration,
+    ])->assertSessionHasErrors('completion_duration_hours');
+
+    $this->assertDatabaseMissing('services', ['organization_id' => $organization->id, 'code' => 'EXP']);
+})->with([0, 8761]);
 
 it('allows an owner to create one price for all current and future branches', function (): void {
     $organization = Organization::factory()->create();

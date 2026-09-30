@@ -81,11 +81,18 @@ final readonly class ConfirmOrderPricing
             ]);
 
             $previousStatus = $lockedOrder->status;
+            foreach ($lockedOrder->tasks()->where('kind', 'pickup')->whereNotIn('status', ['completed', 'cancelled'])->get() as $task) {
+                $task->update(['status' => 'completed', 'completed_at' => now(), 'recipient_name' => $actor->name]);
+                $task->events()->create(['order_id' => $lockedOrder->id, 'actor_id' => $actor->id,
+                    'actor_name_snapshot' => $actor->name, 'status' => 'completed', 'note' => 'Laundry diterima dan ditimbang cabang.']);
+            }
             $lockedOrder->update([
                 'status' => OrderStatus::Weighed,
                 'items_subtotal_rupiah' => $quote->totalRupiah,
                 'total_rupiah' => $quote->totalRupiah + $lockedOrder->delivery_fee_rupiah,
                 'priced_at' => now(),
+                'completion_duration_hours_snapshot' => $availablePriceOption->service->completion_duration_hours ?? 72,
+                'estimated_ready_at' => now()->addHours($availablePriceOption->service->completion_duration_hours ?? 72),
             ]);
             $lockedOrder->statusEvents()->create([
                 'actor_id' => $actor->id,
@@ -108,13 +115,7 @@ final readonly class ConfirmOrderPricing
                 ])
                 ->log('order pricing confirmed');
 
-            return $lockedOrder->load([
-                'organization',
-                'branch',
-                'items',
-                'statusEvents',
-                'payments.statusEvents',
-            ]);
+            return $lockedOrder->loadWorkspace();
         });
 
         $this->dispatchOrderPushNotification->handle(

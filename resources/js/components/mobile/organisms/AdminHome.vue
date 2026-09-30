@@ -17,6 +17,7 @@ const props = defineProps<{
     customerCount: number;
     printerConfigured: boolean;
     whatsAppAvailable: boolean;
+    statistics?: { active: number; unweighed: number; ready: number };
 }>();
 
 const emit = defineEmits<{
@@ -25,19 +26,25 @@ const emit = defineEmits<{
     'view-customers': [];
     'view-whatsapp': [];
     'view-more': [];
+    'view-summary': [];
 }>();
 
 const firstName = computed(() => props.userName.trim().split(/\s+/)[0] || props.userName);
 const activeCount = computed(
-    () => props.orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length,
+    () =>
+        props.statistics?.active ??
+        props.orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length,
 );
 const pricingPendingCount = computed(
     () =>
+        props.statistics?.unweighed ??
         props.orders.filter((order) => !order.pricing.confirmed && order.status !== 'cancelled')
             .length,
 );
 const readyCount = computed(
-    () => props.orders.filter((order) => order.status === 'ready_for_pickup').length,
+    () =>
+        props.statistics?.ready ??
+        props.orders.filter((order) => order.status === 'ready_for_pickup').length,
 );
 </script>
 
@@ -69,6 +76,7 @@ const readyCount = computed(
             </article>
         </div>
         <div>
+            <button type="button" class="mobile-card mb-4 flex min-h-12 w-full items-center justify-between gap-3 p-4 text-left font-semibold text-brand-700" @click="emit('view-summary')">Ringkasan harian <ChevronRight class="size-4" aria-hidden="true" /></button>
             <h2 class="mb-3 font-display text-lg font-semibold text-ink-950">Menu cabang</h2>
             <div class="mobile-bento">
                 <button type="button" class="mobile-card flex flex-col items-start gap-3 p-4 text-left transition hover:border-brand-600" @click="emit('view-customers')">

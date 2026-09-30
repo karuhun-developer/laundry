@@ -15,6 +15,7 @@ final class CreateService
             'code' => $data->code,
             'description' => $data->description,
             'is_active' => $data->isActive,
+            'completion_duration_hours' => $data->completionDurationHours ?? 72,
         ]);
     }
 }

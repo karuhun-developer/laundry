@@ -67,6 +67,25 @@ function orderPricingRoute(Organization $organization, Branch $branch, Order $or
     ]);
 }
 
+it('starts the duration snapshot at confirmation and closes the received pickup', function (): void {
+    [$organization, $branch, $service, $priceOption, $order, $branchAdmin] = createOrderPricingContext();
+    expect($order->estimated_ready_at)->toBeNull();
+    expect($order->completion_duration_hours_snapshot)->toBeNull();
+    $service->update(['completion_duration_hours' => 24]);
+    $this->travelTo(now()->setDate(2026, 9, 30)->setTime(10, 0));
+    Sanctum::actingAs($branchAdmin);
+
+    $this->postJson(orderPricingRoute($organization, $branch, $order), [
+        'price_option_id' => $priceOption->id, 'weight_grams' => 3500,
+    ])->assertOk()->assertJsonPath('data.completion_duration_hours_snapshot', 24)
+        ->assertJsonPath('data.tasks.0.status', 'completed');
+
+    $service->update(['completion_duration_hours' => 96]);
+    expect($order->fresh()->estimated_ready_at->format('Y-m-d H:i:s'))->toBe('2026-10-01 10:00:00');
+    expect($order->fresh()->completion_duration_hours_snapshot)->toBe(24);
+    $this->assertDatabaseHas('order_operation_events', ['order_id' => $order->id, 'status' => 'completed', 'actor_id' => $branchAdmin->id]);
+});
+
 it('lets assigned branch staff confirm actual weight and server-calculated pricing', function (): void {
     [$organization, $branch, , $priceOption, $order, $branchAdmin] = createOrderPricingContext();
     Sanctum::actingAs($branchAdmin);

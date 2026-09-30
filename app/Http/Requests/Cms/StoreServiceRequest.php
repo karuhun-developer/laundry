@@ -50,6 +50,7 @@ class StoreServiceRequest extends FormRequest
             ],
             'description' => ['nullable', 'string', 'max:2000'],
             'is_active' => ['sometimes', 'boolean'],
+            'completion_duration_hours' => ['sometimes', 'integer', 'min:1', 'max:8760'],
         ];
     }
 

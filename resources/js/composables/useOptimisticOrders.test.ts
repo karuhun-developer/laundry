@@ -6,6 +6,31 @@ import type { MobileOrder } from '@/types/mobile';
 describe('useOptimisticOrders', () => {
     const pricingPayload = { price_option_id: 5, weight_grams: 3500 } as const;
 
+    it('preserves a pending mutation through polling and accepts its canonical response', async () => {
+        const initial = makeOrder(42, 'received');
+        const canonical = makeOrder(42, 'weighed');
+        let resolveTransition: (order: MobileOrder) => void = () => undefined;
+        const optimistic = useOptimisticOrders(
+            makeApi({
+                transitionOrder: vi.fn(
+                    () =>
+                        new Promise<MobileOrder>((resolve) => {
+                            resolveTransition = resolve;
+                        }),
+                ),
+            }),
+        );
+        optimistic.setOrders([initial]);
+        const request = optimistic.transitionOrder(42, { status: 'weighed' });
+        optimistic.synchronizeOrders([initial, makeOrder(43)]);
+        expect(optimistic.orders.value[0]?.pending).toBe(true);
+        expect(optimistic.orders.value[0]?.status).toBe('weighed');
+        expect(optimistic.orders.value).toHaveLength(2);
+        resolveTransition(canonical);
+        await expect(request).resolves.toBe(true);
+        expect(optimistic.orders.value[0]).toEqual(canonical);
+    });
+
     it('inserts a draft immediately and replaces it after create succeeds', async () => {
         const canonical = makeOrder(42);
         let resolveCreate: (order: MobileOrder) => void = () => undefined;

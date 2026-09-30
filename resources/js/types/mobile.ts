@@ -153,6 +153,7 @@ export type MobilePriceOption = {
 };
 
 export type MobileService = {
+    completion_duration_hours?: number;
     id: number;
     name: string;
     code: string;
@@ -213,6 +214,12 @@ export type MobileOrderStatusEvent = {
 };
 
 export type MobileOrder = {
+    estimated_ready_at?: string | null;
+    completion_duration_hours_snapshot?: number | null;
+    is_overdue?: boolean;
+    timezone?: string;
+    tasks?: readonly OrderTask[];
+    complaints?: readonly OrderComplaint[];
     id: number;
     order_number: string;
     status: MobileOrderStatus;
@@ -347,4 +354,67 @@ export type MobilePaymentActions = {
 
 export type ApiEnvelope<T> = {
     data: T;
+    meta?: OrderPagination;
+    statistics?: { active: number; unweighed: number; ready: number };
+};
+
+export type OrderQueue = 'all' | 'active' | 'history' | 'unweighed' | 'ready' | 'overdue';
+export type OrderPagination = {
+    current_page: number;
+    last_page: number;
+    total: number;
+    statistics?: { active: number; unweighed: number; ready: number };
+};
+export type OperationEvidence = { id: number; name: string; url: string };
+export type OperationEvent = {
+    id: number;
+    status: string;
+    actor_name: string;
+    note: string | null;
+    occurred_at: string;
+};
+export type OrderTaskStatus =
+    | 'waiting'
+    | 'scheduled'
+    | 'en_route'
+    | 'completed'
+    | 'failed'
+    | 'cancelled';
+export type OrderTask = {
+    id: number;
+    kind: 'pickup' | 'delivery';
+    status: OrderTaskStatus;
+    operator_name: string | null;
+    scheduled_at: string | null;
+    address: string | null;
+    recipient_name: string | null;
+    note: string | null;
+    completed_at: string | null;
+    history: readonly OperationEvent[];
+    evidence: readonly OperationEvidence[];
+};
+export type OrderComplaint = {
+    id: number;
+    category: string;
+    description: string;
+    status: 'new' | 'handling' | 'resolved';
+    resolution_note: string | null;
+    resolved_at: string | null;
+    history: readonly OperationEvent[];
+    evidence: readonly OperationEvidence[];
+};
+export type OrderOperationsOrder = Pick<
+    MobileOrder,
+    | 'id'
+    | 'organization'
+    | 'estimated_ready_at'
+    | 'is_overdue'
+    | 'timezone'
+    | 'tasks'
+    | 'complaints'
+> & {
+    status: string;
+    pricing: { confirmed: boolean };
+    delivery: { address: { address: string | null; recipient_name: string | null } | null } | null;
+    branch: { id: number };
 };

@@ -14,6 +14,7 @@ final class UpdateService
             'code' => $data->code,
             'description' => $data->description,
             'is_active' => $data->isActive,
+            'completion_duration_hours' => $data->completionDurationHours ?? $service->completion_duration_hours,
         ]);
 
         return $service->refresh();

@@ -32,6 +32,6 @@ class MobileOrderIndexController extends Controller
             $organization,
             $user,
             ListMobileOrdersData::fromRequest($request),
-        ));
+        ))->additional($request->boolean('paginated') ? ['statistics' => $listMobileOrders->statistics($user, $request->validated(), $organization)] : []);
     }
 }

@@ -1,5 +1,5 @@
 import { useHttp } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, readonly, ref } from 'vue';
 import { firstRequestError, MobileHttpError, messageFromResponseData } from '@/lib/mobileHttp';
 import { index as customerOrderIndexRoute } from '@/routes/api/v1/mobile/orders';
 import {
@@ -15,18 +15,28 @@ import type {
     ConfirmOrderPricingPayload,
     CreateOrderPayload,
     MobileOrder,
+    OrderPagination,
+    OrderQueue,
     TransitionOrderPayload,
     WhatsAppSuggestion,
 } from '@/types/mobile';
 
 type EmptyRequest = Record<string, never>;
-type MobileOrderFilters = {
+export type MobileOrderFilters = {
     search?: string;
     date_from?: string;
     date_to?: string;
+    branch_id?: number;
+    queue?: OrderQueue;
+    status?: string;
+    unpaid?: boolean;
+    page?: number;
+    pages?: number;
 };
 
 export const useMobileOrderApi = () => {
+    const pagination = ref<OrderPagination>({ current_page: 1, last_page: 1, total: 0 });
+    let listGeneration = 0;
     const ordersRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrder[]>>({});
     const detailRequest = useHttp<EmptyRequest, ApiEnvelope<MobileOrder>>({});
     const createRequest = useHttp<CreateOrderPayload, ApiEnvelope<MobileOrder>>({
@@ -51,24 +61,45 @@ export const useMobileOrderApi = () => {
         filters: MobileOrderFilters = {},
     ): Promise<MobileOrder[]> => {
         ordersRequest.cancel();
+        const generation = ++listGeneration;
         const query = {
+            paginated: 1,
+            ...(filters.branch_id ? { branch_id: filters.branch_id } : {}),
+            ...(filters.queue ? { queue: filters.queue } : {}),
+            ...(filters.status ? { status: filters.status } : {}),
+            ...(filters.unpaid ? { unpaid: 1 } : {}),
             ...(filters.search?.trim() ? { search: filters.search.trim() } : {}),
             ...(filters.date_from ? { date_from: filters.date_from } : {}),
             ...(filters.date_to ? { date_to: filters.date_to } : {}),
         };
-        const response = await ordersRequest.get(
-            organizationSlug
-                ? orderIndexRoute(organizationSlug, {
-                      query,
-                  }).url
-                : customerOrderIndexRoute({ query }).url,
-        );
+        const orders: MobileOrder[] = [];
+        let lastMeta: OrderPagination | undefined;
+        for (let page = filters.page ?? 1; page <= (filters.page ?? filters.pages ?? 1); page++) {
+            const response = await ordersRequest.get(
+                organizationSlug
+                    ? orderIndexRoute(organizationSlug, {
+                          query: { ...query, page },
+                      }).url
+                    : customerOrderIndexRoute({ query: { ...query, page } }).url,
+            );
 
-        if (!response) {
-            throw new Error('Daftar pesanan tidak dapat dimuat.');
+            if (!response) {
+                throw new Error('Daftar pesanan tidak dapat dimuat.');
+            }
+
+            if (generation !== listGeneration) {
+                throw new Error('Permintaan daftar pesanan sudah diganti.');
+            }
+            orders.push(...response.data);
+            lastMeta = response.meta
+                ? { ...response.meta, statistics: response.statistics }
+                : undefined;
+            if (!lastMeta || page >= lastMeta.last_page) {
+                break;
+            }
         }
-
-        return response.data;
+        pagination.value = lastMeta ?? { current_page: 1, last_page: 1, total: orders.length };
+        return orders;
     };
 
     const createOrder = async (
@@ -258,6 +289,7 @@ export const useMobileOrderApi = () => {
     };
 
     return {
+        pagination: readonly(pagination),
         confirmOrderPricing,
         createOrder,
         createProcessing: computed(() => createRequest.processing),

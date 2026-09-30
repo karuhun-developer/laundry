@@ -12,6 +12,7 @@ import {
     User,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import OrderOperationsPanel from '@/components/mobile/organisms/OrderOperationsPanel.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ import type {
     CmsOrderSummary,
     OrderStatusOption,
 } from '@/types';
+import type { MobileOrder } from '@/types/mobile';
 
 const props = defineProps<{
     order: CmsOrderSummary;
@@ -35,6 +37,7 @@ const props = defineProps<{
 }>();
 
 const open = ref(false);
+const emit = defineEmits<{ saved: [order: MobileOrder] }>();
 
 const items = computed<CmsOrderItemSummary[]>(() => {
     if (Array.isArray(props.order.items)) return props.order.items;
@@ -354,6 +357,7 @@ const waLink = computed(() => {
                     </div>
                 </div>
             </div>
+            <OrderOperationsPanel v-if="order.tasks !== undefined" :order="order" staff @saved="emit('saved', $event)" />
         </DialogContent>
     </Dialog>
 </template>

@@ -129,6 +129,7 @@ export type PriceOptionSummary = {
 };
 
 export type ServiceSummary = {
+    completion_duration_hours?: number;
     id: number;
     organization_id: number;
     name: string;
@@ -202,6 +203,11 @@ export type CmsOrderPaymentSummary = {
 };
 
 export type CmsOrderSummary = {
+    estimated_ready_at?: string | null;
+    is_overdue?: boolean;
+    timezone?: string;
+    tasks?: readonly import('./mobile').OrderTask[];
+    complaints?: readonly import('./mobile').OrderComplaint[];
     id: number;
     order_number: string | null;
     status: string;

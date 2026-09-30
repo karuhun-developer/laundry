@@ -28,6 +28,18 @@ class OrderResource extends JsonResource
             'id' => $this->id,
             'order_number' => $this->order_number,
             'status' => $this->status->value,
+            'estimated_ready_at' => $this->estimated_ready_at?->toIso8601String(),
+            'completion_duration_hours_snapshot' => $this->completion_duration_hours_snapshot,
+            'is_overdue' => $this->isOverdue(),
+            'timezone' => config('app.timezone'),
+            'tasks' => $this->whenLoaded(
+                'tasks',
+                fn () => OrderTaskResource::collection($this->tasks)->resolve(),
+            ),
+            'complaints' => $this->whenLoaded(
+                'complaints',
+                fn () => OrderComplaintResource::collection($this->complaints)->resolve(),
+            ),
             'organization_id' => $this->organization_id,
             'organization' => [
                 'id' => $this->organization_id,

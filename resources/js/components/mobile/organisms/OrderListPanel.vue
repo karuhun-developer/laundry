@@ -56,6 +56,7 @@ const customerPhones = computed(
 const emit = defineEmits<{
     'confirm-pricing': [orderId: number, payload: ConfirmOrderPricingPayload];
     transition: [orderId: number, status: MobileOrderStatus];
+    saved: [order: MobileOrder];
 }>();
 
 const onTransition = (orderId: number, status: MobileOrderStatus): void => {
@@ -96,6 +97,7 @@ const onConfirmPricing = (orderId: number, payload: ConfirmOrderPricingPayload):
                 :load-status-whats-app-suggestion="loadStatusWhatsAppSuggestion"
                 @confirm-pricing="onConfirmPricing"
                 @transition="onTransition"
+                @saved="emit('saved', $event)"
             />
         </div>
 

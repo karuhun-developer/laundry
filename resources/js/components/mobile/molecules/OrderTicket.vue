@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Building2, ChevronRight, Clock3, Scale, X } from '@lucide/vue';
+import { ChevronRight, Clock3, Scale, X } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import MobileStatusBadge from '@/components/mobile/atoms/MobileStatusBadge.vue';
 import WhatsAppIcon from '@/components/mobile/atoms/WhatsAppIcon.vue';
@@ -55,6 +55,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
     'confirm-pricing': [orderId: number, payload: ConfirmOrderPricingPayload];
     transition: [orderId: number, status: MobileOrderStatus];
+    saved: [order: MobileOrder];
 }>();
 
 const actualWeightKilograms = ref<number | string>('');
@@ -128,7 +129,16 @@ const previewStatusMessage = async (eventId: number): Promise<void> => {
     }
 };
 
-const nextStatus = computed(() => nextOrderStatus(props.order.status));
+const activeDelivery = computed(() =>
+    props.order.tasks?.some(
+        (task) => task.kind === 'delivery' && !['completed', 'cancelled'].includes(task.status),
+    ),
+);
+const nextStatus = computed(() =>
+    props.order.status === 'ready_for_pickup' && activeDelivery.value
+        ? null
+        : nextOrderStatus(props.order.status),
+);
 const timeline = computed(() => buildOrderTimeline(props.order));
 const currentEvent = computed(() => props.order.status_history.at(-1) ?? null);
 const branchDetails = computed(
@@ -168,16 +178,16 @@ const handlePricingDialogConfirm = (payload: ConfirmOrderPricingPayload): void =
         :data-order-id="order.id"
         :data-pending="order.pending ? 'true' : 'false'"
     >
-        <div class="space-y-4 p-5">
+        <div class="space-y-3 p-4">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
                     <p class="text-xs font-semibold tracking-[0.16em] text-brand-600 uppercase">
                         {{ order.branch.code }}
                     </p>
-                    <h3 class="mt-1 break-words font-display text-lg font-semibold text-ink-950">
+                    <h3 class="mt-1 break-words font-display text-base font-semibold text-ink-950">
                         {{ order.order_number }}
                     </h3>
-                    <p class="mt-1 text-sm wrap-anywhere text-ink-500">{{ order.customer.name }}</p>
+                    <p class="mt-1 text-sm wrap-anywhere text-ink-500">{{ role === 'customer' ? order.branch.name : order.customer.name }}</p>
                 </div>
                 <span
                     v-if="role === 'branch_admin' && !isPricingPending"
@@ -193,148 +203,22 @@ const handlePricingDialogConfirm = (payload: ConfirmOrderPricingPayload): void =
                 </span>
             </div>
 
-            <WhatsAppContactButton
-                v-if="role === 'branch_admin'"
-                :phone="customerPhone ?? ''"
-                recipient="customer"
-            />
-
-            <section
-                class="rounded-2xl border border-line bg-surface-blue/70 p-4"
-                aria-label="Informasi cabang"
-            >
-                <div class="flex items-start gap-3">
-                    <span
-                        class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-700 text-brand-100"
-                    >
-                        <Building2 class="size-5" aria-hidden="true" />
-                    </span>
-                    <div class="min-w-0 flex-1">
-                        <p class="font-display text-base font-semibold text-ink-950">
-                            {{ order.branch.name }}
-                        </p>
-                        <p v-if="branchDetails" class="mt-1 text-sm leading-6 text-ink-700">
-                            {{ branchDetails.address }}
-                        </p>
-                        <p v-if="branchDetails" class="mt-1 text-xs text-ink-500">
-                            {{ branchDetails.city.name }}, {{ branchDetails.city.province }}
-                        </p>
-                        <WhatsAppContactButton
-                            v-if="role === 'customer' && branchDetails?.phone"
-                            :phone="branchDetails.phone"
-                            class="mt-3"
-                        />
-                    </div>
-                </div>
+            <WhatsAppContactButton v-if="role === 'branch_admin'" :phone="customerPhone ?? ''" recipient="customer" />
+            <WhatsAppContactButton v-if="role === 'customer' && branchDetails?.phone" :phone="branchDetails.phone" recipient="branch" />
+            <section class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-blue px-3 py-2" data-test="current-status" aria-label="Status pengerjaan saat ini">
+                <MobileStatusBadge :status="order.status" :pending="order.pending" />
+                <time class="text-xs text-ink-500">{{ formatOrderDate(currentEvent?.occurred_at ?? order.created_at) }}</time>
             </section>
-
-            <section
-                class="mobile-hero relative overflow-hidden rounded-2xl px-4 py-4 text-white"
-                data-test="current-status"
-                aria-label="Status pengerjaan saat ini"
-            >
-                <div class="relative flex items-start justify-between gap-4">
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-[0.14em] text-brand-100/70 uppercase"
-                        >
-                            Status pengerjaan
-                        </p>
-                        <p class="mt-1 font-display text-xl font-semibold">
-                            {{ orderStatusLabels[order.status] }}
-                        </p>
-                        <p class="mt-1 text-xs leading-5 text-white/65">
-                            <template v-if="currentEvent">
-                                Diperbarui {{ formatOrderDate(currentEvent.occurred_at) }}
-                            </template>
-                            <template v-else>
-                                Dibuat {{ formatOrderDate(order.created_at) }}
-                            </template>
-                        </p>
-                    </div>
-                    <MobileStatusBadge :status="order.status" :pending="order.pending" />
-                </div>
-            </section>
+            <p class="text-xs" :class="order.is_overdue ? 'font-semibold text-red-600' : 'text-ink-500'" data-test="order-estimate">
+                {{ order.estimated_ready_at ? (order.is_overdue ? 'Terlambat · ' : 'Estimasi · ') + formatOrderDate(order.estimated_ready_at) : 'Estimasi setelah berat dikonfirmasi' }}
+            </p>
+            <div v-if="order.tasks?.some(task => !['completed', 'cancelled'].includes(task.status)) || order.complaints?.some(complaint => complaint.status !== 'resolved')" class="flex flex-wrap gap-2 text-xs font-medium">
+                <span v-if="order.tasks?.some(task => !['completed', 'cancelled'].includes(task.status))" class="rounded-lg bg-brand-100 px-2 py-1 text-brand-700">Jemput / antar aktif</span>
+                <span v-if="order.complaints?.some(complaint => complaint.status !== 'resolved')" class="rounded-lg bg-amber-500/10 px-2 py-1 text-amber-800">Komplain aktif</span>
+            </div>
         </div>
 
-        <details class="group border-t border-line">
-            <summary
-                class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 text-sm font-semibold text-brand-700 transition hover:bg-brand-100/60"
-            >
-                <span class="flex items-center gap-2">
-                    <Clock3 class="size-4" aria-hidden="true" />
-                    Lihat perjalanan laundry
-                </span>
-                <ChevronRight
-                    class="size-4 transition-transform duration-200 group-open:rotate-90"
-                    aria-hidden="true"
-                />
-            </summary>
-            <ol
-                class="space-y-4 border-t border-dashed border-line px-5 py-5"
-                data-test="order-timeline"
-            >
-                <li
-                    v-for="step in timeline"
-                    :key="step.status + '-' + (step.event?.id ?? 'future')"
-                    class="relative border-l-2 pl-4"
-                    :class="step.state === 'future' ? 'border-line' : 'border-brand-100'"
-                    :data-timeline-state="step.state"
-                >
-                    <span
-                        class="absolute top-1 -left-[7px] size-3 rounded-full border-2 border-surface"
-                        :class="[
-                            step.state === 'future'
-                                ? 'bg-line'
-                                : step.state === 'current'
-                                  ? 'bg-amber-500'
-                                  : 'bg-brand-600',
-                            step.event?.pending ? 'animate-pulse' : '',
-                        ]"
-                    />
-                    <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                        <div>
-                            <p
-                                class="text-sm font-semibold"
-                                :class="
-                                    step.state === 'future' ? 'text-ink-500' : 'text-ink-950'
-                                "
-                            >
-                                {{ orderStatusLabels[step.status] }}
-                                <span v-if="step.event?.pending" class="text-amber-500">
-                                    · menunggu
-                                </span>
-                            </p>
-                            <p v-if="step.event" class="text-xs text-ink-500">
-                                {{ step.event.actor.name }}
-                            </p>
-                            <p v-else class="text-xs text-ink-500">Menunggu tahap sebelumnya</p>
-                            <p v-if="step.event?.note" class="mt-1 text-sm text-ink-700">
-                                {{ step.event.note }}
-                            </p>
-                        </div>
-                        <time
-                            v-if="step.event"
-                            class="shrink-0 text-xs text-ink-500 sm:text-right"
-                        >
-                            {{ formatOrderDate(step.event.occurred_at) }}
-                        </time>
-                    </div>
-                    <button
-                        v-if="role === 'branch_admin' && step.event && step.state !== 'future'"
-                        type="button"
-                        class="mt-2 inline-flex min-h-11 items-center gap-2 rounded-xl border border-brand-600/20 bg-brand-100/60 px-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50"
-                        :disabled="order.pending || step.event.pending || processing || pricingProcessing || statusMessageLoading || !loadStatusWhatsAppSuggestion"
-                        :aria-label="'Kirim WhatsApp status ' + orderStatusLabels[step.status]"
-                        data-test="notify-order-status"
-                        @click="previewStatusMessage(step.event.id)"
-                    >
-                        <WhatsAppIcon class="size-4 shrink-0" />
-                        Kirim WhatsApp
-                    </button>
-                </li>
-            </ol>
-        </details>
+
 
         <div class="space-y-3 border-t border-line p-4 sm:p-5">
             <div
@@ -342,25 +226,25 @@ const handlePricingDialogConfirm = (payload: ConfirmOrderPricingPayload): void =
                 class="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-800"
                 data-test="pricing-pending-summary"
             >
-                Harga menunggu konfirmasi. Pesanan Anda menunggu dijemput dan ditimbang oleh
-                petugas cabang. QRIS dinamis tersedia setelah total harga dikonfirmasi.
+                <p class="font-semibold">Harga menunggu konfirmasi</p>
+                <p>Laundry menunggu dijemput dan ditimbang. QRIS dinamis tersedia setelah total harga dikonfirmasi.</p>
             </div>
 
             <div
                 v-if="!isPricingPending"
-                class="flex flex-wrap items-end justify-between gap-3 rounded-2xl bg-surface-blue p-4"
+                class="flex flex-wrap items-end justify-between gap-2"
                 data-test="payment-summary"
             >
                 <div>
                     <p class="text-xs text-ink-500">Total pesanan</p>
-                    <p class="mt-1 font-display text-xl font-semibold text-brand-700">{{ formatRupiah(order.pricing.total_rupiah) }}</p>
+                    <p class="mt-1 font-display text-lg font-semibold text-brand-700">{{ formatRupiah(order.pricing.total_rupiah) }}</p>
                 </div>
                 <p class="text-sm font-semibold" :class="order.payment_summary.is_paid ? 'text-brand-600' : 'text-amber-700'">
                     {{ order.payment_summary.is_paid ? 'Lunas' : 'Sisa ' + formatRupiah(order.payment_summary.outstanding_rupiah) }}
                 </p>
             </div>
-            <div class="grid gap-2 sm:grid-cols-2" data-test="payment-actions">
-                <OrderDetailsDialog :order="order" :branch="branchDetails" :role="role" />
+            <div class="grid grid-cols-2 gap-2" data-test="payment-actions">
+                <OrderDetailsDialog :order="order" :branch="branchDetails" :role="role" :customer-phone="customerPhone" :disabled="processing || pricingProcessing || paymentProcessing" @saved="emit('saved', $event)" />
                 <PaymentDialog
                     v-if="!isPricingPending && paymentActions"
                     :order="order"
@@ -450,6 +334,7 @@ const handlePricingDialogConfirm = (payload: ConfirmOrderPricingPayload): void =
             class="grid gap-2 border-t border-line bg-canvas p-4 sm:grid-cols-[1fr_auto]"
             data-test="status-controls"
         >
+            <p v-if="activeDelivery && order.status === 'ready_for_pickup'" class="text-sm text-brand-700">Pengantaran aktif. Perbarui serah terima di rincian pesanan.</p>
             <button
                 v-if="nextStatus"
                 type="button"
@@ -469,6 +354,84 @@ const handlePricingDialogConfirm = (payload: ConfirmOrderPricingPayload): void =
                 Batalkan
             </button>
         </div>
+        <details class="group border-t border-line">
+            <summary
+                class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 text-sm font-semibold text-brand-700 transition hover:bg-brand-100/60"
+            >
+                <span class="flex items-center gap-2">
+                    <Clock3 class="size-4" aria-hidden="true" />
+                    Lihat perjalanan laundry
+                </span>
+                <ChevronRight
+                    class="size-4 transition-transform duration-200 group-open:rotate-90"
+                    aria-hidden="true"
+                />
+            </summary>
+            <ol
+                class="space-y-4 border-t border-dashed border-line px-5 py-5"
+                data-test="order-timeline"
+            >
+                <li
+                    v-for="step in timeline"
+                    :key="step.status + '-' + (step.event?.id ?? 'future')"
+                    class="relative border-l-2 pl-4"
+                    :class="step.state === 'future' ? 'border-line' : 'border-brand-100'"
+                    :data-timeline-state="step.state"
+                >
+                    <span
+                        class="absolute top-1 -left-[7px] size-3 rounded-full border-2 border-surface"
+                        :class="[
+                            step.state === 'future'
+                                ? 'bg-line'
+                                : step.state === 'current'
+                                  ? 'bg-amber-500'
+                                  : 'bg-brand-600',
+                            step.event?.pending ? 'animate-pulse' : '',
+                        ]"
+                    />
+                    <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div>
+                            <p
+                                class="text-sm font-semibold"
+                                :class="
+                                    step.state === 'future' ? 'text-ink-500' : 'text-ink-950'
+                                "
+                            >
+                                {{ orderStatusLabels[step.status] }}
+                                <span v-if="step.event?.pending" class="text-amber-500">
+                                    · menunggu
+                                </span>
+                            </p>
+                            <p v-if="step.event" class="text-xs text-ink-500">
+                                {{ step.event.actor.name }}
+                            </p>
+                            <p v-else class="text-xs text-ink-500">Menunggu tahap sebelumnya</p>
+                            <p v-if="step.event?.note" class="mt-1 text-sm text-ink-700">
+                                {{ step.event.note }}
+                            </p>
+                        </div>
+                        <time
+                            v-if="step.event"
+                            class="shrink-0 text-xs text-ink-500 sm:text-right"
+                        >
+                            {{ formatOrderDate(step.event.occurred_at) }}
+                        </time>
+                    </div>
+                    <button
+                        v-if="role === 'branch_admin' && step.event && step.state !== 'future'"
+                        type="button"
+                        class="mt-2 inline-flex min-h-11 items-center gap-2 rounded-xl border border-brand-600/20 bg-brand-100/60 px-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50"
+                        :disabled="order.pending || step.event.pending || processing || pricingProcessing || statusMessageLoading || !loadStatusWhatsAppSuggestion"
+                        :aria-label="'Kirim WhatsApp status ' + orderStatusLabels[step.status]"
+                        data-test="notify-order-status"
+                        @click="previewStatusMessage(step.event.id)"
+                    >
+                        <WhatsAppIcon class="size-4 shrink-0" />
+                        Kirim WhatsApp
+                    </button>
+                </li>
+            </ol>
+        </details>
         <WhatsAppSuggestionDialog
             v-if="role === 'branch_admin'"
             v-model:open="statusMessageOpen"

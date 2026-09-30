@@ -117,6 +117,10 @@ final readonly class CreateOrder
             ));
             $deliveryFeeRupiah = $deliveryQuote === null ? 0 : $deliveryQuote->deliveryFeeRupiah;
             $initialStatus = $isCustomer ? OrderStatus::PickupRequested : OrderStatus::Received;
+            $completionDurationHours = $isCustomer ? null : max(array_map(
+                static fn (PriceQuoteData $quote): int => $quote->priceOption->service->completion_duration_hours ?? 72,
+                $quotedItems,
+            ));
 
             $order = Order::query()->create([
                 'organization_id' => $organization->id,
@@ -145,6 +149,8 @@ final readonly class CreateOrder
                 'delivery_fee_rupiah' => $deliveryFeeRupiah,
                 'total_rupiah' => $isCustomer ? 0 : $itemsSubtotalRupiah + $deliveryFeeRupiah,
                 'priced_at' => $isCustomer ? null : now(),
+                'completion_duration_hours_snapshot' => $completionDurationHours,
+                'estimated_ready_at' => $isCustomer ? null : now()->addHours($completionDurationHours),
             ]);
 
             $order->forceFill([
@@ -207,6 +213,12 @@ final readonly class CreateOrder
                 'status' => $initialStatus,
             ]);
 
+            if ($isCustomer) {
+                $task = $order->tasks()->create(['kind' => 'pickup', 'status' => 'waiting', 'address' => $pickupAddress->address]);
+                $task->events()->create(['order_id' => $order->id, 'actor_id' => $actor->id,
+                    'actor_name_snapshot' => $actor->name, 'status' => 'waiting', 'note' => 'Permintaan penjemputan dibuat.']);
+            }
+
             activity('orders')
                 ->causedBy($actor)
                 ->performedOn($order)
@@ -219,7 +231,7 @@ final readonly class CreateOrder
                 ])
                 ->log('order created');
 
-            return $order->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
+            return $order->loadWorkspace();
         });
 
         if ($isCustomer) {

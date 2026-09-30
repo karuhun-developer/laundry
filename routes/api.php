@@ -6,15 +6,20 @@ use App\Http\Controllers\Api\V1\CustomerAddressIndexController;
 use App\Http\Controllers\Api\V1\CustomerIndexController;
 use App\Http\Controllers\Api\V1\CustomerNearestBranchController;
 use App\Http\Controllers\Api\V1\CustomerOrderIndexController;
+use App\Http\Controllers\Api\V1\DailySummaryController;
 use App\Http\Controllers\Api\V1\DeleteCustomerAddressController;
 use App\Http\Controllers\Api\V1\DeletePushNotificationDeviceController;
 use App\Http\Controllers\Api\V1\MobileContextController;
 use App\Http\Controllers\Api\V1\MobileOrderIndexController;
 use App\Http\Controllers\Api\V1\NearestBranchController;
+use App\Http\Controllers\Api\V1\OrderComplaintController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\OrderEstimateController;
+use App\Http\Controllers\Api\V1\OrderEvidenceController;
 use App\Http\Controllers\Api\V1\OrderPricingController;
 use App\Http\Controllers\Api\V1\OrderReceiptController;
 use App\Http\Controllers\Api\V1\OrderStatusEventController;
+use App\Http\Controllers\Api\V1\OrderTaskController;
 use App\Http\Controllers\Api\V1\OrderTrackingController;
 use App\Http\Controllers\Api\V1\OrderWhatsAppSuggestionController;
 use App\Http\Controllers\Api\V1\PaymentController;
@@ -44,6 +49,14 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     Route::get('mobile/context', MobileContextController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.context');
+    Route::get('mobile/daily-summary', DailySummaryController::class)->middleware('auth:sanctum')->name('mobile.daily-summary.show');
+    Route::get('order-evidence/{media}', OrderEvidenceController::class)->middleware('auth:sanctum')->name('order-evidence.show');
+    Route::post('organizations/{organization:slug}/branches/{branch}/orders/{order}/estimate', OrderEstimateController::class)
+        ->middleware('auth:sanctum')->scopeBindings()->name('organizations.branches.orders.estimate.store');
+    Route::post('organizations/{organization:slug}/branches/{branch}/orders/{order}/tasks', OrderTaskController::class)
+        ->middleware('auth:sanctum')->scopeBindings()->name('organizations.branches.orders.tasks.store');
+    Route::post('organizations/{organization:slug}/branches/{branch}/orders/{order}/complaints', OrderComplaintController::class)
+        ->middleware('auth:sanctum')->scopeBindings()->name('organizations.branches.orders.complaints.store');
     Route::get('mobile/branches/nearest', CustomerNearestBranchController::class)
         ->middleware('auth:sanctum')
         ->name('mobile.branches.nearest');

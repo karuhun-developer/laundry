@@ -1,7 +1,8 @@
-import type { MobileOrder } from '@/types/mobile';
+import type { MobileOrder, OrderQueue } from '@/types/mobile';
 
 export type CustomerOrderFilters = {
     search: string;
+    queue?: OrderQueue;
 };
 
 export const emptyCustomerOrderFilters = (): CustomerOrderFilters => ({
@@ -12,10 +13,11 @@ export const normalizeCustomerOrderFilters = (
     filters: CustomerOrderFilters,
 ): CustomerOrderFilters => ({
     search: filters.search.trim(),
+    ...(filters.queue ? { queue: filters.queue } : {}),
 });
 
 export const hasCustomerOrderFilters = (filters: CustomerOrderFilters): boolean =>
-    Boolean(filters.search.trim());
+    Boolean(filters.search.trim() || (filters.queue && filters.queue !== 'all'));
 
 export const filterCustomerOrders = (
     orders: readonly MobileOrder[],

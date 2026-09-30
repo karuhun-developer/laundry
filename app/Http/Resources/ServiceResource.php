@@ -21,6 +21,7 @@ class ServiceResource extends JsonResource
             'name' => $this->name,
             'code' => $this->code,
             'description' => $this->description,
+            'completion_duration_hours' => $this->completion_duration_hours,
             'price_options' => PriceOptionResource::collection($this->whenLoaded('priceOptions')),
         ];
     }

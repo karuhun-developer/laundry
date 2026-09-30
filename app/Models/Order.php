@@ -37,10 +37,14 @@ use Illuminate\Support\Carbon;
  * @property int $delivery_fee_rupiah
  * @property int $total_rupiah
  * @property Carbon|null $priced_at
+ * @property int|null $completion_duration_hours_snapshot
+ * @property Carbon|null $estimated_ready_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Branch $branch
  * @property-read Collection<int, Payment> $payments
+ * @property-read Collection<int, OrderTask> $tasks
+ * @property-read Collection<int, OrderComplaint> $complaints
  */
 #[Fillable([
     'organization_id',
@@ -66,6 +70,8 @@ use Illuminate\Support\Carbon;
     'delivery_fee_rupiah',
     'total_rupiah',
     'priced_at',
+    'completion_duration_hours_snapshot',
+    'estimated_ready_at',
 ])]
 
 class Order extends Model
@@ -121,6 +127,23 @@ class Order extends Model
         return $this->hasMany(Payment::class)->oldest('id');
     }
 
+    /** @return HasMany<OrderTask, $this> */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(OrderTask::class)->oldest('id');
+    }
+
+    /** @return HasMany<OrderComplaint, $this> */
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(OrderComplaint::class)->oldest('id');
+    }
+
+    public function loadWorkspace(): self
+    {
+        return $this->load(['organization', 'branch', 'items', 'statusEvents', 'payments.statusEvents', 'tasks.events', 'tasks.media', 'complaints.events', 'complaints.media']);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
@@ -135,6 +158,16 @@ class Order extends Model
             'delivery_fee_rupiah' => 'integer',
             'total_rupiah' => 'integer',
             'priced_at' => 'datetime',
+            'completion_duration_hours_snapshot' => 'integer',
+            'estimated_ready_at' => 'datetime',
         ];
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->estimated_ready_at !== null
+            && $this->estimated_ready_at->isPast()
+            && ! $this->status->isTerminal()
+            && $this->status !== OrderStatus::ReadyForPickup;
     }
 }

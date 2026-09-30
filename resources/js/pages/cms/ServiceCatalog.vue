@@ -161,6 +161,7 @@ const pricingDetail = (priceOption: PriceOptionSummary): string => {
                             <p class="text-ink-500 mt-1 text-xs">
                                 {{ service.code }} · {{ service.organization.name }}
                             </p>
+                            <p class="mt-3 text-sm font-medium text-brand-700">Estimasi pengerjaan {{ service.completion_duration_hours ?? 72 }} jam</p>
                             <p v-if="service.description" class="text-ink-700 mt-3 text-sm leading-6">
                                 {{ service.description }}
                             </p>

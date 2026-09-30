@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use App\Models\Branch;
 use App\Models\Order;
@@ -12,8 +13,82 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
+it('paginates a scoped queue and calculates statistics before slicing the page', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    Order::factory()->for($organization)->for($branch)->count(31)->create(['status' => OrderStatus::Washing]);
+    Order::factory()->count(3)->create();
+
+    $this->actingAs($owner)->get(route('cms.orders.index'))
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->has('orders', 25)
+            ->where('pagination.total', 31)
+            ->where('pagination.last_page', 2)
+            ->where('statistics.active', 31));
+
+    $this->get(route('cms.orders.index', ['page' => 2]))
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->has('orders', 6)
+            ->where('pagination.current_page', 2)
+            ->where('statistics.active', 31));
+});
+
+it('combines server search status and dates before pagination', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    Order::factory()->for($organization)->for($branch)->count(30)->create(['status' => OrderStatus::Washing]);
+    Order::factory()->for($organization)->for($branch)->create([
+        'order_number' => 'FILTER-TARGET',
+        'status' => OrderStatus::ReadyForPickup,
+        'created_at' => '2026-09-28 10:00:00',
+    ]);
+
+    $this->actingAs($owner)->get(route('cms.orders.index', [
+        'search' => 'FILTER TARGET',
+        'status' => 'ready_for_pickup',
+        'date_from' => '2026-09-28',
+        'date_to' => '2026-09-28',
+    ]))->assertInertia(fn (Assert $page): Assert => $page
+        ->has('orders', 1)
+        ->where('orders.0.order_number', 'FILTER-TARGET')
+        ->where('pagination.total', 1)
+        ->where('statistics.ready', 1));
+});
+
 it('redirects guests from cms order queue to login', function (): void {
     $this->get(route('cms.orders.index'))->assertRedirect(route('login'));
+});
+
+it('provides task and complaint lists directly to cms order details', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    Order::factory()->for($organization)->for($branch)->create();
+    $order = Order::factory()->for($organization)->for($branch)->create();
+    $task = $order->tasks()->create(['kind' => 'delivery', 'status' => 'waiting', 'address' => 'Jalan Mawar']);
+    $complaint = $order->complaints()->create([
+        'category' => 'quality',
+        'description' => 'Pakaian belum bersih',
+        'status' => 'new',
+        'created_by_id' => $owner->id,
+    ]);
+
+    $this->actingAs($owner)->get(route('cms.orders.index'))
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->has('orders', 2)
+            ->has('orders.0.tasks', 1)
+            ->where('orders.0.tasks.0.id', $task->id)
+            ->has('orders.0.tasks.0.history', 0)
+            ->has('orders.0.complaints', 1)
+            ->where('orders.0.complaints.0.id', $complaint->id)
+            ->has('orders.0.complaints.0.evidence', 0)
+            ->has('orders.1.tasks', 0)
+            ->has('orders.1.complaints', 0));
 });
 
 it('forbids customers from opening cms order queue', function (): void {

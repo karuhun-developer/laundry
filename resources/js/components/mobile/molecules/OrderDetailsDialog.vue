@@ -2,6 +2,7 @@
 import { Building2, MapPin, ReceiptText, UserRound } from '@lucide/vue';
 import { computed } from 'vue';
 import WhatsAppContactButton from '@/components/mobile/molecules/WhatsAppContactButton.vue';
+import OrderOperationsPanel from '@/components/mobile/organisms/OrderOperationsPanel.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,7 +15,14 @@ import {
 import { formatRupiah, formatWeight } from '@/lib/mobileOrders';
 import type { MobileBranch, MobileOrder, MobileRole } from '@/types/mobile';
 
-const props = defineProps<{ order: MobileOrder; branch: MobileBranch | null; role: MobileRole }>();
+const props = defineProps<{
+    order: MobileOrder;
+    branch: MobileBranch | null;
+    role: MobileRole;
+    disabled?: boolean;
+    customerPhone?: string | null;
+}>();
+const emit = defineEmits<{ saved: [order: MobileOrder] }>();
 const isPricingPending = computed(() => !props.order.pricing.confirmed);
 </script>
 
@@ -52,6 +60,7 @@ const isPricingPending = computed(() => !props.order.pricing.confirmed);
                     :phone="branch.phone"
                     class="mt-3"
                 />
+                <WhatsAppContactButton v-if="role === 'branch_admin'" :phone="customerPhone ?? ''" recipient="customer" class="mt-3" />
             </section>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div class="rounded-xl bg-canvas p-3">
@@ -119,6 +128,7 @@ const isPricingPending = computed(() => !props.order.pricing.confirmed);
                     </div>
                 </div>
 
+            <OrderOperationsPanel :order="order" :staff="role === 'branch_admin'" :disabled="disabled || order.pending" @saved="emit('saved', $event)" />
             <p v-if="isPricingPending" class="text-sm leading-6 text-ink-500">
                 Harga menunggu konfirmasi berat dari petugas cabang.
             </p>

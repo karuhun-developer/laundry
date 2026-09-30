@@ -25,6 +25,6 @@ class CustomerOrderIndexController extends Controller
         return OrderResource::collection($listMobileOrders->handleForCustomer(
             $user,
             $request->validated(),
-        ));
+        ))->additional($request->boolean('paginated') ? ['statistics' => $listMobileOrders->statistics($user, $request->validated())] : []);
     }
 }

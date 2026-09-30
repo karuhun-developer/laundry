@@ -32,6 +32,21 @@ export const useOptimisticOrders = (api: MobileOrderApi) => {
         rollbackMessage.value = null;
     };
 
+    const synchronizeOrders = (nextOrders: MobileOrder[]): void => {
+        const pending = orders.value.filter(
+            (order) => order.pending || order.payments.some((payment) => payment.pending),
+        );
+        const pendingIds = new Set(pending.map((order) => order.id));
+        orders.value = [
+            ...pending.filter((order) => !nextOrders.some((next) => next.id === order.id)),
+            ...nextOrders.map((order) =>
+                pendingIds.has(order.id)
+                    ? (pending.find((entry) => entry.id === order.id) ?? order)
+                    : order,
+            ),
+        ];
+    };
+
     const createOrder = async (
         draft: MobileOrder,
         payload: CreateOrderPayload,
@@ -71,6 +86,7 @@ export const useOptimisticOrders = (api: MobileOrderApi) => {
         createOrder,
         createPayment,
         setOrders,
+        synchronizeOrders,
         transitionOrder,
         transitionPaymentStatus,
     };

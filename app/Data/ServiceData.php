@@ -13,6 +13,7 @@ final readonly class ServiceData
         public string $code,
         public ?string $description,
         public bool $isActive,
+        public ?int $completionDurationHours = null,
     ) {}
 
     public static function fromRequest(StoreServiceRequest|UpdateServiceRequest $request): self
@@ -25,6 +26,9 @@ final readonly class ServiceData
                 ? $request->string('description')->toString()
                 : null,
             isActive: $request->boolean('is_active', true),
+            completionDurationHours: $request->has('completion_duration_hours')
+                ? $request->integer('completion_duration_hours')
+                : null,
         );
     }
 }

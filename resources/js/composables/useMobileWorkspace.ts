@@ -3,6 +3,7 @@ import { type Coordinates, useGeolocation } from '@/composables/useGeolocation';
 import { useMobileCatalogApi } from '@/composables/useMobileCatalogApi';
 import { useMobileCustomerAddressApi } from '@/composables/useMobileCustomerAddressApi';
 import { useMobileCustomerWorkspace } from '@/composables/useMobileCustomerWorkspace';
+import type { MobileOrderFilters } from '@/composables/useMobileOrderApi';
 import { useMobileOrderWorkspace } from '@/composables/useMobileOrderWorkspace';
 import { useMobilePrinter } from '@/composables/useMobilePrinter';
 import type { CustomerOrderFilters } from '@/lib/mobileOrderFilters';
@@ -13,10 +14,12 @@ import type {
     MobileCustomer,
     MobileCustomerAddress,
     MobileCustomerAddressPayload,
+    MobileOrder,
     MobilePaymentActions,
     MobilePriceQuote,
     MobileService,
     NearestMobileBranch,
+    OrderQueue,
 } from '@/types/mobile';
 
 const errorMessage = (error: unknown, fallback: string): string =>
@@ -47,6 +50,9 @@ export const useMobileWorkspace = () => {
     let orderSearchGeneration = 0;
     let customerOrderSearchGeneration = 0;
     let customerOrderRefreshPromise: Promise<boolean> | null = null;
+    const queueFilter = ref<OrderQueue>('all');
+    let currentOrderFilters: MobileOrderFilters = {};
+    const loadingMore = ref(false);
 
     const selectedBranch = computed<MobileBranch | null>(
         () =>
@@ -94,7 +100,10 @@ export const useMobileWorkspace = () => {
         }
     };
 
-    const loadOrganizationData = async (requestGeneration: number): Promise<void> => {
+    const loadOrganizationData = async (
+        requestGeneration: number,
+        preserveLoadedPages = false,
+    ): Promise<void> => {
         const currentContext = context.value;
 
         if (!currentContext) {
@@ -106,6 +115,14 @@ export const useMobileWorkspace = () => {
                 currentContext.role === 'branch_admin'
                     ? currentContext.organization.slug
                     : undefined,
+                {
+                    ...currentOrderFilters,
+                    branch_id:
+                        currentContext.role === 'branch_admin'
+                            ? (selectedBranchId.value ?? undefined)
+                            : undefined,
+                    pages: preserveLoadedPages ? orderWorkspace.pagination.value.current_page : 1,
+                },
             ),
             currentContext.role === 'branch_admin'
                 ? catalogApi.loadCustomers(currentContext.organization.slug)
@@ -119,7 +136,7 @@ export const useMobileWorkspace = () => {
             return;
         }
 
-        orderWorkspace.setOrders(orders);
+        orderWorkspace.synchronizeOrders(orders);
         customerWorkspace.setCustomers(organizationCustomers);
         addresses.value = customerAddresses;
         selectedAddressId.value = customerAddresses.some(
@@ -306,15 +323,22 @@ export const useMobileWorkspace = () => {
             return;
         }
 
-        branchSelectionGeneration += 1;
+        const selectionGeneration = ++branchSelectionGeneration;
         selectedBranchId.value = branchId;
         services.value = [];
         requestError.value = null;
 
         try {
-            await loadCatalog();
+            await Promise.all([
+                loadCatalog(),
+                context.value?.role === 'branch_admin'
+                    ? searchOrders(currentOrderFilters.search ?? '')
+                    : Promise.resolve(),
+            ]);
         } catch (error: unknown) {
-            requestError.value = errorMessage(error, 'Katalog cabang tidak dapat dimuat.');
+            if (selectionGeneration === branchSelectionGeneration) {
+                requestError.value = errorMessage(error, 'Katalog cabang tidak dapat dimuat.');
+            }
         }
     };
 
@@ -353,7 +377,7 @@ export const useMobileWorkspace = () => {
                 : (response.branches[0]?.id ?? null);
             selectedAddressId.value = previousAddressId;
             nearestGeneration += 1;
-            await loadOrganizationData(requestGeneration);
+            await loadOrganizationData(requestGeneration, true);
 
             const coordinates = selectedAddress.value
                 ? {
@@ -486,7 +510,10 @@ export const useMobileWorkspace = () => {
         return address;
     };
 
-    const searchOrders = async (search: string): Promise<void> => {
+    const searchOrders = async (
+        search: string,
+        queue: OrderQueue = queueFilter.value,
+    ): Promise<void> => {
         const currentContext = context.value;
 
         if (currentContext?.role !== 'branch_admin') {
@@ -494,16 +521,20 @@ export const useMobileWorkspace = () => {
         }
 
         const requestGeneration = ++orderSearchGeneration;
+        queueFilter.value = queue;
+        currentOrderFilters = { search, queue };
         queueLoading.value = true;
         requestError.value = null;
 
         try {
             const orders = await orderWorkspace.loadOrders(currentContext.organization.slug, {
                 search,
+                queue,
+                branch_id: selectedBranchId.value ?? undefined,
             });
 
             if (requestGeneration === orderSearchGeneration && currentContext === context.value) {
-                orderWorkspace.setOrders(orders);
+                orderWorkspace.synchronizeOrders(orders);
             }
         } catch (error: unknown) {
             if (requestGeneration === orderSearchGeneration) {
@@ -517,6 +548,7 @@ export const useMobileWorkspace = () => {
     };
 
     const searchCustomerOrders = async (filters: CustomerOrderFilters): Promise<void> => {
+        currentOrderFilters = filters;
         const currentContext = context.value;
 
         if (currentContext?.role !== 'customer') {
@@ -534,7 +566,7 @@ export const useMobileWorkspace = () => {
                 requestGeneration === customerOrderSearchGeneration &&
                 currentContext === context.value
             ) {
-                orderWorkspace.setOrders(orders);
+                orderWorkspace.synchronizeOrders(orders);
             }
         } catch (error: unknown) {
             if (requestGeneration === customerOrderSearchGeneration) {
@@ -561,7 +593,10 @@ export const useMobileWorkspace = () => {
         const requestGeneration = ++customerOrderSearchGeneration;
         const refreshPromise = (async (): Promise<boolean> => {
             try {
-                const orders = await orderWorkspace.loadOrders(undefined, filters);
+                const orders = await orderWorkspace.loadOrders(undefined, {
+                    ...filters,
+                    pages: orderWorkspace.pagination?.value.current_page ?? 1,
+                });
 
                 if (
                     requestGeneration !== customerOrderSearchGeneration ||
@@ -570,7 +605,7 @@ export const useMobileWorkspace = () => {
                     return false;
                 }
 
-                orderWorkspace.setOrders(orders);
+                orderWorkspace.synchronizeOrders(orders);
 
                 return true;
             } catch {
@@ -609,9 +644,77 @@ export const useMobileWorkspace = () => {
         },
     };
 
+    const loadMoreOrders = async (): Promise<void> => {
+        const currentContext = context.value;
+        const pagination = orderWorkspace.pagination?.value;
+        if (
+            !currentContext ||
+            !pagination ||
+            pagination.current_page >= pagination.last_page ||
+            loadingMore.value ||
+            loading.value ||
+            refreshing.value ||
+            queueLoading.value ||
+            customerOrderLoading.value
+        ) {
+            return;
+        }
+        const generation = ++orderSearchGeneration;
+        const customerGeneration = customerOrderSearchGeneration;
+        loadingMore.value = true;
+        try {
+            const orders = await orderWorkspace.loadOrders(
+                currentContext.role === 'branch_admin'
+                    ? currentContext.organization.slug
+                    : undefined,
+                {
+                    ...currentOrderFilters,
+                    branch_id:
+                        currentContext.role === 'branch_admin'
+                            ? (selectedBranchId.value ?? undefined)
+                            : undefined,
+                    page: pagination.current_page + 1,
+                },
+            );
+            if (
+                generation !== orderSearchGeneration ||
+                customerGeneration !== customerOrderSearchGeneration ||
+                currentContext !== context.value
+            ) {
+                return;
+            }
+            const existing = new Map(orderWorkspace.orders.value.map((order) => [order.id, order]));
+            for (const order of orders) {
+                existing.set(order.id, order);
+            }
+            orderWorkspace.synchronizeOrders([...existing.values()]);
+        } catch (error: unknown) {
+            if (
+                generation === orderSearchGeneration &&
+                customerGeneration === customerOrderSearchGeneration &&
+                currentContext === context.value
+            ) {
+                requestError.value = errorMessage(error, 'Pesanan berikutnya tidak dapat dimuat.');
+            }
+        } finally {
+            loadingMore.value = false;
+        }
+    };
+
+    const replaceOrder = (order: MobileOrder): void => {
+        orderWorkspace.synchronizeOrders(
+            orderWorkspace.orders.value.map((entry) => (entry.id === order.id ? order : entry)),
+        );
+    };
+
     onMounted(() => void load());
 
     return {
+        pagination: orderWorkspace.pagination,
+        loadingMore: readonly(loadingMore),
+        loadMoreOrders,
+        queueFilter: readonly(queueFilter),
+        replaceOrder,
         context: readonly(context),
         addresses: readonly(addresses),
         services: readonly(services),

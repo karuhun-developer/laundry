@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, reactive } from 'vue';
 import PriceOptionFormDialog from '@/components/cms/PriceOptionFormDialog.vue';
+import ServiceFormDialog from '@/components/cms/ServiceFormDialog.vue';
 import type { CatalogBranchSummary, ServiceSummary } from '@/types';
 
 type SubmitOptions = {
@@ -20,13 +21,21 @@ type MockForm = Record<string, unknown> & {
 
 const inertiaHarness = vi.hoisted(() => {
     let submittedData: Record<string, unknown> | undefined;
+    let optimisticUpdate: ((page: unknown) => unknown) | undefined;
 
     return {
         record(data: Record<string, unknown>): void {
             submittedData = data;
         },
+        recordOptimistic(callback: (page: unknown) => unknown): void {
+            optimisticUpdate = callback;
+        },
+        optimisticData(page: unknown): unknown {
+            return optimisticUpdate?.(page);
+        },
         reset(): void {
             submittedData = undefined;
+            optimisticUpdate = undefined;
         },
         submittedData(): Record<string, unknown> | undefined {
             return submittedData;
@@ -45,7 +54,10 @@ vi.mock('@inertiajs/vue3', () => ({
             clearErrors: () => {
                 form.errors = {};
             },
-            optimistic: () => form,
+            optimistic: (callback) => {
+                inertiaHarness.recordOptimistic(callback);
+                return form;
+            },
             reset: () => {
                 Object.assign(form, structuredClone(defaults));
             },
@@ -121,6 +133,26 @@ afterEach(() => {
 });
 
 describe('catalog dialogs', () => {
+    it('updates the completion duration optimistically when editing a service', async () => {
+        const existingService = { ...service, completion_duration_hours: 72 };
+        const wrapper = mount(ServiceFormDialog, {
+            props: {
+                service: existingService,
+                organizations: [{ id: 1, name: 'LaundryHub Demo' }],
+                currentOrganizationId: 1,
+                isSuperadmin: false,
+            },
+            global: { stubs: dialogStubs },
+        });
+
+        await wrapper.get('#service-duration').setValue('24');
+        await wrapper.get('[data-test="service-form"]').trigger('submit');
+
+        expect(inertiaHarness.optimisticData({ services: [existingService] })).toMatchObject({
+            services: [{ id: existingService.id, completion_duration_hours: 24 }],
+        });
+    });
+
     it('shows only active branches owned by the service organization', () => {
         const wrapper = mount(PriceOptionFormDialog, {
             props: { service, branches },

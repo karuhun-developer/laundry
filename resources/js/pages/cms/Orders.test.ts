@@ -1,12 +1,15 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Orders from '@/pages/cms/Orders.vue';
 import type { CmsOrderSummary } from '@/types';
+
+const visits = vi.hoisted(() => ({ get: vi.fn(), reload: vi.fn() }));
 
 vi.mock('@inertiajs/vue3', async () => {
     const { defineComponent } = await import('vue');
 
     return {
+        router: visits,
         Head: defineComponent({ template: '<div><slot /></div>' }),
         usePage: () => ({
             props: {
@@ -19,6 +22,15 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 describe('CMS Orders Queue page', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.clearAllMocks();
+    });
+    const serverProps = {
+        filters: {},
+        pagination: { current_page: 1, last_page: 5, total: 111 },
+        statistics: { total: 111, in_progress: 80, ready: 20, completed: 11 },
+    };
     const sampleOrders: CmsOrderSummary[] = [
         {
             id: 1,
@@ -138,13 +150,15 @@ describe('CMS Orders Queue page', () => {
         { value: 'completed', label: 'Selesai' },
     ];
 
-    it('renders orders table and filters by organization, branch, status, and search query', async () => {
+    it('debounces server filters and preserves them when visiting numbered pages', async () => {
+        vi.useFakeTimers();
         const wrapper = mount(Orders, {
             props: {
                 orders: sampleOrders,
                 branches,
                 organizations,
                 orderStatuses,
+                ...serverProps,
             },
             global: {
                 stubs: {
@@ -157,35 +171,33 @@ describe('CMS Orders Queue page', () => {
             },
         });
 
-        // Initially both orders are displayed
         expect(wrapper.findAll('tbody tr')).toHaveLength(2);
-
-        // Filter by organization 1
-        const orgSelect = wrapper.find('#order-organization-filter');
-        await orgSelect.setValue('1');
-        expect(wrapper.findAll('tbody tr')).toHaveLength(1);
-
-        // Reset organization filter
-        await orgSelect.setValue('all');
+        await wrapper.find('#order-organization-filter').setValue('1');
+        await wrapper.find('#order-branch-filter').setValue('10');
+        await wrapper.find('#order-status-filter').setValue('washing');
+        await wrapper.find('#order-search').setValue(' Budi ');
+        expect(visits.get).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(300);
+        expect(visits.get).toHaveBeenCalledWith(
+            '/cms/orders',
+            { page: 1, organization_id: '1', branch_id: '10', status: 'washing', search: 'Budi' },
+            expect.objectContaining({ preserveState: true }),
+        );
         expect(wrapper.findAll('tbody tr')).toHaveLength(2);
-
-        // Filter by status 'ready_for_pickup'
-        const statusSelect = wrapper.find('#order-status-filter');
-        await statusSelect.setValue('ready_for_pickup');
+        const pageTwo = wrapper.findAll('nav button').find((button) => button.text() === '2');
+        expect(pageTwo).toBeDefined();
+        await pageTwo?.trigger('click');
+        expect(visits.get).toHaveBeenLastCalledWith(
+            '/cms/orders',
+            expect.objectContaining({ page: 2, search: 'Budi', branch_id: '10' }),
+            expect.any(Object),
+        );
+        await wrapper.setProps({
+            orders: sampleOrders.slice(0, 1),
+            pagination: { current_page: 1, last_page: 1, total: 1 },
+        });
         expect(wrapper.findAll('tbody tr')).toHaveLength(1);
-
-        // Reset status filter
-        await statusSelect.setValue('all');
-        expect(wrapper.findAll('tbody tr')).toHaveLength(2);
-
-        // Filter by search query 'Budi'
-        const searchInput = wrapper.find('#order-search');
-        await searchInput.setValue('Budi');
-        expect(wrapper.findAll('tbody tr')).toHaveLength(1);
-
-        // Filter by search query non-existent
-        await searchInput.setValue('NonExistent');
-        expect(wrapper.findAll('tbody tr')).toHaveLength(0);
+        wrapper.unmount();
     });
 
     it('renders safely when order items are empty, null, or wrapped in a data object', () => {
@@ -234,6 +246,7 @@ describe('CMS Orders Queue page', () => {
         const wrapper = mount(Orders, {
             props: {
                 orders: defensiveOrders,
+                ...serverProps,
                 branches,
                 organizations,
                 orderStatuses,

@@ -25,6 +25,8 @@ const geolocation = vi.hoisted(() => ({
 const orderApi = vi.hoisted(() => ({
     loadOrders: vi.fn(),
     setOrders: vi.fn(),
+    synchronizeOrders: vi.fn(),
+    pagination: { current_page: 1, last_page: 1, total: 0 },
 }));
 const customerAddressApi = vi.hoisted(() => ({
     loadAddresses: vi.fn(),
@@ -68,6 +70,7 @@ vi.mock('@/composables/useMobileOrderWorkspace', async () => {
     return {
         useMobileOrderWorkspace: () => ({
             orders: ref([]),
+            pagination: ref(orderApi.pagination),
             rollbackMessage: ref(null),
             whatsAppSuggestion: ref(null),
             whatsAppSuggestionError: ref(null),
@@ -84,6 +87,7 @@ vi.mock('@/composables/useMobileOrderWorkspace', async () => {
             loadReceipt: vi.fn(),
             refreshOrder: vi.fn(),
             setOrders: orderApi.setOrders,
+            synchronizeOrders: orderApi.synchronizeOrders,
             transitionOrder: vi.fn(),
             transitionPaymentStatus: vi.fn(),
         }),
@@ -274,6 +278,7 @@ const mountWorkspaceUi = (): { workspace: Workspace; wrapper: VueWrapper } => {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(orderApi.pagination, { current_page: 1, last_page: 1, total: 0 });
     catalogApi.loadContext.mockResolvedValue(customerContext);
     catalogApi.loadCatalog.mockImplementation(
         async (_organizationSlug: string, branchId: number) => [serviceFor(branchId)],
@@ -412,6 +417,47 @@ describe('mobile workspace automatic nearest branch selection', () => {
 });
 
 describe('mobile workspace refresh', () => {
+    it('refreshes every loaded page without resetting optimistic orders', async () => {
+        catalogApi.loadContext.mockResolvedValue(branchAdminContext);
+        const { workspace, unmount } = mountWorkspace();
+        await flushPromises();
+        await workspace.searchOrders('Laundry', 'active');
+        orderApi.pagination.current_page = 2;
+        orderApi.setOrders.mockClear();
+        orderApi.synchronizeOrders.mockClear();
+
+        await expect(workspace.refresh()).resolves.toBe(true);
+
+        expect(orderApi.loadOrders).toHaveBeenLastCalledWith(branchAdminContext.organization.slug, {
+            search: 'Laundry',
+            queue: 'active',
+            branch_id: kemangBranch.id,
+            pages: 2,
+        });
+        expect(orderApi.setOrders).not.toHaveBeenCalled();
+        expect(orderApi.synchronizeOrders).toHaveBeenCalledWith([]);
+        unmount();
+    });
+
+    it('requests the next page with the current queue filter', async () => {
+        catalogApi.loadContext.mockResolvedValue(branchAdminContext);
+        const { workspace, unmount } = mountWorkspace();
+        await flushPromises();
+        await workspace.searchOrders('Laundry', 'ready');
+        orderApi.pagination.last_page = 3;
+
+        await workspace.loadMoreOrders();
+
+        expect(orderApi.loadOrders).toHaveBeenLastCalledWith(branchAdminContext.organization.slug, {
+            search: 'Laundry',
+            queue: 'ready',
+            branch_id: kemangBranch.id,
+            page: 2,
+        });
+        expect(workspace.loadingMore.value).toBe(false);
+        unmount();
+    });
+
     it('refreshes only customer orders silently and prevents overlapping requests', async () => {
         const { workspace, unmount } = mountWorkspace();
         await vi.waitFor(() => expect(workspace.loading.value).toBe(false));
@@ -429,14 +475,14 @@ describe('mobile workspace refresh', () => {
 
         expect(firstRefresh).toBe(overlappingRefresh);
         expect(orderApi.loadOrders).toHaveBeenCalledOnce();
-        expect(orderApi.loadOrders).toHaveBeenCalledWith(undefined, filters);
+        expect(orderApi.loadOrders).toHaveBeenCalledWith(undefined, { ...filters, pages: 1 });
         expect(catalogApi.loadContext).not.toHaveBeenCalled();
         expect(catalogApi.loadCatalog).not.toHaveBeenCalled();
         expect(customerAddressApi.loadAddresses).not.toHaveBeenCalled();
 
         resolveOrders([]);
         await expect(firstRefresh).resolves.toBe(true);
-        expect(orderApi.setOrders).toHaveBeenCalledWith([]);
+        expect(orderApi.synchronizeOrders).toHaveBeenCalledWith([]);
 
         unmount();
     });

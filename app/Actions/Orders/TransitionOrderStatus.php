@@ -4,11 +4,13 @@ namespace App\Actions\Orders;
 
 use App\Actions\PushNotifications\DispatchOrderPushNotification;
 use App\Data\TransitionOrderStatusData;
+use App\Enums\OrderStatus;
 use App\Enums\PushNotificationEvent;
 use App\Exceptions\InvalidOrderStatusTransition;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final readonly class TransitionOrderStatus
 {
@@ -28,11 +30,22 @@ final readonly class TransitionOrderStatus
                 ->firstOrFail();
             $currentStatus = $lockedOrder->status;
 
+            if ($data->status === OrderStatus::Completed && $lockedOrder->tasks()->where('kind', 'delivery')->whereNotIn('status', ['completed', 'cancelled'])->exists()) {
+                throw ValidationException::withMessages(['status' => 'Selesaikan serah-terima pada tugas pengantaran.']);
+            }
+
             if (! $currentStatus->canTransitionTo($data->status)) {
                 throw InvalidOrderStatusTransition::between($currentStatus, $data->status);
             }
 
             $lockedOrder->update(['status' => $data->status]);
+            if ($data->status === OrderStatus::Cancelled) {
+                foreach ($lockedOrder->tasks()->whereNotIn('status', ['completed', 'cancelled'])->get() as $task) {
+                    $task->update(['status' => 'cancelled']);
+                    $task->events()->create(['order_id' => $lockedOrder->id, 'actor_id' => $actor->id,
+                        'actor_name_snapshot' => $actor->name, 'status' => 'cancelled', 'note' => 'Pesanan dibatalkan.']);
+                }
+            }
             $lockedOrder->statusEvents()->create([
                 'actor_id' => $actor->id,
                 'actor_name_snapshot' => $actor->name,
@@ -50,7 +63,7 @@ final readonly class TransitionOrderStatus
                 ])
                 ->log('order status transitioned');
 
-            return $lockedOrder->load(['branch', 'items', 'statusEvents', 'payments.statusEvents']);
+            return $lockedOrder->loadWorkspace();
         });
 
         $this->dispatchOrderPushNotification->handle(

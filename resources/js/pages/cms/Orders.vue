@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { CheckCircle2, Clock, Layers, PackageCheck, ShoppingBag } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import OrderDetailDialog from '@/components/cms/OrderDetailDialog.vue';
+import DailySummaryDialog from '@/components/mobile/organisms/DailySummaryDialog.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,14 +34,93 @@ const props = defineProps<{
     branches: OrderBranchOption[];
     organizations: OrganizationOption[];
     orderStatuses: OrderStatusOption[];
+    pagination: { current_page: number; last_page: number; total: number };
+    statistics: { total: number; in_progress: number; ready: number; completed: number };
+    filters: {
+        search?: string;
+        organization_id?: number;
+        branch_id?: number;
+        status?: string;
+        date_from?: string;
+        date_to?: string;
+        overdue?: boolean;
+        unpaid?: boolean;
+    };
 }>();
 const page = usePage();
 const isSuperadmin = computed(() => page.props.auth.user.roles.includes('superadmin'));
 
-const organizationFilter = ref<string>('all');
-const branchFilter = ref<string>('all');
-const statusFilter = ref<string>('all');
-const searchQuery = ref<string>('');
+const organizationFilter = ref(props.filters.organization_id?.toString() ?? 'all');
+const branchFilter = ref(props.filters.branch_id?.toString() ?? 'all');
+const statusFilter = ref(props.filters.status ?? 'all');
+const searchQuery = ref(props.filters.search ?? '');
+const dateFrom = ref(props.filters.date_from ?? '');
+const dateTo = ref(props.filters.date_to ?? '');
+const overdueOnly = ref(Boolean(props.filters.overdue));
+const unpaidOnly = ref(Boolean(props.filters.unpaid));
+const loading = ref(false);
+const summaryOpen = ref(false);
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+const visitPage = (pageNumber = 1): void => {
+    clearTimeout(searchTimer);
+    router.get(
+        ordersIndex().url,
+        {
+            page: pageNumber,
+            ...(searchQuery.value.trim() ? { search: searchQuery.value.trim() } : {}),
+            ...(organizationFilter.value !== 'all'
+                ? { organization_id: organizationFilter.value }
+                : {}),
+            ...(branchFilter.value !== 'all' ? { branch_id: branchFilter.value } : {}),
+            ...(statusFilter.value !== 'all' ? { status: statusFilter.value } : {}),
+            ...(dateFrom.value ? { date_from: dateFrom.value } : {}),
+            ...(dateTo.value ? { date_to: dateTo.value } : {}),
+            ...(overdueOnly.value ? { overdue: 1 } : {}),
+            ...(unpaidOnly.value ? { unpaid: 1 } : {}),
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onStart: () => {
+                loading.value = true;
+            },
+            onFinish: () => {
+                loading.value = false;
+            },
+        },
+    );
+};
+watch(
+    [
+        organizationFilter,
+        branchFilter,
+        statusFilter,
+        searchQuery,
+        dateFrom,
+        dateTo,
+        overdueOnly,
+        unpaidOnly,
+    ],
+    () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => visitPage(), 300);
+    },
+);
+onBeforeUnmount(() => clearTimeout(searchTimer));
+const pageNumbers = computed(() => {
+    const first = Math.max(
+        1,
+        Math.min(props.pagination.current_page - 2, props.pagination.last_page - 4),
+    );
+    return Array.from(
+        { length: Math.min(5, props.pagination.last_page) },
+        (_, index) => first + index,
+    );
+});
+const reloadOrders = (): void => {
+    router.reload({ only: ['orders', 'statistics', 'pagination'] });
+};
 
 watch(organizationFilter, () => {
     branchFilter.value = 'all';
@@ -56,63 +136,7 @@ const availableBranches = computed(() => {
     );
 });
 
-const visibleOrders = computed(() => {
-    const query = searchQuery.value.trim().toLowerCase();
-
-    return props.orders.filter((order) => {
-        if (isSuperadmin.value && organizationFilter.value !== 'all') {
-            if (order.organization_id.toString() !== organizationFilter.value) {
-                return false;
-            }
-        }
-
-        if (branchFilter.value !== 'all') {
-            if (order.branch.id.toString() !== branchFilter.value) {
-                return false;
-            }
-        }
-
-        if (statusFilter.value !== 'all') {
-            if (order.status !== statusFilter.value) {
-                return false;
-            }
-        }
-
-        if (query !== '') {
-            const matchNumber = order.order_number?.toLowerCase().includes(query) ?? false;
-            const matchCustomer = order.customer.name.toLowerCase().includes(query);
-            const matchPhone =
-                order.customer.whatsapp_phone?.toLowerCase().includes(query) ?? false;
-
-            if (!matchNumber && !matchCustomer && !matchPhone) {
-                return false;
-            }
-        }
-
-        return true;
-    });
-});
-
-const inProgressStatuses = [
-    'pickup_requested',
-    'received',
-    'weighed',
-    'washing',
-    'drying',
-    'ironing',
-];
-
-const inProgressOrdersCount = computed(
-    () => visibleOrders.value.filter((order) => inProgressStatuses.includes(order.status)).length,
-);
-
-const readyOrdersCount = computed(
-    () => visibleOrders.value.filter((order) => order.status === 'ready_for_pickup').length,
-);
-
-const completedOrdersCount = computed(
-    () => visibleOrders.value.filter((order) => order.status === 'completed').length,
-);
+const visibleOrders = computed(() => props.orders);
 
 const formatRupiah = (amount: number): string =>
     new Intl.NumberFormat('id-ID', {
@@ -197,25 +221,25 @@ const itemsSummary = (order: CmsOrderSummary): string => {
             <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Ringkasan antrean pesanan">
                 <CmsMetricCard
                     label="Total antrean"
-                    :value="visibleOrders.length"
+                    :value="statistics.total"
                     detail="Semua pesanan terpantau"
                     :icon="Layers"
                 />
                 <CmsMetricCard
                     label="Perlu diproses"
-                    :value="inProgressOrdersCount"
+                    :value="statistics.in_progress"
                     detail="Cuci, kering & setrika"
                     :icon="Clock"
                 />
                 <CmsMetricCard
                     label="Siap diambil"
-                    :value="readyOrdersCount"
+                    :value="statistics.ready"
                     detail="Menunggu pelanggan"
                     :icon="PackageCheck"
                 />
                 <CmsMetricCard
                     label="Selesai"
-                    :value="completedOrdersCount"
+                    :value="statistics.completed"
                     detail="Pesanan tuntas"
                     :icon="CheckCircle2"
                 />
@@ -298,6 +322,14 @@ const itemsSummary = (order: CmsOrderSummary): string => {
             </section>
 
             <!-- Orders Table & Mobile List -->
+            <section class="flex flex-wrap items-end gap-4 rounded-2xl border border-line bg-surface p-5" aria-label="Filter waktu dan pembayaran">
+                <label class="grid gap-2 text-sm">Dari tanggal<input v-model="dateFrom" type="date" class="min-h-11 rounded-lg border border-line px-3" /></label>
+                <label class="grid gap-2 text-sm">Sampai tanggal<input v-model="dateTo" type="date" :min="dateFrom" class="min-h-11 rounded-lg border border-line px-3" /></label>
+                <label class="flex min-h-11 items-center gap-2 text-sm"><input v-model="overdueOnly" type="checkbox" />Lewat estimasi</label>
+                <label class="flex min-h-11 items-center gap-2 text-sm"><input v-model="unpaidOnly" type="checkbox" />Belum lunas</label>
+                <button type="button" class="min-h-11 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white" @click="summaryOpen = true">Ringkasan harian</button>
+                <p v-if="loading" class="text-sm text-ink-500" role="status">Memuat pesanan…</p>
+            </section>
             <section class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low">
                 <div class="border-line border-b px-5 py-4">
                     <h2 class="font-display text-ink-950 font-semibold">Daftar antrean pesanan</h2>
@@ -398,6 +430,7 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                                     <OrderDetailDialog
                                         :order="order"
                                         :order-statuses="orderStatuses"
+                                        @saved="reloadOrders"
                                     />
                                 </td>
                             </tr>
@@ -442,11 +475,21 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                             <OrderDetailDialog
                                 :order="order"
                                 :order-statuses="orderStatuses"
+                                @saved="reloadOrders"
                             />
                         </div>
                     </article>
                 </div>
             </section>
+            <nav class="flex flex-wrap items-center justify-between gap-3" aria-label="Halaman pesanan">
+                <p class="text-sm text-ink-500">{{ pagination.total }} pesanan · Halaman {{ pagination.current_page }} dari {{ pagination.last_page }}</p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm disabled:opacity-40" :disabled="loading || pagination.current_page === 1" @click="visitPage(pagination.current_page - 1)">Sebelumnya</button>
+                    <button v-for="pageNumber in pageNumbers" :key="pageNumber" type="button" class="min-h-11 min-w-11 rounded-lg px-3 text-sm" :class="pageNumber === pagination.current_page ? 'bg-brand-700 text-white' : 'border border-line bg-surface'" :aria-current="pageNumber === pagination.current_page ? 'page' : undefined" :disabled="loading" @click="visitPage(pageNumber)">{{ pageNumber }}</button>
+                    <button type="button" class="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm disabled:opacity-40" :disabled="loading || pagination.current_page === pagination.last_page" @click="visitPage(pagination.current_page + 1)">Berikutnya</button>
+                </div>
+            </nav>
+            <DailySummaryDialog v-if="summaryOpen" v-model:open="summaryOpen" :organization-id="organizationFilter !== 'all' ? Number(organizationFilter) : undefined" :branch-id="branchFilter !== 'all' ? Number(branchFilter) : undefined" />
         </div>
     </main>
 </template>

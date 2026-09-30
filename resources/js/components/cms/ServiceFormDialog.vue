@@ -27,6 +27,7 @@ const defaultOrganizationId = (): string =>
         props.organizations[0]?.id
     )?.toString() ?? '';
 const form = useForm({
+    completion_duration_hours: props.service?.completion_duration_hours ?? 72,
     organization_id: defaultOrganizationId(),
     name: props.service?.name ?? '',
     code: props.service?.code ?? '',
@@ -35,6 +36,7 @@ const form = useForm({
 });
 
 const restoreValues = (): void => {
+    form.completion_duration_hours = props.service?.completion_duration_hours ?? 72;
     form.organization_id = defaultOrganizationId();
     form.name = props.service?.name ?? '';
     form.code = props.service?.code ?? '';
@@ -60,6 +62,7 @@ const submit = (): void => {
     if (props.service) {
         const pending: ServiceSummary = {
             ...props.service,
+            completion_duration_hours: form.completion_duration_hours,
             name: form.name,
             code: form.code.toUpperCase(),
             description: form.description === '' ? null : form.description,
@@ -80,6 +83,7 @@ const submit = (): void => {
     }
 
     const pending: ServiceSummary = {
+        completion_duration_hours: form.completion_duration_hours,
         id: -Date.now(),
         organization_id: organizationId,
         name: form.name,
@@ -156,6 +160,12 @@ const submit = (): void => {
             <InputError id="service-organization-error" :message="form.errors.organization_id" />
         </div>
 
+        <div class="space-y-2">
+            <Label for="service-duration">Estimasi pengerjaan (jam)</Label>
+            <Input id="service-duration" v-model.number="form.completion_duration_hours" type="number" min="1" max="8760" required />
+            <p class="text-xs text-ink-500">Mulai dihitung setelah berat dan harga dikonfirmasi. Default 72 jam.</p>
+            <InputError :message="form.errors.completion_duration_hours" />
+        </div>
         <div class="grid gap-4 sm:grid-cols-[1fr_10rem]">
             <div class="space-y-2">
                 <Label for="service-name">Nama layanan</Label>

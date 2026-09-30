@@ -16,7 +16,16 @@ vi.mock('@inertiajs/vue3', () => ({
             get: vi.fn(async (url: string) => {
                 requestedUrls.push(url);
 
-                return { data: [] };
+                return {
+                    data: [],
+                    meta: {
+                        current_page: Number(
+                            new URL(url, 'http://localhost').searchParams.get('page'),
+                        ),
+                        last_page: 3,
+                        total: 65,
+                    },
+                };
             }),
             post: vi.fn(async () => {
                 submittedBodies.push(
@@ -65,7 +74,21 @@ describe('mobile order API', () => {
         });
 
         expect(requestedUrls).toEqual([
-            '/api/v1/mobile/orders?search=Kemang+CKL&date_from=2026-09-01&date_to=2026-09-15',
+            '/api/v1/mobile/orders?paginated=1&search=Kemang+CKL&date_from=2026-09-01&date_to=2026-09-15&page=1',
         ]);
+    });
+
+    it('reloads all loaded pages with the same branch and quick filter', async () => {
+        await useMobileOrderApi().loadOrders('laundryhub-demo', {
+            branch_id: 7,
+            queue: 'overdue',
+            pages: 3,
+        });
+        expect(requestedUrls).toEqual(
+            [1, 2, 3].map(
+                (page) =>
+                    `/api/v1/organizations/laundryhub-demo/orders?paginated=1&branch_id=7&queue=overdue&page=${page}`,
+            ),
+        );
     });
 });

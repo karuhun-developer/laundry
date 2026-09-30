@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,6 +24,13 @@ class ListCustomerOrdersRequest extends FormRequest
     {
         return [
             'search' => ['sometimes', 'string', 'max:100'],
+            'paginated' => ['sometimes', 'boolean'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'branch_id' => ['sometimes', 'integer', 'min:1'],
+            'status' => ['sometimes', Rule::enum(OrderStatus::class)],
+            'queue' => ['sometimes', Rule::in(['all', 'active', 'history'])],
+            'unpaid' => ['sometimes', 'boolean'],
+            'overdue' => ['sometimes', 'boolean'],
             'date_from' => ['sometimes', 'date_format:Y-m-d'],
             'date_to' => [
                 'sometimes',

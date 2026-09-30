@@ -277,6 +277,7 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
     };
 
     return {
+        pagination: api.pagination,
         confirmOrderPricing,
         createOrder,
         createPayment,
@@ -291,6 +292,7 @@ export const useMobileOrderWorkspace = (state: MobileOrderWorkspaceState) => {
         refreshOrder,
         rollbackMessage: optimistic.rollbackMessage,
         setOrders,
+        synchronizeOrders: optimistic.synchronizeOrders,
         transitionOrder,
         transitionProcessing: api.transitionProcessing,
         transitionPaymentStatus,

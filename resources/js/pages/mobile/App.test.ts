@@ -534,16 +534,19 @@ describe('branch-admin mobile tab rendering', () => {
         expect(refreshButton.get('svg').classes()).toContain('animate-spin');
     });
 
-    it('reapplies the active queue search after a successful global refresh', async () => {
+    it('refreshes the active queue without restarting pagination', async () => {
+        vi.useFakeTimers();
         const wrapper = mountMobileApp();
 
         await selectTab(wrapper, 'queue');
         await wrapper.get('[data-test="queue-search"]').setValue('  Waki  ');
+        await vi.advanceTimersByTimeAsync(300);
+        mobileWorkspace.searchOrders.mockClear();
         await wrapper.get('[data-test="refresh-mobile-app"]').trigger('click');
         await flushPromises();
 
         expect(mobileWorkspace.refresh).toHaveBeenCalledOnce();
-        expect(mobileWorkspace.searchOrders).toHaveBeenCalledWith('Waki');
+        expect(mobileWorkspace.searchOrders).not.toHaveBeenCalled();
     });
 
     it('unregisters push notifications before logging out', async () => {
