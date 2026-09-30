@@ -4,6 +4,31 @@ All notable changes to LaundryHub are documented here. The project follows phase
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-01
+
+### Added
+
+- Added server-side pagination, tenant-scoped search, and queue filters for CMS and mobile orders, including active orders, history, unweighed orders, unpaid orders, and overdue work.
+- Added configurable service completion durations, order-level estimate snapshots, overdue indicators, and administrator estimate overrides with history.
+- Added daily summaries of settled cash, QRIS, and gateway receipts, manual income and expenses, net income, outstanding balances, and operational counts.
+- Added pickup and delivery tasks with scheduling, operator and recipient details, progress history, and photo evidence; completing delivery also completes the order.
+- Added order complaints with handling and resolution progress, resolution notes, history, and photo evidence.
+
+### Changed
+
+- Refined responsive customer order lists and branch-admin queues with clearer status, payment, estimate, and action layouts.
+- Preserved loaded mobile order pages and applied filters during refreshes and optimistic updates.
+- Updated the default weighing WhatsApp message to direct customers to QRIS on the order-tracking page.
+
+### Fixed
+
+- Fixed optimistic service edits retaining the previous completion duration instead of the newly entered value.
+- Normalized WhatsApp phone numbers during customer authentication and registration to support local and international phone formats.
+
+### Security
+
+- Kept task and complaint photo evidence on private storage behind authorized order access, with image type, size, and count limits.
+
 ## [1.3.0] - 2026-09-21
 
 - Added dedicated CMS Cashflow module with a 12-month financial Cashflow Statement (grouped into Rutin and Non-Rutin sub-groups for both Pemasukan and Pengeluaran, with automatic net profit/loss calculation) and an entries Table view.
