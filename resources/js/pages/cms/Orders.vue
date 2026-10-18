@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { CheckCircle2, Clock, Download, Layers, PackageCheck, ShoppingBag } from '@lucide/vue';
+import { CheckCircle2, Clock, Download, FileSpreadsheet, Layers, PackageCheck, ShoppingBag } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
@@ -13,7 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes/cms';
-import { exportMethod as ordersExport, index as ordersIndex } from '@/routes/cms/orders';
+import {
+    exportMethod as ordersExport,
+    index as ordersIndex,
+    template as ordersTemplate,
+} from '@/routes/cms/orders';
 import type {
     CmsOrderItemSummary,
     CmsOrderSummary,
@@ -235,6 +239,12 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                 description="Pantau alur pengerjaan dan status pembayaran pesanan pelanggan di seluruh cabang."
             >
                 <template #actions>
+                    <Button as-child variant="outline" class="gap-2">
+                        <a :href="ordersTemplate().url" download>
+                            <FileSpreadsheet class="size-4" />
+                            Template CSV
+                        </a>
+                    </Button>
                     <Button variant="outline" class="gap-2" @click="handleExport">
                         <Download class="size-4" />
                         Export CSV

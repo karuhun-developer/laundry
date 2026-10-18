@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { BarChart3, Download, Table2, Wallet } from '@lucide/vue';
+import { BarChart3, Download, FileSpreadsheet, Table2, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CashflowCategoryDialog from '@/components/cms/CashflowCategoryDialog.vue';
 import CashflowEntryFormDialog from '@/components/cms/CashflowEntryFormDialog.vue';
@@ -12,7 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes/cms';
-import { destroy, exportMethod as cashflowExport, index as cashflowIndex } from '@/routes/cms/cashflow';
+import {
+    destroy,
+    exportMethod as cashflowExport,
+    index as cashflowIndex,
+    template as cashflowTemplate,
+} from '@/routes/cms/cashflow';
 import type {
     CashflowBranchOption,
     CashflowCategoryOption,
@@ -163,6 +168,13 @@ const availableBranches = computed(() => {
                 description="Manage data cashflow untuk keperluan pencatatan arus kas."
             >
                 <template #actions>
+                    <Button as-child variant="outline" class="gap-2">
+                        <a :href="cashflowTemplate().url" download>
+                            <FileSpreadsheet class="size-4" />
+                            Template CSV
+                        </a>
+                    </Button>
+
                     <Button variant="outline" class="gap-2" @click="handleExport">
                         <Download class="size-4" />
                         Export CSV

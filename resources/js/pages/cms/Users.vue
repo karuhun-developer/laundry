@@ -38,8 +38,9 @@ const organizationName = (user: UserSummary): string =>
     props.organizations.find((organization) => organization.id === user.organization_id)?.name ??
     'Tanpa organisasi';
 const userIdentity = (user: UserSummary): string => user.email ?? user.whatsapp_phone ?? user.name;
+const isOwner = (user: UserSummary): boolean => user.roles.some((role) => role.name === 'owner');
 const canManageUser = (user: UserSummary): boolean =>
-    isSuperadmin.value || !user.roles.some((role) => role.name === 'owner');
+    isSuperadmin.value || !isOwner(user);
 </script>
 
 <template>
@@ -114,7 +115,7 @@ const canManageUser = (user: UserSummary): boolean =>
                                             {{ branch.name }}
                                         </Badge>
                                         <span v-if="user.branches.length === 0" class="text-ink-500 text-xs">
-                                            Semua / tanpa cabang
+                                            {{ isOwner(user) ? 'Semua cabang' : 'Semua / tanpa cabang' }}
                                         </span>
                                     </div>
                                 </td>
@@ -164,7 +165,7 @@ const canManageUser = (user: UserSummary): boolean =>
                                 {{ branch.name }}
                             </Badge>
                             <span v-if="user.branches.length === 0" class="text-ink-500 text-xs">
-                                Tidak dibatasi ke cabang
+                                {{ isOwner(user) ? 'Semua cabang' : 'Tidak dibatasi ke cabang' }}
                             </span>
                         </div>
                         <div v-if="canManageUser(user)" class="flex justify-end gap-1 border-t pt-3">
