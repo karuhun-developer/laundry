@@ -7,6 +7,7 @@ cd "$repo_root"
 
 target_host="${DEPLOY_HOST:-ssh67.karuhundeveloper.com}"
 target_user="${DEPLOY_USER:-hidupjokowi}"
+deploy_key="${DEPLOY_SSH_KEY_FILE:-$HOME/.ssh/laundry_deploy}"
 commit="$(git rev-parse HEAD)"
 
 echo "=== LaundryHub Local Deployment ==="
@@ -29,7 +30,14 @@ checksum="$(sha256sum "$archive_tar" | cut -d ' ' -f 1)"
 echo "Archive checksum: $checksum"
 
 echo "Step 3: Streaming release to server and activating..."
-ssh -o BatchMode=yes "$target_user@$target_host" "deploy $commit $checksum" < "$archive_tar"
+if [[ -f "$deploy_key" ]]; then
+    ssh -i "$deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+        -o 'ProxyCommand=cloudflared access ssh --hostname %h' \
+        "$target_user@$target_host" "deploy $commit $checksum" < "$archive_tar"
+else
+    ssh -o BatchMode=yes "$target_user@$target_host" \
+        "SSH_ORIGINAL_COMMAND='deploy $commit $checksum' /home/hidupjokowi/laundry/bin/ssh-deploy.sh" < "$archive_tar"
+fi
 rm -f "$archive_tar"
 
 echo "Step 4: Verifying health check on server port 8099..."
