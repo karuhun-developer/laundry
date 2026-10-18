@@ -370,3 +370,35 @@ it('requires the exact email before deleting a managed user', function (): void 
 
     $this->assertDatabaseMissing('users', ['id' => $managedUser->id]);
 });
+
+it('allows deleting a managed user using whatsapp phone or name', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $phoneOnlyUser = User::factory()->for($organization)->create([
+        'name' => 'Siti Aminah',
+        'email' => null,
+        'whatsapp_phone' => '6289876543210',
+    ]);
+    $phoneOnlyUser->assignRole(RoleName::Customer->value);
+
+    $this->actingAs($owner)->delete(route('cms.users.destroy', $phoneOnlyUser), [
+        'confirmation' => '089876543210',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->assertDatabaseMissing('users', ['id' => $phoneOnlyUser->id]);
+
+    $namedUser = User::factory()->for($organization)->create([
+        'name' => 'Budi Santoso',
+        'email' => null,
+        'whatsapp_phone' => '628111222333',
+    ]);
+    $namedUser->assignRole(RoleName::Customer->value);
+
+    $this->actingAs($owner)->delete(route('cms.users.destroy', $namedUser), [
+        'confirmation' => 'Budi Santoso',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->assertDatabaseMissing('users', ['id' => $namedUser->id]);
+});

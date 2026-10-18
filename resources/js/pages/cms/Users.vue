@@ -38,6 +38,10 @@ const organizationName = (user: UserSummary): string =>
     props.organizations.find((organization) => organization.id === user.organization_id)?.name ??
     'Tanpa organisasi';
 const userIdentity = (user: UserSummary): string => user.email ?? user.whatsapp_phone ?? user.name;
+const userConfirmations = (user: UserSummary): string[] =>
+    [user.email, user.whatsapp_phone, user.name].filter(
+        (val): val is string => typeof val === 'string' && val.trim() !== '',
+    );
 const isOwner = (user: UserSummary): boolean => user.roles.some((role) => role.name === 'owner');
 const canManageUser = (user: UserSummary): boolean =>
     isSuperadmin.value || !isOwner(user);
@@ -132,7 +136,7 @@ const canManageUser = (user: UserSummary): boolean =>
                                             v-if="user.id !== currentUserId"
                                             title="Hapus pengguna?"
                                             :description="`Akun ${user.name} akan dihapus permanen beserta seluruh akses cabangnya.`"
-                                            :confirmation="userIdentity(user)"
+                                            :confirmation="userConfirmations(user)"
                                             confirmation-label="Email, WhatsApp, atau nama pengguna"
                                             :route="destroy(user.id)"
                                             :disabled="user.pending"
@@ -180,7 +184,7 @@ const canManageUser = (user: UserSummary): boolean =>
                                 v-if="user.id !== currentUserId"
                                 title="Hapus pengguna?"
                                 :description="`Akun ${user.name} akan dihapus permanen beserta seluruh akses cabangnya.`"
-                                :confirmation="userIdentity(user)"
+                                :confirmation="userConfirmations(user)"
                                 confirmation-label="Email, WhatsApp, atau nama pengguna"
                                 :route="destroy(user.id)"
                                 :disabled="user.pending"

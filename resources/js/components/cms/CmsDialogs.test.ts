@@ -236,6 +236,40 @@ describe('CMS dialogs', () => {
         expect(submit.element.disabled).toBe(false);
     });
 
+    it('accepts email, phone number variations, or name when confirmation is an array', async () => {
+        const wrapper = mount(CmsDeleteDialog, {
+            props: {
+                title: 'Hapus pengguna?',
+                description: 'Pengguna akan dihapus permanen.',
+                confirmation: ['siti@example.test', '6289876543210', 'Siti Aminah'],
+                confirmationLabel: 'Email, WhatsApp, atau nama pengguna',
+                route: { method: 'delete', url: '/cms/users/5' },
+            },
+            global: { stubs: dialogStubs },
+        });
+
+        const input = wrapper.get('[data-test="delete-confirmation"]');
+        const submit = wrapper.get<HTMLButtonElement>('[data-test="confirm-delete"]');
+
+        expect(wrapper.text()).toContain('siti@example.test');
+        expect(submit.element.disabled).toBe(true);
+
+        await input.setValue('Siti Aminah');
+        expect(submit.element.disabled).toBe(false);
+
+        await input.setValue('siti@example.test');
+        expect(submit.element.disabled).toBe(false);
+
+        await input.setValue('089876543210');
+        expect(submit.element.disabled).toBe(false);
+
+        await input.setValue('6289876543210');
+        expect(submit.element.disabled).toBe(false);
+
+        await input.setValue('random');
+        expect(submit.element.disabled).toBe(true);
+    });
+
     it('prefills organization values without exposing or submitting its slug', async () => {
         const organization: OrganizationSummary = {
             id: 1,

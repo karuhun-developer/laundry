@@ -25,7 +25,7 @@ type DeleteRoute = {
 const props = defineProps<{
     title: string;
     description: string;
-    confirmation: string;
+    confirmation: string | string[];
     confirmationLabel: string;
     route: DeleteRoute;
     disabled?: boolean;
@@ -33,7 +33,52 @@ const props = defineProps<{
 
 const open = ref(false);
 const form = useForm({ confirmation: '' });
-const confirmationMatches = computed(() => form.confirmation === props.confirmation);
+
+const allowedConfirmations = computed<string[]>(() =>
+    Array.isArray(props.confirmation)
+        ? props.confirmation.filter((val) => typeof val === 'string' && val.trim() !== '')
+        : [props.confirmation],
+);
+
+const displayConfirmation = computed<string>(
+    () => allowedConfirmations.value[0] ?? '',
+);
+
+const normalizeDigits = (val: string): string => {
+    const digits = val.replace(/\D+/g, '');
+    if (digits.startsWith('6208')) {
+        return '62' + digits.slice(3);
+    }
+    if (digits.startsWith('0')) {
+        return '62' + digits.slice(1);
+    }
+    if (digits.startsWith('8')) {
+        return '62' + digits;
+    }
+
+    return digits;
+};
+
+const confirmationMatches = computed(() => {
+    const input = form.confirmation.trim();
+    if (!input) {
+        return false;
+    }
+
+    return allowedConfirmations.value.some((target) => {
+        if (input === target) {
+            return true;
+        }
+
+        const inputDigits = normalizeDigits(input);
+        const targetDigits = normalizeDigits(target);
+        if (inputDigits.length >= 8 && inputDigits === targetDigits) {
+            return true;
+        }
+
+        return false;
+    });
+});
 
 watch(open, (isOpen) => {
     if (!isOpen) {
@@ -65,7 +110,7 @@ const submit = (): void => {
                 size="sm"
                 class="text-destructive hover:bg-destructive/10 hover:text-destructive min-h-11 min-w-11"
                 :disabled="disabled"
-                :aria-label="`Hapus ${confirmation}`"
+                :aria-label="`Hapus ${displayConfirmation}`"
                 data-test="open-delete-dialog"
             >
                 <Trash2 />
@@ -81,7 +126,7 @@ const submit = (): void => {
 
                 <div class="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border p-3 text-sm">
                     Tindakan ini tidak dapat dibatalkan. Ketik
-                    <strong>{{ confirmation }}</strong> untuk melanjutkan.
+                    <strong>{{ displayConfirmation }}</strong> untuk melanjutkan.
                 </div>
 
                 <div class="space-y-2">
@@ -90,7 +135,7 @@ const submit = (): void => {
                         id="delete-confirmation"
                         v-model="form.confirmation"
                         autocomplete="off"
-                        :placeholder="confirmation"
+                        :placeholder="displayConfirmation"
                         :aria-invalid="Boolean(form.errors.confirmation)"
                         aria-describedby="delete-confirmation-error"
                         data-test="delete-confirmation"
