@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { BarChart3, Table2, Wallet } from '@lucide/vue';
+import { BarChart3, Download, Table2, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CashflowCategoryDialog from '@/components/cms/CashflowCategoryDialog.vue';
 import CashflowEntryFormDialog from '@/components/cms/CashflowEntryFormDialog.vue';
+import CashflowImportDialog from '@/components/cms/CashflowImportDialog.vue';
 import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes/cms';
-import { index as cashflowIndex, destroy } from '@/routes/cms/cashflow';
+import { destroy, exportMethod as cashflowExport, index as cashflowIndex } from '@/routes/cms/cashflow';
 import type {
     CashflowBranchOption,
     CashflowCategoryOption,
@@ -67,6 +69,21 @@ const applyFilters = (): void => {
         replace: true,
     });
 };
+
+const handleExport = (): void => {
+    const params = new URLSearchParams();
+    params.append('year', yearFilter.value.toString());
+    if (branchFilter.value !== 'all') {
+        params.append('branch_id', branchFilter.value);
+    }
+    if (organizationFilter.value !== 'all' && isSuperadmin.value) {
+        params.append('organization_id', organizationFilter.value);
+    }
+
+    const queryString = params.toString();
+    window.location.href = `${cashflowExport().url}?${queryString}`;
+};
+
 
 const formatRupiah = (amount: number): string =>
     new Intl.NumberFormat('id-ID', {
@@ -146,6 +163,13 @@ const availableBranches = computed(() => {
                 description="Manage data cashflow untuk keperluan pencatatan arus kas."
             >
                 <template #actions>
+                    <Button variant="outline" class="gap-2" @click="handleExport">
+                        <Download class="size-4" />
+                        Export CSV
+                    </Button>
+
+                    <CashflowImportDialog />
+
                     <CashflowCategoryDialog
                         :categories="categories"
                         :organizations="organizations"

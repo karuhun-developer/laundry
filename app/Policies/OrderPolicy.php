@@ -36,8 +36,13 @@ class OrderPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user, Organization $organization, Branch $branch): bool
+    public function create(User $user, ?Organization $organization = null, ?Branch $branch = null): bool
     {
+        if ($organization === null || $branch === null) {
+            return $user->can(PermissionName::ManageOrders->value)
+                && ($user->hasRole(RoleName::Superadmin->value) || $user->organization_id !== null);
+        }
+
         if ($branch->organization_id !== $organization->id) {
             return false;
         }

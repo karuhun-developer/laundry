@@ -74,7 +74,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/export', [OrderController::class, 'export'])->name('orders.export');
+        Route::get('orders/import/template', [OrderController::class, 'template'])->name('orders.template');
+        Route::post('orders/import', [OrderController::class, 'import'])->name('orders.import');
         Route::get('cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+        Route::get('cashflow/export', [CashflowController::class, 'export'])->name('cashflow.export');
+        Route::get('cashflow/import/template', [CashflowController::class, 'template'])->name('cashflow.template');
+        Route::post('cashflow/import', [CashflowController::class, 'import'])->name('cashflow.import');
         Route::post('cashflow', [CashflowController::class, 'store'])->name('cashflow.store');
         Route::delete('cashflow/{cashflowEntry}', [CashflowController::class, 'destroy'])->name('cashflow.destroy');
         Route::post('cashflow/categories', [CashflowCategoryController::class, 'store'])->name('cashflow.categories.store');

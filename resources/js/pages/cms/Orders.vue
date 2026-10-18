@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { CheckCircle2, Clock, Layers, PackageCheck, ShoppingBag } from '@lucide/vue';
+import { CheckCircle2, Clock, Download, Layers, PackageCheck, ShoppingBag } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import OrderDetailDialog from '@/components/cms/OrderDetailDialog.vue';
+import OrderImportDialog from '@/components/cms/OrderImportDialog.vue';
 import DailySummaryDialog from '@/components/mobile/organisms/DailySummaryDialog.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes/cms';
-import { index as ordersIndex } from '@/routes/cms/orders';
+import { exportMethod as ordersExport, index as ordersIndex } from '@/routes/cms/orders';
 import type {
     CmsOrderItemSummary,
     CmsOrderSummary,
@@ -91,6 +93,22 @@ const visitPage = (pageNumber = 1): void => {
         },
     );
 };
+
+const handleExport = (): void => {
+    const params = new URLSearchParams();
+    if (searchQuery.value.trim()) params.append('search', searchQuery.value.trim());
+    if (organizationFilter.value !== 'all') params.append('organization_id', organizationFilter.value);
+    if (branchFilter.value !== 'all') params.append('branch_id', branchFilter.value);
+    if (statusFilter.value !== 'all') params.append('status', statusFilter.value);
+    if (dateFrom.value) params.append('date_from', dateFrom.value);
+    if (dateTo.value) params.append('date_to', dateTo.value);
+    if (overdueOnly.value) params.append('overdue', '1');
+    if (unpaidOnly.value) params.append('unpaid', '1');
+
+    const queryString = params.toString();
+    window.location.href = `${ordersExport().url}${queryString ? `?${queryString}` : ''}`;
+};
+
 watch(
     [
         organizationFilter,
@@ -215,7 +233,15 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                 eyebrow="Operasional laundry"
                 title="Antrean pesanan"
                 description="Pantau alur pengerjaan dan status pembayaran pesanan pelanggan di seluruh cabang."
-            />
+            >
+                <template #actions>
+                    <Button variant="outline" class="gap-2" @click="handleExport">
+                        <Download class="size-4" />
+                        Export CSV
+                    </Button>
+                    <OrderImportDialog />
+                </template>
+            </CmsPageHeader>
 
             <!-- Metric Cards -->
             <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Ringkasan antrean pesanan">

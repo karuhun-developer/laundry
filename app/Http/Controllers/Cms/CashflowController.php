@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Cms;
 
 use App\Actions\Cashflow\CreateCashflowEntry;
 use App\Actions\Cashflow\DeleteCashflowEntry;
+use App\Actions\Cashflow\DownloadCashflowImportTemplateCsv;
+use App\Actions\Cashflow\ExportCashflowCsv;
+use App\Actions\Cashflow\ImportCashflowCsv;
 use App\Data\CashflowEntryData;
 use App\Enums\CashflowType;
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cms\ImportCsvRequest;
 use App\Http\Requests\Cms\StoreCashflowEntryRequest;
 use App\Models\Branch;
 use App\Models\CashflowCategory;
@@ -17,9 +21,11 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CashflowController extends Controller
 {
@@ -111,6 +117,66 @@ class CashflowController extends Controller
         $deleteCashflowEntry->handle($cashflowEntry);
 
         return back()->with('success', 'Entri cashflow berhasil dihapus.');
+    }
+
+    public function export(Request $request, ExportCashflowCsv $exportCashflow): StreamedResponse
+    {
+        Gate::authorize('viewAny', CashflowEntry::class);
+
+        /** @var User $user */
+        $user = $request->user();
+        $isSuperadmin = $user->hasRole(RoleName::Superadmin->value);
+        $year = (int) $request->input('year', now()->year);
+
+        $entriesQuery = CashflowEntry::query()
+            ->whereYear('entry_date', $year)
+            ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $user->organization_id))
+            ->when(
+                $request->filled('organization_id') && $isSuperadmin,
+                fn ($query) => $query->where('organization_id', $request->input('organization_id')),
+            )
+            ->when(
+                $request->filled('branch_id'),
+                fn ($query) => $query->where('branch_id', $request->input('branch_id')),
+            )
+            ->oldest('entry_date')
+            ->oldest('id');
+
+        return $exportCashflow->handle($entriesQuery);
+    }
+
+    public function template(DownloadCashflowImportTemplateCsv $downloadTemplate): StreamedResponse
+    {
+        Gate::authorize('create', CashflowEntry::class);
+
+        return $downloadTemplate->handle();
+    }
+
+    public function import(
+        ImportCsvRequest $request,
+        ImportCashflowCsv $importCashflow,
+    ): RedirectResponse {
+        Gate::authorize('create', CashflowEntry::class);
+
+        /** @var User $user */
+        $user = $request->user();
+        $file = $request->file('file');
+        \assert($file instanceof UploadedFile);
+
+        $result = $importCashflow->handle($file, $user);
+
+        if (! empty($result['errors'])) {
+            $msg = sprintf(
+                'Berhasil mengimpor %d entri cashflow. Terdapat %d kendala: %s',
+                $result['imported'],
+                count($result['errors']),
+                implode('; ', array_slice($result['errors'], 0, 3)),
+            );
+
+            return back()->with($result['imported'] > 0 ? 'warning' : 'error', $msg);
+        }
+
+        return back()->with('success', sprintf('Berhasil mengimpor %d entri cashflow.', $result['imported']));
     }
 
     /**
