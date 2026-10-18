@@ -284,6 +284,53 @@ it('keeps users without an organization limited to the customer role', function 
         ->and($customer->hasRole(RoleName::Customer->value))->toBeTrue();
 });
 
+it('allows updating owner and customer accounts with empty branch_ids payload', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->patch(route('cms.users.update', $owner), [
+        'name' => 'Owner Diperbarui',
+        'email' => 'owner-baru@example.test',
+        'role' => RoleName::Owner->value,
+        'branch_ids' => [],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($owner->refresh()->name)->toBe('Owner Diperbarui')
+        ->and($owner->branches)->toBeEmpty();
+
+    $customer = User::factory()->for($organization)->create();
+    $customer->assignRole(RoleName::Customer->value);
+
+    $this->actingAs($owner)->patch(route('cms.users.update', $customer), [
+        'name' => 'Pelanggan Diperbarui',
+        'email' => 'customer-baru@example.test',
+        'role' => RoleName::Customer->value,
+        'branch_ids' => [],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($customer->refresh()->name)->toBe('Pelanggan Diperbarui')
+        ->and($customer->branches)->toBeEmpty();
+});
+
+it('prohibits assigning branch_ids when updating owner accounts', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->patch(route('cms.users.update', $owner), [
+        'name' => 'Owner Diperbarui',
+        'email' => $owner->email,
+        'role' => RoleName::Owner->value,
+        'branch_ids' => [$branch->id],
+    ])->assertSessionHasErrors('branch_ids');
+});
+
 it('prevents owners from managing owner accounts and users from deleting themselves', function (): void {
     $organization = Organization::factory()->create();
     $owner = User::factory()->for($organization)->create();

@@ -21,10 +21,13 @@ final readonly class UserAccessData
 
     public static function fromRequest(StoreUserRequest $request): self
     {
-        $branchIds = array_map(
-            static fn (mixed $id): int => (int) $id,
-            $request->array('branch_ids'),
-        );
+        $role = RoleName::from($request->string('role')->toString());
+        $branchIds = $role === RoleName::BranchAdmin
+            ? array_map(
+                static fn (mixed $id): int => (int) $id,
+                $request->array('branch_ids'),
+            )
+            : [];
 
         return new self(
             organizationId: $request->organizationId(),
@@ -36,7 +39,7 @@ final readonly class UserAccessData
                     : null,
             ),
             password: $request->string('password')->toString(),
-            role: RoleName::from($request->string('role')->toString()),
+            role: $role,
             branchIds: $branchIds,
         );
     }

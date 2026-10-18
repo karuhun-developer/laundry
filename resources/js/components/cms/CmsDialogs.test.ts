@@ -294,6 +294,35 @@ describe('CMS dialogs', () => {
         expect(wrapper.text()).toContain('Password baru (opsional)');
     });
 
+    it('submits owner accounts with empty branch_ids and explains organization-wide access', async () => {
+        const wrapper = mount(UserFormDialog, {
+            props: {
+                branches: [{ id: 7, organization_id: 1, name: 'Kemang' }],
+                organizations: [{ id: 1, name: 'Kirei Wash Jakarta' }],
+                currentOrganizationId: 1,
+                isSuperadmin: true,
+            },
+            global: { stubs: dialogStubs },
+        });
+
+        await wrapper.get<HTMLSelectElement>('#user-role').setValue('owner');
+
+        expect(wrapper.text()).toContain('Owner dapat mengakses seluruh cabang dalam organisasi.');
+        expect(wrapper.find('fieldset').exists()).toBe(false);
+
+        await wrapper.get<HTMLInputElement>('#user-name').setValue('Budi Owner');
+        await wrapper.get<HTMLInputElement>('#user-email').setValue('owner.budi@example.test');
+        await wrapper.get<HTMLInputElement>('#user-password').setValue('password123');
+        await wrapper.get<HTMLInputElement>('#user-password-confirmation').setValue('password123');
+
+        await wrapper.get('[data-test="user-form"]').trigger('submit');
+
+        expect(inertiaHarness.submittedData()).toMatchObject({
+            role: 'owner',
+            branch_ids: [],
+        });
+    });
+
     it('prefills a message template and renders its variable preview', () => {
         const messageTemplate: MessageTemplateSummary = {
             id: 20,

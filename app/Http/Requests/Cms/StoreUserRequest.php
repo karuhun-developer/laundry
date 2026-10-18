@@ -28,6 +28,7 @@ class StoreUserRequest extends FormRequest
     public function rules(): array
     {
         $organizationId = $this->organizationId();
+        $isBranchAdmin = $this->string('role')->toString() === RoleName::BranchAdmin->value;
         $roles = $this->user()?->hasRole(RoleName::Superadmin->value) === true
             ? [RoleName::Owner->value, RoleName::BranchAdmin->value, RoleName::Customer->value]
             : [RoleName::BranchAdmin->value, RoleName::Customer->value];
@@ -45,10 +46,10 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::in($roles)],
             'branch_ids' => [
-                Rule::requiredIf($this->string('role')->toString() === RoleName::BranchAdmin->value),
-                Rule::prohibitedIf($this->string('role')->toString() !== RoleName::BranchAdmin->value),
+                $isBranchAdmin ? 'required' : 'prohibited',
+                'nullable',
                 'array',
-                'min:1',
+                Rule::when($isBranchAdmin, ['min:1']),
             ],
             'branch_ids.*' => [
                 'integer',

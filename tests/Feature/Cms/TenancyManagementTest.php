@@ -416,6 +416,69 @@ it('allows only superadmins to create owners', function (): void {
     $this->assertDatabaseMissing('users', ['email' => 'owner-kedua@example.test']);
 });
 
+it('allows superadmins to create owners with empty branch_ids as submitted by the cms form', function (): void {
+    $organization = Organization::factory()->create();
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->post(route('cms.users.store'), [
+        'organization_id' => $organization->id,
+        'name' => 'Owner Utama',
+        'email' => 'owner-utama@example.test',
+        'whatsapp_phone' => '081234567890',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'role' => RoleName::Owner->value,
+        'branch_ids' => [],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $createdOwner = User::query()->where('email', 'owner-utama@example.test')->firstOrFail();
+
+    expect($createdOwner->organization_id)->toBe($organization->id)
+        ->and($createdOwner->hasRole(RoleName::Owner->value))->toBeTrue()
+        ->and($createdOwner->branches)->toBeEmpty();
+});
+
+it('allows creating customers with empty branch_ids as submitted by the cms form', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $this->actingAs($owner)->post(route('cms.users.store'), [
+        'name' => 'Pelanggan Walkin',
+        'email' => 'walkin@example.test',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'role' => RoleName::Customer->value,
+        'branch_ids' => [],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $customer = User::query()->where('email', 'walkin@example.test')->firstOrFail();
+
+    expect($customer->organization_id)->toBe($organization->id)
+        ->and($customer->hasRole(RoleName::Customer->value))->toBeTrue()
+        ->and($customer->branches)->toBeEmpty();
+});
+
+it('prohibits branch assignment when creating an owner account', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $this->actingAs($superadmin)->post(route('cms.users.store'), [
+        'organization_id' => $organization->id,
+        'name' => 'Owner Ilegal Cabang',
+        'email' => 'owner-ilegal@example.test',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'role' => RoleName::Owner->value,
+        'branch_ids' => [$branch->id],
+    ])->assertSessionHasErrors('branch_ids');
+
+    $this->assertDatabaseMissing('users', ['email' => 'owner-ilegal@example.test']);
+});
+
 it('scopes the user management page and excludes superadmins', function (): void {
     $organization = Organization::factory()->create();
     $otherOrganization = Organization::factory()->create();

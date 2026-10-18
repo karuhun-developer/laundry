@@ -3,6 +3,7 @@
 namespace App\Actions\Users;
 
 use App\Data\UserAccessData;
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -20,13 +21,14 @@ final class CreateUserWithAccess
             ]);
 
             $user->assignRole($data->role->value);
-            $user->branches()->sync($data->branchIds);
+            $branchIds = $data->role === RoleName::BranchAdmin ? $data->branchIds : [];
+            $user->branches()->sync($branchIds);
 
             activity('access')
                 ->performedOn($user)
                 ->withProperties([
                     'role' => $data->role->value,
-                    'branch_ids' => $data->branchIds,
+                    'branch_ids' => $branchIds,
                 ])
                 ->log('user access created');
 

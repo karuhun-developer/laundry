@@ -41,6 +41,12 @@ const toggleBranch = (branchId: number): void => {
             </option>
         </select>
         <InputError id="user-role-error" :message="roleError" />
+        <p v-if="role === 'owner'" class="text-ink-500 text-xs">
+            Owner dapat mengakses seluruh cabang dalam organisasi.
+        </p>
+        <p v-else-if="role === 'customer'" class="text-ink-500 text-xs">
+            Pelanggan tidak dibatasi pada cabang tertentu.
+        </p>
     </div>
 
     <fieldset v-if="role === 'branch_admin'" class="space-y-2">

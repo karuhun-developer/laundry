@@ -23,6 +23,7 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         $managedUser = $this->managedUser();
+        $isBranchAdmin = $this->string('role')->toString() === RoleName::BranchAdmin->value;
         $roles = match (true) {
             $managedUser?->organization_id === null => [RoleName::Customer->value],
             $this->user()?->hasRole(RoleName::Superadmin->value) === true => [
@@ -40,10 +41,10 @@ class UpdateUserRequest extends FormRequest
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::in($roles)],
             'branch_ids' => [
-                Rule::requiredIf($this->string('role')->toString() === RoleName::BranchAdmin->value),
-                Rule::prohibitedIf($this->string('role')->toString() !== RoleName::BranchAdmin->value),
+                $isBranchAdmin ? 'required' : 'prohibited',
+                'nullable',
                 'array',
-                'min:1',
+                Rule::when($isBranchAdmin, ['min:1']),
             ],
             'branch_ids.*' => [
                 'integer',

@@ -20,10 +20,13 @@ final readonly class UpdateUserAccessData
 
     public static function fromRequest(UpdateUserRequest $request): self
     {
-        $branchIds = array_map(
-            static fn (mixed $id): int => (int) $id,
-            $request->array('branch_ids'),
-        );
+        $role = RoleName::from($request->string('role')->toString());
+        $branchIds = $role === RoleName::BranchAdmin
+            ? array_map(
+                static fn (mixed $id): int => (int) $id,
+                $request->array('branch_ids'),
+            )
+            : [];
 
         return new self(
             name: $request->string('name')->toString(),
@@ -34,7 +37,7 @@ final readonly class UpdateUserAccessData
                     : null,
             ),
             password: $request->filled('password') ? $request->string('password')->toString() : null,
-            role: RoleName::from($request->string('role')->toString()),
+            role: $role,
             branchIds: $branchIds,
         );
     }
