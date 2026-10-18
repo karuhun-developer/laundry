@@ -16,34 +16,60 @@ use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         Gate::authorize('viewAny', User::class);
 
+        $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
+
         /** @var User $actor */
-        $actor = request()->user();
+        $actor = $request->user();
         $isSuperadmin = $actor->hasRole(RoleName::Superadmin->value);
 
+        $query = User::query()
+            ->with(['organization:id,name', 'roles:id,name', 'branches:id,name'])
+            ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
+            ->whereDoesntHave('roles', fn ($query) => $query->where('name', RoleName::Superadmin->value))
+            ->orderBy('name');
+
+        $totalUsers = (clone $query)->count();
+        $branchAdminsCount = (clone $query)
+            ->whereHas('roles', fn ($query) => $query->where('name', RoleName::BranchAdmin->value))
+            ->count();
+
+        $users = $query->paginate(25)->withQueryString();
+
+        $branches = Branch::query()
+            ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
+            ->orderBy('name')
+            ->get(['id', 'organization_id', 'name']);
+
+        $organizations = $isSuperadmin
+            ? Organization::query()->orderBy('name')->get(['id', 'name'])
+            : [];
+
         return Inertia::render('cms/Users', [
-            'users' => User::query()
-                ->with(['organization:id,name', 'roles:id,name', 'branches:id,name'])
-                ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
-                ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'superadmin'))
-                ->orderBy('name')
-                ->get(['id', 'organization_id', 'name', 'email', 'whatsapp_phone']),
-            'branches' => Branch::query()
-                ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
-                ->orderBy('name')
-                ->get(['id', 'organization_id', 'name']),
-            'organizations' => $isSuperadmin
-                ? Organization::query()->orderBy('name')->get(['id', 'name'])
-                : [],
+            'users' => $users->getCollection()->values(),
+            'pagination' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'total' => $users->total(),
+            ],
+            'statistics' => [
+                'total' => $totalUsers,
+                'branch_admins' => $branchAdminsCount,
+            ],
+            'branches' => $branches,
+            'organizations' => $organizations,
         ]);
     }
 

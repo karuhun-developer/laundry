@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Building2, ShieldCheck, UsersRound } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
@@ -27,11 +27,44 @@ const page = usePage();
 const isSuperadmin = computed(() => page.props.auth.user.roles.includes('superadmin'));
 const currentOrganizationId = computed(() => page.props.auth.user.organization_id);
 const currentUserId = computed(() => page.props.auth.user.id);
+const loading = ref(false);
+
+const totalUsers = computed(() => props.statistics?.total ?? props.pagination.total);
 const branchAdmins = computed(
     () =>
+        props.statistics?.branch_admins ??
         props.users.filter((user) => user.roles.some((role) => role.name === 'branch_admin'))
             .length,
 );
+
+const pageNumbers = computed(() => {
+    const first = Math.max(
+        1,
+        Math.min(props.pagination.current_page - 2, props.pagination.last_page - 4),
+    );
+    return Array.from(
+        { length: Math.min(5, props.pagination.last_page) },
+        (_, index) => first + index,
+    );
+});
+
+const visitPage = (pageNumber = 1): void => {
+    router.get(
+        index().url,
+        { page: pageNumber },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onStart: () => {
+                loading.value = true;
+            },
+            onFinish: () => {
+                loading.value = false;
+            },
+        },
+    );
+};
 
 const organizationName = (user: UserSummary): string =>
     user.organization?.name ??
@@ -42,8 +75,7 @@ const userConfirmations = (user: UserSummary): string[] =>
         (val): val is string => typeof val === 'string' && val.trim() !== '',
     );
 const isOwner = (user: UserSummary): boolean => user.roles.some((role) => role.name === 'owner');
-const canManageUser = (user: UserSummary): boolean =>
-    isSuperadmin.value || !isOwner(user);
+const canManageUser = (user: UserSummary): boolean => isSuperadmin.value || !isOwner(user);
 </script>
 
 <template>
@@ -67,7 +99,7 @@ const canManageUser = (user: UserSummary): boolean =>
             </CmsPageHeader>
 
             <section class="grid gap-4 sm:grid-cols-3" aria-label="Ringkasan pengguna">
-                <CmsMetricCard label="Total pengguna" :value="users.length" detail="Dalam cakupan Anda" :icon="UsersRound" />
+                <CmsMetricCard label="Total pengguna" :value="totalUsers" detail="Dalam cakupan Anda" :icon="UsersRound" />
                 <CmsMetricCard label="Admin cabang" :value="branchAdmins" detail="Akun operasional" :icon="ShieldCheck" />
                 <CmsMetricCard label="Cabang tersedia" :value="branches.length" detail="Untuk penetapan akses" :icon="Building2" />
             </section>
@@ -193,6 +225,45 @@ const canManageUser = (user: UserSummary): boolean =>
                     </article>
                 </div>
             </section>
+            <nav
+                v-if="pagination.total > 0"
+                class="flex flex-wrap items-center justify-between gap-3"
+                aria-label="Halaman pengguna"
+            >
+                <p class="text-sm text-ink-500">
+                    {{ pagination.total }} pengguna · Halaman {{ pagination.current_page }} dari {{ pagination.last_page }}
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm disabled:opacity-40"
+                        :disabled="loading || pagination.current_page === 1"
+                        @click="visitPage(pagination.current_page - 1)"
+                    >
+                        Sebelumnya
+                    </button>
+                    <button
+                        v-for="pageNumber in pageNumbers"
+                        :key="pageNumber"
+                        type="button"
+                        class="min-h-11 min-w-11 rounded-lg px-3 text-sm"
+                        :class="pageNumber === pagination.current_page ? 'bg-brand-700 text-white' : 'border border-line bg-surface'"
+                        :aria-current="pageNumber === pagination.current_page ? 'page' : undefined"
+                        :disabled="loading"
+                        @click="visitPage(pageNumber)"
+                    >
+                        {{ pageNumber }}
+                    </button>
+                    <button
+                        type="button"
+                        class="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm disabled:opacity-40"
+                        :disabled="loading || pagination.current_page === pagination.last_page"
+                        @click="visitPage(pagination.current_page + 1)"
+                    >
+                        Berikutnya
+                    </button>
+                </div>
+            </nav>
         </div>
     </main>
 </template>

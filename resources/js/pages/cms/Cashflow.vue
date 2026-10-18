@@ -13,19 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes/cms';
 import {
-    destroy,
     exportMethod as cashflowExport,
     index as cashflowIndex,
     template as cashflowTemplate,
+    destroy,
 } from '@/routes/cms/cashflow';
-import type {
-    CashflowBranchOption,
-    CashflowCategoryOption,
-    CashflowEntrySummary,
-    CashflowStatement,
-    CashflowStatementCategory,
-    OrganizationOption,
-} from '@/types';
+import type { CashflowPageProps, CashflowStatementCategory } from '@/types';
 
 defineOptions({
     layout: {
@@ -36,30 +29,41 @@ defineOptions({
     },
 });
 
-const props = defineProps<{
-    statement: CashflowStatement;
-    entries: CashflowEntrySummary[];
-    branches: CashflowBranchOption[];
-    organizations: OrganizationOption[];
-    categories: CashflowCategoryOption[];
-    filters: {
-        year: number;
-        branch_id: string | null;
-        organization_id: string | null;
-    };
-}>();
+const props = defineProps<CashflowPageProps>();
 
 const page = usePage();
 const isSuperadmin = computed(() => page.props.auth.user.roles.includes('superadmin'));
 
-const viewMode = ref<'laporan' | 'tabel'>('laporan');
+const viewMode = ref<'laporan' | 'tabel'>(
+    props.filters.tab === 'tabel' ||
+        (typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('tab') === 'tabel')
+        ? 'tabel'
+        : 'laporan',
+);
 
 const yearFilter = ref(props.filters.year);
 const branchFilter = ref(props.filters.branch_id ?? 'all');
 const organizationFilter = ref(props.filters.organization_id ?? 'all');
+const loading = ref(false);
 
-const applyFilters = (): void => {
-    const query: Record<string, string | number> = { year: yearFilter.value };
+const pageNumbers = computed(() => {
+    const first = Math.max(
+        1,
+        Math.min(props.pagination.current_page - 2, props.pagination.last_page - 4),
+    );
+    return Array.from(
+        { length: Math.min(5, props.pagination.last_page) },
+        (_, index) => first + index,
+    );
+});
+
+const visitPage = (pageNumber = 1): void => {
+    const query: Record<string, string | number> = {
+        year: yearFilter.value,
+        page: pageNumber,
+        tab: 'tabel',
+    };
 
     if (branchFilter.value !== 'all') {
         query.branch_id = branchFilter.value;
@@ -72,6 +76,42 @@ const applyFilters = (): void => {
         preserveScroll: true,
         preserveState: true,
         replace: true,
+        onStart: () => {
+            loading.value = true;
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
+    });
+};
+
+const applyFilters = (): void => {
+    const query: Record<string, string | number> = {
+        year: yearFilter.value,
+        page: 1,
+    };
+
+    if (viewMode.value === 'tabel') {
+        query.tab = 'tabel';
+    }
+
+    if (branchFilter.value !== 'all') {
+        query.branch_id = branchFilter.value;
+    }
+    if (organizationFilter.value !== 'all' && isSuperadmin.value) {
+        query.organization_id = organizationFilter.value;
+    }
+
+    router.get(cashflowIndex.url(), query, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onStart: () => {
+            loading.value = true;
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
     });
 };
 
@@ -88,7 +128,6 @@ const handleExport = (): void => {
     const queryString = params.toString();
     window.location.href = `${cashflowExport().url}?${queryString}`;
 };
-
 
 const formatRupiah = (amount: number): string =>
     new Intl.NumberFormat('id-ID', {
@@ -559,118 +598,159 @@ const availableBranches = computed(() => {
             </section>
 
             <!-- TABEL VIEW (Entries Table) -->
-            <section
-                v-if="viewMode === 'tabel'"
-                class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low"
-            >
-                <div class="border-line border-b px-5 py-4">
-                    <h2 class="font-display text-ink-950 font-semibold">Daftar entri cashflow</h2>
-                    <p class="text-ink-500 mt-1 text-sm">
-                        Semua transaksi pemasukan dan pengeluaran pada tahun {{ statement.year }}.
-                    </p>
-                </div>
+            <div v-if="viewMode === 'tabel'" class="space-y-6">
+                <section
+                    class="border-line bg-surface overflow-hidden rounded-3xl border shadow-low"
+                >
+                    <div class="border-line border-b px-5 py-4">
+                        <h2 class="font-display text-ink-950 font-semibold">Daftar entri cashflow</h2>
+                        <p class="text-ink-500 mt-1 text-sm">
+                            Semua transaksi pemasukan dan pengeluaran pada tahun {{ statement.year }}.
+                        </p>
+                    </div>
 
-                <CmsEmptyState
-                    v-if="entries.length === 0"
-                    class="m-5"
-                    title="Belum ada entri cashflow"
-                    description="Belum ada transaksi yang tercatat. Klik 'Buat Baru' untuk menambahkan."
-                    :icon="Wallet"
-                />
+                    <CmsEmptyState
+                        v-if="entries.length === 0"
+                        class="m-5"
+                        title="Belum ada entri cashflow"
+                        description="Belum ada transaksi yang tercatat. Klik 'Buat Baru' untuk menambahkan."
+                        :icon="Wallet"
+                    />
 
-                <!-- Desktop Table -->
-                <div v-else class="hidden overflow-x-auto lg:block">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-canvas text-ink-500">
-                            <tr>
-                                <th class="px-5 py-3 font-medium">Tanggal</th>
-                                <th class="px-5 py-3 font-medium">Kategori</th>
-                                <th class="px-5 py-3 font-medium">Deskripsi</th>
-                                <th class="px-5 py-3 font-medium">Cabang</th>
-                                <th class="px-5 py-3 font-medium">Tipe</th>
-                                <th class="px-5 py-3 text-right font-medium">Jumlah</th>
-                                <th class="px-5 py-3 text-right font-medium">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-line divide-y">
-                            <tr v-for="entry in entries" :key="entry.id">
-                                <td class="px-5 py-4 text-ink-950 whitespace-nowrap">
-                                    {{ formatDate(entry.entry_date) }}
-                                </td>
-                                <td class="px-5 py-4">
-                                    <p class="text-ink-950 font-medium">{{ entry.category.name }}</p>
-                                    <p class="text-ink-500 mt-0.5 text-xs capitalize">{{ entry.category.group === 'non_rutin' ? 'Non-Rutin' : 'Rutin' }}</p>
-                                </td>
-                                <td class="px-5 py-4 text-ink-700 max-w-xs truncate">
-                                    {{ entry.description }}
-                                </td>
-                                <td class="px-5 py-4 text-ink-700">
-                                    {{ entry.branch.name }}
-                                </td>
-                                <td class="px-5 py-4">
-                                    <Badge
-                                        :variant="entry.type === 'debit' ? 'default' : 'destructive'"
-                                        :class="entry.type === 'debit' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''"
-                                    >
-                                        {{ entry.type === 'debit' ? 'Pemasukan' : 'Pengeluaran' }}
-                                    </Badge>
-                                </td>
-                                <td class="px-5 py-4 text-right font-semibold tabular-nums" :class="entry.type === 'debit' ? 'text-emerald-700' : 'text-red-700'">
-                                    {{ formatRupiah(entry.amount_rupiah) }}
-                                </td>
-                                <td class="px-5 py-4 text-right">
-                                    <CmsDeleteDialog
-                                        v-if="entry.payment_id === null"
-                                        title="Hapus entri cashflow"
-                                        description="Hapus entri cashflow ini secara permanen."
-                                        :confirmation="entry.description"
-                                        confirmation-label="Ketik deskripsi untuk konfirmasi"
-                                        :route="destroy(entry.id)"
-                                    />
-                                    <span v-else class="text-ink-400 text-xs italic">Otomatis</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <!-- Desktop Table -->
+                    <div v-else class="hidden overflow-x-auto lg:block">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-canvas text-ink-500">
+                                <tr>
+                                    <th class="px-5 py-3 font-medium">Tanggal</th>
+                                    <th class="px-5 py-3 font-medium">Kategori</th>
+                                    <th class="px-5 py-3 font-medium">Deskripsi</th>
+                                    <th class="px-5 py-3 font-medium">Cabang</th>
+                                    <th class="px-5 py-3 font-medium">Tipe</th>
+                                    <th class="px-5 py-3 text-right font-medium">Jumlah</th>
+                                    <th class="px-5 py-3 text-right font-medium">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-line divide-y">
+                                <tr v-for="entry in entries" :key="entry.id">
+                                    <td class="px-5 py-4 text-ink-950 whitespace-nowrap">
+                                        {{ formatDate(entry.entry_date) }}
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <p class="text-ink-950 font-medium">{{ entry.category.name }}</p>
+                                        <p class="text-ink-500 mt-0.5 text-xs capitalize">{{ entry.category.group === 'non_rutin' ? 'Non-Rutin' : 'Rutin' }}</p>
+                                    </td>
+                                    <td class="px-5 py-4 text-ink-700 max-w-xs truncate">
+                                        {{ entry.description }}
+                                    </td>
+                                    <td class="px-5 py-4 text-ink-700">
+                                        {{ entry.branch.name }}
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <Badge
+                                            :variant="entry.type === 'debit' ? 'default' : 'destructive'"
+                                            :class="entry.type === 'debit' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''"
+                                        >
+                                            {{ entry.type === 'debit' ? 'Pemasukan' : 'Pengeluaran' }}
+                                        </Badge>
+                                    </td>
+                                    <td class="px-5 py-4 text-right font-semibold tabular-nums" :class="entry.type === 'debit' ? 'text-emerald-700' : 'text-red-700'">
+                                        {{ formatRupiah(entry.amount_rupiah) }}
+                                    </td>
+                                    <td class="px-5 py-4 text-right">
+                                        <CmsDeleteDialog
+                                            v-if="entry.payment_id === null"
+                                            title="Hapus entri cashflow"
+                                            description="Hapus entri cashflow ini secara permanen."
+                                            :confirmation="entry.description"
+                                            confirmation-label="Ketik deskripsi untuk konfirmasi"
+                                            :route="destroy(entry.id)"
+                                        />
+                                        <span v-else class="text-ink-400 text-xs italic">Otomatis</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <!-- Mobile Card View -->
-                <div v-if="entries.length > 0" class="divide-line divide-y lg:hidden">
-                    <article v-for="entry in entries" :key="entry.id" class="space-y-3 p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <h3 class="text-ink-950 text-sm font-semibold">{{ entry.category.name }}</h3>
-                                <p class="text-ink-500 mt-0.5 text-xs">
-                                    {{ entry.branch.name }} · {{ formatDate(entry.entry_date) }}
-                                </p>
+                    <!-- Mobile Card View -->
+                    <div v-if="entries.length > 0" class="divide-line divide-y lg:hidden">
+                        <article v-for="entry in entries" :key="entry.id" class="space-y-3 p-5">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 class="text-ink-950 text-sm font-semibold">{{ entry.category.name }}</h3>
+                                    <p class="text-ink-500 mt-0.5 text-xs">
+                                        {{ entry.branch.name }} · {{ formatDate(entry.entry_date) }}
+                                    </p>
+                                </div>
+                                <Badge
+                                    :variant="entry.type === 'debit' ? 'default' : 'destructive'"
+                                    :class="entry.type === 'debit' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''"
+                                >
+                                    {{ entry.type === 'debit' ? 'Pemasukan' : 'Pengeluaran' }}
+                                </Badge>
                             </div>
-                            <Badge
-                                :variant="entry.type === 'debit' ? 'default' : 'destructive'"
-                                :class="entry.type === 'debit' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''"
-                            >
-                                {{ entry.type === 'debit' ? 'Pemasukan' : 'Pengeluaran' }}
-                            </Badge>
-                        </div>
 
-                        <div class="flex items-center justify-between rounded-xl bg-canvas/40 p-2.5 text-xs text-ink-600">
-                            <span class="max-w-[60%] truncate">{{ entry.description }}</span>
-                            <span class="font-semibold tabular-nums" :class="entry.type === 'debit' ? 'text-emerald-700' : 'text-red-700'">
-                                {{ formatRupiah(entry.amount_rupiah) }}
-                            </span>
-                        </div>
+                            <div class="flex items-center justify-between rounded-xl bg-canvas/40 p-2.5 text-xs text-ink-600">
+                                <span class="max-w-[60%] truncate">{{ entry.description }}</span>
+                                <span class="font-semibold tabular-nums" :class="entry.type === 'debit' ? 'text-emerald-700' : 'text-red-700'">
+                                    {{ formatRupiah(entry.amount_rupiah) }}
+                                </span>
+                            </div>
 
-                        <div v-if="entry.payment_id === null" class="border-line flex items-center justify-end border-t pt-3">
-                            <CmsDeleteDialog
-                                title="Hapus entri cashflow"
-                                description="Hapus entri cashflow ini secara permanen."
-                                :confirmation="entry.description"
-                                confirmation-label="Ketik deskripsi untuk konfirmasi"
-                                :route="destroy(entry.id)"
-                            />
-                        </div>
-                    </article>
-                </div>
-            </section>
+                            <div v-if="entry.payment_id === null" class="border-line flex items-center justify-end border-t pt-3">
+                                <CmsDeleteDialog
+                                    title="Hapus entri cashflow"
+                                    description="Hapus entri cashflow ini secara permanen."
+                                    :confirmation="entry.description"
+                                    confirmation-label="Ketik deskripsi untuk konfirmasi"
+                                    :route="destroy(entry.id)"
+                                />
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <nav
+                    v-if="pagination.total > 0"
+                    class="flex flex-wrap items-center justify-between gap-3"
+                    aria-label="Halaman entri cashflow"
+                >
+                    <p class="text-sm text-ink-500">
+                        {{ pagination.total }} entri · Halaman {{ pagination.current_page }} dari {{ pagination.last_page }}
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm disabled:opacity-40"
+                            :disabled="loading || pagination.current_page === 1"
+                            @click="visitPage(pagination.current_page - 1)"
+                        >
+                            Sebelumnya
+                        </button>
+                        <button
+                            v-for="pageNumber in pageNumbers"
+                            :key="pageNumber"
+                            type="button"
+                            class="min-h-11 min-w-11 rounded-lg px-3 text-sm"
+                            :class="pageNumber === pagination.current_page ? 'bg-brand-700 text-white' : 'border border-line bg-surface'"
+                            :aria-current="pageNumber === pagination.current_page ? 'page' : undefined"
+                            :disabled="loading"
+                            @click="visitPage(pageNumber)"
+                        >
+                            {{ pageNumber }}
+                        </button>
+                        <button
+                            type="button"
+                            class="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm disabled:opacity-40"
+                            :disabled="loading || pagination.current_page === pagination.last_page"
+                            @click="visitPage(pagination.current_page + 1)"
+                        >
+                            Berikutnya
+                        </button>
+                    </div>
+                </nav>
+            </div>
         </div>
     </main>
 </template>
