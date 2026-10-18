@@ -250,7 +250,7 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                         <Download class="size-4" />
                         Export CSV
                     </Button>
-                    <OrderImportDialog />
+                    <OrderImportDialog @imported="reloadOrders" />
                 </template>
             </CmsPageHeader>
 

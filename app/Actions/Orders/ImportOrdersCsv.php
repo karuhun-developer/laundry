@@ -31,11 +31,13 @@ final readonly class ImportOrdersCsv
     ) {}
 
     /**
+     * @param  (callable(int, list<string>, int): void)|null  $onProgress
      * @return array{imported: int, errors: list<string>}
      */
-    public function handle(UploadedFile $file, User $actor): array
+    public function handle(UploadedFile|string $file, User $actor, ?callable $onProgress = null): array
     {
-        $handle = fopen($file->getRealPath(), 'rb');
+        $realPath = $file instanceof UploadedFile ? $file->getRealPath() : $file;
+        $handle = fopen($realPath, 'rb');
 
         if ($handle === false) {
             return [
@@ -94,14 +96,19 @@ final readonly class ImportOrdersCsv
                     }
 
                     $rawPhone = $getValue('no_hp');
-                    $phone = preg_replace('/[^0-9]/', '', $rawPhone);
-                    if ($phone === '') {
-                        throw new Exception("Baris {$rowNumber}: Nomor HP pelanggan wajib diisi.");
-                    }
-                    if (str_starts_with($phone, '0')) {
-                        $phone = '62'.substr($phone, 1);
-                    } elseif (str_starts_with($phone, '8')) {
-                        $phone = '62'.$phone;
+                    $trimmedPhone = trim($rawPhone);
+                    $phone = null;
+
+                    if ($trimmedPhone !== '' && $trimmedPhone !== '-' && $trimmedPhone !== '--') {
+                        $digits = preg_replace('/[^0-9]/', '', $trimmedPhone);
+                        if ($digits !== '') {
+                            if (str_starts_with($digits, '0')) {
+                                $digits = '62'.substr($digits, 1);
+                            } elseif (str_starts_with($digits, '8')) {
+                                $digits = '62'.$digits;
+                            }
+                            $phone = $digits;
+                        }
                     }
 
                     // 1. Organization resolution
@@ -129,7 +136,16 @@ final readonly class ImportOrdersCsv
                     }
 
                     // 2. Customer resolution & PIN setup (PIN: 676767)
-                    $customer = User::query()->where('whatsapp_phone', $phone)->first();
+                    if ($phone !== null) {
+                        $customer = User::query()->where('whatsapp_phone', $phone)->first();
+                    } else {
+                        $customer = User::query()
+                            ->where('name', $customerName)
+                            ->whereNull('whatsapp_phone')
+                            ->whereHas('customerOrganizations', fn ($q) => $q->where('organizations.id', $org->id))
+                            ->first();
+                    }
+
                     if ($customer === null) {
                         $customer = User::query()->create([
                             'name' => $customerName,
@@ -139,7 +155,9 @@ final readonly class ImportOrdersCsv
                             'session_version' => 1,
                         ]);
                         $customer->assignRole(RoleName::Customer->value);
-                        $customer->setCustomerPin('676767', null, false);
+                        if ($phone !== null) {
+                            $customer->setCustomerPin('676767', null, false);
+                        }
                         $customer->save();
                     }
                     $customer->customerOrganizations()->syncWithoutDetaching([$org->id]);
@@ -368,6 +386,10 @@ final readonly class ImportOrdersCsv
                 $imported++;
             } catch (Exception $e) {
                 $errors[] = $e->getMessage();
+            }
+
+            if ($onProgress !== null) {
+                $onProgress($imported, $errors, $rowNumber - 1);
             }
         }
 

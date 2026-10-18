@@ -6,21 +6,25 @@ use App\Actions\Orders\DeleteOrder;
 use App\Actions\Orders\DownloadOrderImportTemplateCsv;
 use App\Actions\Orders\ExportOrdersCsv;
 use App\Actions\Orders\FilterOrderQueue;
-use App\Actions\Orders\ImportOrdersCsv;
 use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\DeleteOrderRequest;
 use App\Http\Requests\Cms\ImportCsvRequest;
 use App\Http\Resources\OrderResource;
+use App\Jobs\ProcessOrderImportJob;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -135,8 +139,7 @@ class OrderController extends Controller
 
     public function import(
         ImportCsvRequest $request,
-        ImportOrdersCsv $importOrders,
-    ): RedirectResponse {
+    ): JsonResponse|RedirectResponse {
         Gate::authorize('create', Order::class);
 
         /** @var User $user */
@@ -144,20 +147,88 @@ class OrderController extends Controller
         $file = $request->file('file');
         \assert($file instanceof UploadedFile);
 
-        $result = $importOrders->handle($file, $user);
+        $importId = (string) Str::uuid();
+        $fileName = "{$importId}.csv";
+        $storedPath = $file->storeAs('imports/orders', $fileName);
+        $fullPath = Storage::path($storedPath);
+        $totalRows = $this->countCsvRows($fullPath);
 
-        if (! empty($result['errors'])) {
-            $msg = sprintf(
-                'Berhasil mengimpor %d pesanan. Terdapat %d kendala: %s',
-                $result['imported'],
-                count($result['errors']),
-                implode('; ', array_slice($result['errors'], 0, 3)),
-            );
+        Cache::put("order_import:{$importId}", [
+            'id' => $importId,
+            'status' => 'pending',
+            'total_rows' => $totalRows,
+            'processed_rows' => 0,
+            'imported' => 0,
+            'errors' => [],
+            'error_count' => 0,
+        ], now()->addDay());
 
-            return back()->with($result['imported'] > 0 ? 'warning' : 'error', $msg);
+        ProcessOrderImportJob::dispatch($importId, $storedPath, $user->id, $totalRows);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'import_id' => $importId,
+                'status' => 'pending',
+                'total_rows' => $totalRows,
+            ]);
         }
 
-        return back()->with('success', sprintf('Berhasil mengimpor %d pesanan.', $result['imported']));
+        $cached = Cache::get("order_import:{$importId}");
+        $imported = (int) ($cached['imported'] ?? $totalRows);
+        $errors = (array) ($cached['errors'] ?? []);
+
+        if (! empty($errors)) {
+            $msg = sprintf(
+                'Berhasil mengimpor %d pesanan. Terdapat %d kendala: %s',
+                $imported,
+                count($errors),
+                implode('; ', array_slice($errors, 0, 3)),
+            );
+
+            return back()->with($imported > 0 ? 'warning' : 'error', $msg);
+        }
+
+        return back()->with('success', sprintf('Berhasil mengimpor %d pesanan.', $imported));
+    }
+
+    public function importStatus(string $importId): JsonResponse
+    {
+        Gate::authorize('create', Order::class);
+
+        $status = Cache::get("order_import:{$importId}");
+
+        if ($status === null) {
+            return response()->json(['error' => 'Data status impor tidak ditemukan.'], 404);
+        }
+
+        return response()->json($status);
+    }
+
+    private function countCsvRows(string $filePath): int
+    {
+        $count = 0;
+        $handle = fopen($filePath, 'rb');
+
+        if ($handle === false) {
+            return 0;
+        }
+
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") {
+            rewind($handle);
+        }
+
+        fgetcsv($handle);
+
+        while (($row = fgetcsv($handle)) !== false) {
+            if (! empty(array_filter($row, fn ($val): bool => trim((string) $val) !== ''))) {
+                $count++;
+            }
+        }
+
+        fclose($handle);
+
+        return $count;
     }
 
     public function destroy(

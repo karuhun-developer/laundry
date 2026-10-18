@@ -106,3 +106,73 @@ it('imports orders from csv, creates customer with pin 676767, completes order, 
     expect($cashflow->type)->toBe(CashflowType::Debit);
     expect($cashflow->amount_rupiah)->toBe(40000);
 });
+
+it('supports hyphenated phone numbers and normalizes them to Indonesian format', function (): void {
+    $organization = Organization::factory()->create(['name' => 'Laundry Cepat']);
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $csvRows = [
+        'nama_pelanggan,no_hp,organisasi,cabang,layanan,opsi_harga,berat_kg,total_biaya,status_pembayaran,metode_pembayaran,status_pesanan,tanggal,catatan',
+        'Rina Wati,0812-8921-3041,Laundry Cepat,Cabang Dago,Cuci Kering,Reguler,3.0,30000,lunas,cash,completed,2026-03-15 10:00:00,Lipat rapi',
+    ];
+    $file = UploadedFile::fake()->createWithContent('orders.csv', implode("\n", $csvRows));
+
+    $response = $this->actingAs($owner)->post(route('cms.orders.import'), ['file' => $file]);
+    $response->assertRedirect();
+
+    $customer = User::query()->where('name', 'Rina Wati')->first();
+    expect($customer)->not->toBeNull()
+        ->and($customer->whatsapp_phone)->toBe('6281289213041');
+
+    $order = Order::query()->where('organization_id', $organization->id)->latest('id')->first();
+    expect($order)->not->toBeNull()
+        ->and($order->customer_whatsapp_phone_snapshot)->toBe('6281289213041');
+});
+
+it('treats dash in phone column as empty data without error', function (): void {
+    $organization = Organization::factory()->create(['name' => 'Laundry Kilat']);
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $csvRows = [
+        'nama_pelanggan,no_hp,organisasi,cabang,layanan,opsi_harga,berat_kg,total_biaya,status_pembayaran,metode_pembayaran,status_pesanan,tanggal,catatan',
+        'Pelanggan Anonim,-,Laundry Kilat,Cabang Pasteur,Cuci Satuan,Kemeja,1.0,15000,lunas,cash,completed,2026-03-15 10:00:00,Tanpa nomor HP',
+    ];
+    $file = UploadedFile::fake()->createWithContent('orders.csv', implode("\n", $csvRows));
+
+    $response = $this->actingAs($owner)->post(route('cms.orders.import'), ['file' => $file]);
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    $customer = User::query()->where('name', 'Pelanggan Anonim')->first();
+    expect($customer)->not->toBeNull()
+        ->and($customer->whatsapp_phone)->toBeNull();
+
+    $order = Order::query()->where('organization_id', $organization->id)->latest('id')->first();
+    expect($order)->not->toBeNull()
+        ->and($order->customer_whatsapp_phone_snapshot)->toBeNull()
+        ->and($order->total_rupiah)->toBe(15000);
+});
+
+it('returns json with import_id when requested and provides status endpoint', function (): void {
+    $organization = Organization::factory()->create(['name' => 'Laundry Express']);
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $csvRows = [
+        'nama_pelanggan,no_hp,organisasi,cabang,layanan,opsi_harga,berat_kg,total_biaya,status_pembayaran,metode_pembayaran,status_pesanan,tanggal,catatan',
+        'Doni,081234567899,Laundry Express,Cabang Tebet,Cuci Kering,Reguler,2.0,20000,lunas,cash,completed,2026-03-15 10:00:00,',
+    ];
+    $file = UploadedFile::fake()->createWithContent('orders.csv', implode("\n", $csvRows));
+
+    $response = $this->actingAs($owner)->postJson(route('cms.orders.import'), ['file' => $file]);
+    $response->assertOk()
+        ->assertJsonStructure(['import_id', 'status', 'total_rows']);
+
+    $importId = (string) $response->json('import_id');
+
+    $statusResponse = $this->actingAs($owner)->getJson(route('cms.orders.import.status', $importId));
+    $statusResponse->assertOk()
+        ->assertJsonStructure(['id', 'status', 'total_rows', 'processed_rows', 'imported']);
+});

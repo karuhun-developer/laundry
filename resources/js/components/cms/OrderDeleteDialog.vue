@@ -18,7 +18,7 @@ import { destroy as destroyOrder } from '@/routes/cms/orders';
 const props = defineProps<{
     order: {
         id: number;
-        order_number: string;
+        order_number: string | null;
     };
     disabled?: boolean;
 }>();
