@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\Payment;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
@@ -360,4 +361,35 @@ it('blocks switching an active gateway back to QRIS via signed POST', function (
         ->assertSee('Pembayaran gateway masih aktif')
         ->assertDontSee('Pilih metode pembayaran lain')
         ->assertDontSee('Unduh QRIS');
+});
+
+it('displays active QRIS container with countdown when QRIS is within 15 minutes window', function (): void {
+    $organization = Organization::factory()->create([
+        'qris_enabled' => true,
+        'qris_api_key' => 'test-key',
+    ]);
+    $branch = Branch::factory()->for($organization)->create([
+        'qris_enabled' => true,
+    ]);
+    $order = Order::factory()->for($organization)->for($branch)->create([
+        'order_number' => 'LDR-20261018-00000099',
+        'total_rupiah' => 25000,
+        'priced_at' => now(),
+    ]);
+
+    Payment::factory()->for($organization)->for($branch)->for($order)->create([
+        'method' => PaymentMethod::Qris,
+        'status' => PaymentStatus::Pending,
+        'amount_rupiah' => 25000,
+        'qris_payload' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+        'qris_token' => 'tok_active_qris_utc',
+        'qris_expires_at' => Carbon::now('UTC')->addMinutes(15)->toISOString(),
+    ]);
+
+    $url = URL::signedRoute('orders.public.show', ['order' => $order->order_number]);
+
+    $response = $this->get($url);
+    $response->assertOk()
+        ->assertViewHas('isQrisExpired', false)
+        ->assertViewHas('qrisRemainingSeconds', fn ($val) => $val >= 895 && $val <= 900);
 });

@@ -573,6 +573,7 @@
             const qrisRegenerateUrl = @json($paymentRegenerateUrl ?? null);
             const isQrisActive = @json(($isQris ?? false) && !($isPaid ?? false));
             let qrisExpiresAt = @json($qrisExpiresAt ?? null);
+            let qrisRemainingSeconds = @json($qrisRemainingSeconds ?? 0);
             let isExpired = @json($isQrisExpired ?? false);
             let pollTimer = null;
             let countdownInterval = null;
@@ -593,9 +594,10 @@
                 if (countdownInterval) clearInterval(countdownInterval);
             }
 
-            function setQrisActiveState(newImageDataUri, newExpiresAt) {
+            function setQrisActiveState(newImageDataUri, newExpiresAt, newRemainingSeconds) {
                 isExpired = false;
                 qrisExpiresAt = newExpiresAt;
+                qrisRemainingSeconds = typeof newRemainingSeconds === 'number' ? newRemainingSeconds : 900;
 
                 const activeContainer = document.getElementById('qris-active-container');
                 const expiredContainer = document.getElementById('qris-expired-container');
@@ -613,18 +615,27 @@
             }
 
             function updateCountdown() {
-                if (!qrisExpiresAt || isExpired) return;
+                if (isExpired) return;
 
                 const timerEl = document.getElementById('qris-countdown-timer');
                 if (!timerEl) return;
 
-                const expiryDate = new Date(qrisExpiresAt).getTime();
-                const now = Date.now();
-                const remainingSeconds = Math.max(0, Math.floor((expiryDate - now) / 1000));
+                if (qrisExpiresAt) {
+                    const expiryDate = new Date(qrisExpiresAt).getTime();
+                    const now = Date.now();
+                    const computedRemaining = Math.max(0, Math.floor((expiryDate - now) / 1000));
+                    if (qrisRemainingSeconds > 0 && Math.abs(computedRemaining - qrisRemainingSeconds) > 300) {
+                        qrisRemainingSeconds = Math.max(0, qrisRemainingSeconds - 1);
+                    } else {
+                        qrisRemainingSeconds = computedRemaining;
+                    }
+                } else if (qrisRemainingSeconds > 0) {
+                    qrisRemainingSeconds = Math.max(0, qrisRemainingSeconds - 1);
+                }
 
-                timerEl.textContent = formatTime(remainingSeconds);
+                timerEl.textContent = formatTime(qrisRemainingSeconds);
 
-                if (remainingSeconds <= 0) {
+                if (qrisRemainingSeconds <= 0) {
                     setQrisExpiredState();
                 }
             }
@@ -724,7 +735,7 @@
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success && data.qris_image_data_uri) {
-                            setQrisActiveState(data.qris_image_data_uri, data.expires_at);
+                            setQrisActiveState(data.qris_image_data_uri, data.expires_at, data.remaining_seconds);
                         } else {
                             window.location.reload();
                         }

@@ -85,6 +85,9 @@ class PublicOrderTrackingController extends Controller
             ->filter(static fn (Payment $payment): bool => $payment->status === PaymentStatus::Paid);
 
         $isQrisExpired = $pendingPayment?->qris_expires_at !== null && $pendingPayment->qris_expires_at->isPast();
+        $qrisRemainingSeconds = ($pendingPayment?->qris_expires_at !== null && ! $isQrisExpired)
+            ? max(0, (int) now()->diffInSeconds($pendingPayment->qris_expires_at, false))
+            : 0;
 
         return view('orders.track', [
             'order' => $order,
@@ -95,6 +98,7 @@ class PublicOrderTrackingController extends Controller
             'isQrisAvailable' => $isQrisAvailable,
             'isQrisExpired' => $isQrisExpired,
             'qrisExpiresAt' => $pendingPayment?->qris_expires_at?->toIso8601String(),
+            'qrisRemainingSeconds' => $qrisRemainingSeconds,
             'qrisImageDataUri' => $qrisImageDataUri,
             'gatewayMethods' => $gatewayMethods,
             'gatewayUnavailable' => $gatewayUnavailable,

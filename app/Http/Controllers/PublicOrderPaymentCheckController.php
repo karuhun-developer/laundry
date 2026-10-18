@@ -93,6 +93,9 @@ class PublicOrderPaymentCheckController extends Controller
             'status' => $isExpired ? 'expired' : 'pending',
             'expired' => $isExpired,
             'expires_at' => $pendingPayment->qris_expires_at?->toIso8601String(),
+            'remaining_seconds' => ($pendingPayment->qris_expires_at !== null && ! $isExpired)
+                ? max(0, (int) now()->diffInSeconds($pendingPayment->qris_expires_at, false))
+                : 0,
         ]);
     }
 }

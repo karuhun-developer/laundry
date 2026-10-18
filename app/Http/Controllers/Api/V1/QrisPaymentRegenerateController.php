@@ -44,6 +44,9 @@ class QrisPaymentRegenerateController extends Controller
             'qris_payload' => $updated->qris_payload,
             'qris_image_data_uri' => $dataUri,
             'expires_at' => $updated->qris_expires_at?->toIso8601String(),
+            'remaining_seconds' => $updated->qris_expires_at !== null
+                ? max(0, (int) now()->diffInSeconds($updated->qris_expires_at, false))
+                : 900,
         ]);
     }
 }

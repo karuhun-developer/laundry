@@ -46,8 +46,15 @@ final class QrisApiClient
         $totalAmount = (int) ($payload['amount'] ?? $amount);
         $uniqueCode = isset($payload['unique_code']) ? (int) $payload['unique_code'] : null;
         $qrisString = (string) $payload['qris_string'];
+        $appTimezone = (string) config('app.timezone', 'Asia/Jakarta');
         $expiresAtRaw = $payload['expires_at'] ?? null;
-        $expiresAt = $expiresAtRaw ? CarbonImmutable::parse((string) $expiresAtRaw) : CarbonImmutable::now()->addMinutes(15);
+        if ($expiresAtRaw) {
+            $expiresAt = CarbonImmutable::parse((string) $expiresAtRaw)->setTimezone($appTimezone);
+        } elseif (! empty($payload['expires_in_seconds']) && is_numeric($payload['expires_in_seconds'])) {
+            $expiresAt = CarbonImmutable::now($appTimezone)->addSeconds((int) $payload['expires_in_seconds']);
+        } else {
+            $expiresAt = CarbonImmutable::now($appTimezone)->addMinutes(15);
+        }
         $qrisUrl = isset($payload['qris_url']) ? (string) $payload['qris_url'] : null;
 
         return new QrisCreateResponse(
@@ -87,7 +94,10 @@ final class QrisApiClient
             $timeStr = $response->json('data.transaction.time')
                 ?? $response->json('transaction.time')
                 ?? $response->json('transaction_time');
-            $settledAt = $timeStr ? CarbonImmutable::parse((string) $timeStr) : CarbonImmutable::now();
+            $appTimezone = (string) config('app.timezone', 'Asia/Jakarta');
+            $settledAt = $timeStr
+                ? CarbonImmutable::parse((string) $timeStr)->setTimezone($appTimezone)
+                : CarbonImmutable::now($appTimezone);
         } elseif ($statusStr === 'expired') {
             $paid = false;
             $statusStr = 'expired';

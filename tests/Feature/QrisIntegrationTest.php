@@ -87,7 +87,8 @@ it('creates dynamic QRIS with 15-minute expiration and token from qris api', fun
                 'amount' => 60000,
                 'unique_code' => 123,
                 'qris_string' => QRIS_SAMPLE_STRING,
-                'expires_at' => Carbon::now()->addMinutes(15)->toIso8601String(),
+                'expires_at' => Carbon::now('UTC')->addMinutes(15)->toISOString(),
+                'expires_in_seconds' => 900,
             ],
         ], 200),
     ]);
@@ -107,7 +108,9 @@ it('creates dynamic QRIS with 15-minute expiration and token from qris api', fun
     expect($payment->qris_token)->toBe('tok_qris_mock_123')
         ->and($payment->qris_unique_code)->toBe(123)
         ->and($payment->qris_payload)->toBe(QRIS_SAMPLE_STRING)
-        ->and($payment->qris_expires_at)->not->toBeNull();
+        ->and($payment->qris_expires_at)->not->toBeNull()
+        ->and($payment->qris_expires_at->isPast())->toBeFalse()
+        ->and($payment->qris_expires_at->isFuture())->toBeTrue();
 });
 
 it('checks payment status via api and settles if paid on gateway', function (): void {
@@ -188,7 +191,8 @@ it('regenerates an expired qris payment', function (): void {
                 'amount' => 50000,
                 'unique_code' => 555,
                 'qris_string' => QRIS_SAMPLE_STRING,
-                'expires_at' => Carbon::now()->addMinutes(15)->toIso8601String(),
+                'expires_at' => Carbon::now('UTC')->addMinutes(15)->toISOString(),
+                'expires_in_seconds' => 900,
             ],
         ], 200),
     ]);
@@ -205,10 +209,13 @@ it('regenerates an expired qris payment', function (): void {
         ->assertJsonPath('success', true)
         ->assertJsonPath('qris_payload', QRIS_SAMPLE_STRING);
 
+    expect($response->json('remaining_seconds'))->toBeGreaterThanOrEqual(895)->toBeLessThanOrEqual(900);
+
     $payment->refresh();
     expect($payment->qris_token)->toBe('tok_new_regenerated')
         ->and($payment->qris_unique_code)->toBe(555)
         ->and($payment->qris_payload)->toBe(QRIS_SAMPLE_STRING)
+        ->and($payment->qris_expires_at->isPast())->toBeFalse()
         ->and($payment->qris_expires_at->isFuture())->toBeTrue();
 });
 

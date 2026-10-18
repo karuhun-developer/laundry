@@ -85,6 +85,9 @@ class QrisPaymentCheckController extends Controller
             'status' => $isExpired ? 'expired' : 'pending',
             'expired' => $isExpired,
             'expires_at' => $payment->qris_expires_at?->toIso8601String(),
+            'remaining_seconds' => ($payment->qris_expires_at !== null && ! $isExpired)
+                ? max(0, (int) now()->diffInSeconds($payment->qris_expires_at, false))
+                : 0,
         ]);
     }
 }

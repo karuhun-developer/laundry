@@ -108,6 +108,31 @@ class Payment extends Model
         return $this->hasMany(PaymentGatewayDelivery::class);
     }
 
+    public function setQrisExpiresAtAttribute(mixed $value): void
+    {
+        $this->attributes['qris_expires_at'] = $this->normalizeDateTimeToAppTimezone($value);
+    }
+
+    public function setGatewayExpiresAtAttribute(mixed $value): void
+    {
+        $this->attributes['gateway_expires_at'] = $this->normalizeDateTimeToAppTimezone($value);
+    }
+
+    private function normalizeDateTimeToAppTimezone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $appTimezone = (string) config('app.timezone', 'Asia/Jakarta');
+
+        if ($value instanceof \DateTimeInterface) {
+            return Carbon::instance($value)->setTimezone($appTimezone)->format('Y-m-d H:i:s');
+        }
+
+        return Carbon::parse((string) $value)->setTimezone($appTimezone)->format('Y-m-d H:i:s');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
