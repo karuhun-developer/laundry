@@ -1,0 +1,74 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: laundry-production
+  cancel-in-progress: false
+
+jobs:
+  verification:
+    uses: ./.github/workflows/checks.yml
+
+  deploy:
+    needs: verification
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-${{ github.sha }}
+          path: public/build
+      - name: Package verified commit and frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$(mktemp -d)"
+          git archive "$GITHUB_SHA" | tar -x -C "$release"
+          cp -a public/build "$release/public/build"
+          tar -czf "$RUNNER_TEMP/release.tar.gz" -C "$release" .
+          sha256sum "$RUNNER_TEMP/release.tar.gz"
+      - name: Install Cloudflare SSH transport
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl --fail --silent --show-error --location https://github.com/cloudflare/cloudflared/releases/download/2026.9.1/cloudflared-linux-amd64 -o "$RUNNER_TEMP/bin/cloudflared"
+          printf '%s  %s\n' '03f1f25d1cc93b9ad6c60569d44060bc4f17ed97075760ed8cfca4b12dcd68cc' "$RUNNER_TEMP/bin/cloudflared" | sha256sum --check --status
+          chmod +x "$RUNNER_TEMP/bin/cloudflared"
+          "$RUNNER_TEMP/bin/cloudflared" --version
+          printf '%s\n' "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Configure deployment SSH key and pinned server identity
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/laundry_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload and activate tested release
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$DEPLOY_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          checksum="$(sha256sum "$RUNNER_TEMP/release.tar.gz" | cut -d ' ' -f 1)"
+          ssh -i ~/.ssh/laundry_deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o 'ProxyCommand=cloudflared access ssh --hostname %h' \
+            "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA $checksum" < "$RUNNER_TEMP/release.tar.gz"
+      - name: Verify public production route
+        if: vars.VERIFY_PUBLIC_URL == 'true'
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors "$APP_URL/up" > /dev/null
+          curl --fail --silent --show-error "$APP_URL/" > "$RUNNER_TEMP/landing.html"
+          grep -q 'LaundryHub' "$RUNNER_TEMP/landing.html"

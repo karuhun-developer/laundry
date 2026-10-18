@@ -1,0 +1,55 @@
+name: Checks
+
+on:
+  workflow_call:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, fileinfo, gd, intl, zip, bcmath, pcntl, exif
+          tools: composer:v2
+          coverage: none
+      - uses: oven-sh/setup-bun@v2
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+      - name: Validate deployment scripts
+        run: |
+          bash -n deploy/activate.sh deploy/bootstrap.sh deploy/compose.sh deploy/ssh-deploy.sh deploy/local-deploy.sh deploy/import-db.sh
+          shellcheck deploy/activate.sh deploy/bootstrap.sh deploy/compose.sh deploy/ssh-deploy.sh deploy/local-deploy.sh deploy/import-db.sh
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          bun install --frozen-lockfile
+          php artisan key:generate
+      - name: Frontend checks and production build
+        run: |
+          bun run check
+          bun run types:check
+          bun run test
+          bun run build
+      - name: PHP checks
+        run: |
+          composer validate --strict
+          vendor/bin/pint --test
+          vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+          php artisan test --compact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ github.sha }}
+          path: public/build
+          if-no-files-found: error
+          retention-days: 7
