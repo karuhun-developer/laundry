@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
+import OrderDeleteDialog from '@/components/cms/OrderDeleteDialog.vue';
 import OrderDetailDialog from '@/components/cms/OrderDetailDialog.vue';
 import OrderImportDialog from '@/components/cms/OrderImportDialog.vue';
 import DailySummaryDialog from '@/components/mobile/organisms/DailySummaryDialog.vue';
@@ -463,11 +464,17 @@ const itemsSummary = (order: CmsOrderSummary): string => {
 
                                 <!-- Aksi -->
                                 <td class="px-5 py-4 text-right">
-                                    <OrderDetailDialog
-                                        :order="order"
-                                        :order-statuses="orderStatuses"
-                                        @saved="reloadOrders"
-                                    />
+                                    <div class="flex items-center justify-end gap-1">
+                                        <OrderDetailDialog
+                                            :order="order"
+                                            :order-statuses="orderStatuses"
+                                            @saved="reloadOrders"
+                                        />
+                                        <OrderDeleteDialog
+                                            :order="order"
+                                            @deleted="reloadOrders"
+                                        />
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -508,11 +515,17 @@ const itemsSummary = (order: CmsOrderSummary): string => {
 
                         <div class="border-line flex items-center justify-between border-t pt-3">
                             <span class="text-ink-400 text-[11px]">{{ formatDate(order.created_at) }}</span>
-                            <OrderDetailDialog
-                                :order="order"
-                                :order-statuses="orderStatuses"
-                                @saved="reloadOrders"
-                            />
+                            <div class="flex items-center gap-1">
+                                <OrderDetailDialog
+                                    :order="order"
+                                    :order-statuses="orderStatuses"
+                                    @saved="reloadOrders"
+                                />
+                                <OrderDeleteDialog
+                                    :order="order"
+                                    @deleted="reloadOrders"
+                                />
+                            </div>
                         </div>
                     </article>
                 </div>

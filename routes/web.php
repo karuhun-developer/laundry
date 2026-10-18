@@ -77,6 +77,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('orders/export', [OrderController::class, 'export'])->name('orders.export');
         Route::get('orders/import/template', [OrderController::class, 'template'])->name('orders.template');
         Route::post('orders/import', [OrderController::class, 'import'])->name('orders.import');
+        Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::get('cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
         Route::get('cashflow/export', [CashflowController::class, 'export'])->name('cashflow.export');
         Route::get('cashflow/import/template', [CashflowController::class, 'template'])->name('cashflow.template');

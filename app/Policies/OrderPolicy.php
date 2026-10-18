@@ -104,7 +104,7 @@ class OrderPolicy
      */
     public function delete(User $user, Order $order): bool
     {
-        return false;
+        return $this->staffCanAccessOrder($user, $order, PermissionName::ManageOrders);
     }
 
     /**

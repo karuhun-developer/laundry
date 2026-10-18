@@ -174,3 +174,65 @@ it('shows every organization order and branches to a superadmin', function (): v
             ->has('branches', 2)
             ->has('organizations', 2));
 });
+
+it('allows an owner to delete an order within their organization', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    $order = Order::factory()->for($organization)->for($branch)->create();
+
+    $this->actingAs($owner)
+        ->from(route('cms.orders.index'))
+        ->delete(route('cms.orders.destroy', $order))
+        ->assertRedirect(route('cms.orders.index'))
+        ->assertSessionHas('success', 'Pesanan berhasil dihapus.');
+
+    $this->assertDatabaseMissing('orders', ['id' => $order->id]);
+});
+
+it('allows an assigned branch admin to delete an order, but forbids an unassigned admin', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $otherBranch = Branch::factory()->for($organization)->create();
+
+    $assignedAdmin = User::factory()->for($organization)->create();
+    $assignedAdmin->assignRole(RoleName::BranchAdmin->value);
+    $assignedAdmin->branches()->attach($branch);
+
+    $unassignedAdmin = User::factory()->for($organization)->create();
+    $unassignedAdmin->assignRole(RoleName::BranchAdmin->value);
+    $unassignedAdmin->branches()->attach($otherBranch);
+
+    $order = Order::factory()->for($organization)->for($branch)->create();
+
+    $this->actingAs($unassignedAdmin)
+        ->delete(route('cms.orders.destroy', $order))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('orders', ['id' => $order->id]);
+
+    $this->actingAs($assignedAdmin)
+        ->from(route('cms.orders.index'))
+        ->delete(route('cms.orders.destroy', $order))
+        ->assertRedirect(route('cms.orders.index'))
+        ->assertSessionHas('success', 'Pesanan berhasil dihapus.');
+
+    $this->assertDatabaseMissing('orders', ['id' => $order->id]);
+});
+
+it('forbids customers from deleting orders', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $order = Order::factory()->for($organization)->for($branch)->create();
+
+    $customer = User::factory()->create();
+    $customer->assignRole(RoleName::Customer->value);
+
+    $this->actingAs($customer)
+        ->withSession(['customer_session_version' => $customer->session_version])
+        ->delete(route('cms.orders.destroy', $order))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('orders', ['id' => $order->id]);
+});

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Cms;
 
+use App\Actions\Orders\DeleteOrder;
 use App\Actions\Orders\DownloadOrderImportTemplateCsv;
 use App\Actions\Orders\ExportOrdersCsv;
 use App\Actions\Orders\FilterOrderQueue;
@@ -9,6 +10,7 @@ use App\Actions\Orders\ImportOrdersCsv;
 use App\Enums\OrderStatus;
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cms\DeleteOrderRequest;
 use App\Http\Requests\Cms\ImportCsvRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Branch;
@@ -156,5 +158,18 @@ class OrderController extends Controller
         }
 
         return back()->with('success', sprintf('Berhasil mengimpor %d pesanan.', $result['imported']));
+    }
+
+    public function destroy(
+        DeleteOrderRequest $request,
+        Order $order,
+        DeleteOrder $deleteOrder,
+    ): RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        $deleteOrder->handle($order, $user);
+
+        return back()->with('success', 'Pesanan berhasil dihapus.');
     }
 }

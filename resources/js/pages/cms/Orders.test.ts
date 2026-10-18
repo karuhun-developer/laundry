@@ -167,6 +167,7 @@ describe('CMS Orders Queue page', () => {
                     CmsEmptyState: true,
                     Badge: true,
                     OrderDetailDialog: true,
+                    OrderDeleteDialog: true,
                 },
             },
         });
@@ -258,6 +259,7 @@ describe('CMS Orders Queue page', () => {
                     CmsEmptyState: true,
                     Badge: true,
                     OrderDetailDialog: true,
+                    OrderDeleteDialog: true,
                 },
             },
         });
