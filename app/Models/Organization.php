@@ -18,8 +18,11 @@ use Spatie\Sluggable\SlugOptions;
  * @property string $name
  * @property string $slug
  * @property bool $is_active
+ * @property bool $qris_enabled
+ * @property string|null $qris_api_key
+ * @property string|null $qris_base_url
  */
-#[Fillable(['name', 'is_active'])]
+#[Fillable(['name', 'is_active', 'qris_enabled', 'qris_api_key', 'qris_base_url'])]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */
@@ -78,6 +81,10 @@ class Organization extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'qris_enabled' => 'boolean',
+            'qris_api_key' => 'encrypted',
+        ];
     }
 }

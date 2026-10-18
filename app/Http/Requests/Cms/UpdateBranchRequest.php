@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Cms;
 
 use App\Models\Branch;
-use App\Rules\ValidQrisPayload;
 use App\Rules\ValidWhatsAppPhone;
 use App\Services\WhatsAppPhoneNormalizer;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -47,13 +46,8 @@ class UpdateBranchRequest extends FormRequest
             'free_delivery_radius_meters' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'delivery_fee_per_km_rupiah' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
             'qris_enabled' => ['sometimes', 'boolean'],
-            'qris_static_payload' => [
-                Rule::requiredIf($this->boolean('qris_enabled')),
-                'nullable',
-                'string',
-                'max:4096',
-                new ValidQrisPayload,
-            ],
+            'qris_api_key' => ['nullable', 'string', 'max:255'],
+            'qris_base_url' => ['nullable', 'string', 'url', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

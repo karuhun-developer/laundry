@@ -5,7 +5,7 @@
     $description = 'Struk dan status pesanan '.$order->order_number.' dari '.$order->branch->name.'. '.$pricingSummary.', Status: '.$order->status->label().'.';
     $socialImageUrl = asset('apple-touch-icon.png');
     $isPaid = $isPriced && $outstandingRupiah === 0;
-    $canSelectQris = $pendingPayment === null && $order->branch->qris_enabled && $order->branch->qris_static_payload !== null;
+    $canSelectQris = $pendingPayment === null && ($isQrisAvailable ?? false);
     $isGateway = $pendingPayment !== null && ($pendingPayment->gateway_driver !== null || $pendingPayment->method === \App\Enums\PaymentMethod::Gateway);
     $isQris = $pendingPayment !== null && $pendingPayment->method === \App\Enums\PaymentMethod::Qris;
 @endphp
@@ -341,48 +341,86 @@
                         </div>
 
                         {{-- Tampilan QRIS Dinamis --}}
+                        {{-- Tampilan QRIS Dinamis --}}
                         @if ($qrisImageDataUri && (! $isGateway || $pendingPayment?->gateway_method === 'QRIS'))
-                            <div class="mx-auto mt-5 max-w-72 rounded-3xl border border-line bg-white p-4 text-center">
-                                <img
-                                    src="{{ $qrisImageDataUri }}"
-                                    alt="QRIS {{ $pendingPayment?->payment_number ?? $order->order_number }}"
-                                    class="aspect-square w-full"
-                                />
-                                <p class="mt-2 text-[11px] font-semibold tracking-wider text-ink-500 uppercase">
-                                    QRIS Standar Pembayaran Nasional
+                            {{-- Container QRIS Aktif --}}
+                            <div id="qris-active-container" class="{{ $isQrisExpired ? 'hidden' : '' }}">
+                                <div class="mx-auto mt-4 max-w-72 rounded-3xl border border-line bg-white p-4 text-center">
+                                    <div class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-800">
+                                        <span class="size-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                        <span>Berlaku: <strong id="qris-countdown-timer" class="font-mono text-ink-950">15:00</strong></span>
+                                    </div>
+                                    <img
+                                        id="qris-image-element"
+                                        src="{{ $qrisImageDataUri }}"
+                                        alt="QRIS {{ $pendingPayment?->payment_number ?? $order->order_number }}"
+                                        class="aspect-square w-full"
+                                    />
+                                    <p class="mt-2 text-[11px] font-semibold tracking-wider text-ink-500 uppercase">
+                                        QRIS Standar Pembayaran Nasional
+                                    </p>
+                                </div>
+
+                                <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                                    <a
+                                        id="qris-download-btn"
+                                        href="{{ $qrisImageDataUri }}"
+                                        download="QRIS-{{ $pendingPayment?->payment_number ?? $order->order_number }}.svg"
+                                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
+                                    >
+                                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Unduh QRIS
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onclick="checkPaymentStatusNow()"
+                                        id="qris-manual-check-btn"
+                                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600"
+                                    >
+                                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        <span id="qris-manual-check-text">Cek Status Sekarang</span>
+                                    </button>
+                                </div>
+
+                                <div class="mt-4 rounded-2xl bg-canvas p-4 text-sm leading-6 text-ink-700">
+                                    <p class="font-semibold text-ink-950">Cara Pembayaran QRIS:</p>
+                                    <ol class="mt-1 list-decimal pl-4 space-y-1">
+                                        <li>Buka aplikasi m-Banking (BCA, Mandiri, BRI, BNI) atau e-Wallet (GoPay, OVO, DANA, ShopeePay).</li>
+                                        <li>Pindai (scan) kode QRIS di atas, atau pilih dari galeri foto HP Anda.</li>
+                                        <li>Periksa nama merchant dan nominal Rp{{ number_format($pendingPayment?->amount_rupiah ?? $outstandingRupiah, 0, ',', '.') }}.</li>
+                                        <li>Selesaikan pembayaran. Sistem akan memverifikasi otomatis dalam beberapa detik.</li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            {{-- Container QRIS Kedaluwarsa (> 15 Menit) --}}
+                            <div id="qris-expired-container" class="{{ $isQrisExpired ? '' : 'hidden' }} mt-4 rounded-3xl border border-red-500/20 bg-red-500/5 p-6 text-center">
+                                <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+                                    <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 class="mt-3 font-display text-lg font-semibold text-ink-950">QRIS Telah Kedaluwarsa</h3>
+                                <p class="mt-1 text-sm text-ink-600 leading-relaxed">
+                                    Batas waktu pembayaran 15 menit telah berakhir. Kode QRIS lama sudah tidak dapat digunakan.
                                 </p>
-                            </div>
-
-                            <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                                <a
-                                    href="{{ $qrisImageDataUri }}"
-                                    download="QRIS-{{ $pendingPayment?->payment_number ?? $order->order_number }}.svg"
-                                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
-                                >
-                                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    Unduh QRIS
-                                </a>
-                                <a
-                                    href="{{ $canonicalUrl }}"
-                                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600"
-                                >
-                                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    Cek Pembayaran
-                                </a>
-                            </div>
-
-                            <div class="mt-4 rounded-2xl bg-canvas p-4 text-sm leading-6 text-ink-700">
-                                <p class="font-semibold text-ink-950">Cara Pembayaran QRIS:</p>
-                                <ol class="mt-1 list-decimal pl-4 space-y-1">
-                                    <li>Buka aplikasi m-Banking (BCA, Mandiri, BRI, BNI) atau e-Wallet (GoPay, OVO, DANA, ShopeePay).</li>
-                                    <li>Pindai (scan) kode QRIS di atas, atau pilih dari galeri foto HP Anda.</li>
-                                    <li>Periksa nama merchant dan nominal Rp{{ number_format($pendingPayment?->amount_rupiah ?? $outstandingRupiah, 0, ',', '.') }}.</li>
-                                    <li>Selesaikan pembayaran, lalu tekan tombol <em>Cek Pembayaran</em>.</li>
-                                </ol>
+                                <div class="mt-5">
+                                    <button
+                                        type="button"
+                                        id="qris-regenerate-btn"
+                                        onclick="regenerateQris()"
+                                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 shadow-sm"
+                                    >
+                                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        <span id="qris-regenerate-text">Generate Ulang QRIS</span>
+                                    </button>
+                                </div>
                             </div>
                         @elseif ($isGateway && $pendingPayment?->gateway_payment_number)
                             {{-- Tampilan Virtual Account / Nomor Pembayaran Gateway --}}
@@ -529,6 +567,189 @@
                     setTimeout(() => { btn.innerHTML = originalText; }, 2000);
                 });
             }
+
+            // QRIS Polling & Countdown Logic
+            const qrisCheckUrl = @json($paymentCheckUrl ?? null);
+            const qrisRegenerateUrl = @json($paymentRegenerateUrl ?? null);
+            const isQrisActive = @json(($isQris ?? false) && !($isPaid ?? false));
+            let qrisExpiresAt = @json($qrisExpiresAt ?? null);
+            let isExpired = @json($isQrisExpired ?? false);
+            let pollTimer = null;
+            let countdownInterval = null;
+
+            function formatTime(seconds) {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            function setQrisExpiredState() {
+                isExpired = true;
+                const activeContainer = document.getElementById('qris-active-container');
+                const expiredContainer = document.getElementById('qris-expired-container');
+                if (activeContainer) activeContainer.classList.add('hidden');
+                if (expiredContainer) expiredContainer.classList.remove('hidden');
+                if (pollTimer) clearInterval(pollTimer);
+                if (countdownInterval) clearInterval(countdownInterval);
+            }
+
+            function setQrisActiveState(newImageDataUri, newExpiresAt) {
+                isExpired = false;
+                qrisExpiresAt = newExpiresAt;
+
+                const activeContainer = document.getElementById('qris-active-container');
+                const expiredContainer = document.getElementById('qris-expired-container');
+                const img = document.getElementById('qris-image-element');
+                const downloadBtn = document.getElementById('qris-download-btn');
+
+                if (img && newImageDataUri) img.src = newImageDataUri;
+                if (downloadBtn && newImageDataUri) downloadBtn.href = newImageDataUri;
+
+                if (expiredContainer) expiredContainer.classList.add('hidden');
+                if (activeContainer) activeContainer.classList.remove('hidden');
+
+                startCountdown();
+                startPolling();
+            }
+
+            function updateCountdown() {
+                if (!qrisExpiresAt || isExpired) return;
+
+                const timerEl = document.getElementById('qris-countdown-timer');
+                if (!timerEl) return;
+
+                const expiryDate = new Date(qrisExpiresAt).getTime();
+                const now = Date.now();
+                const remainingSeconds = Math.max(0, Math.floor((expiryDate - now) / 1000));
+
+                timerEl.textContent = formatTime(remainingSeconds);
+
+                if (remainingSeconds <= 0) {
+                    setQrisExpiredState();
+                }
+            }
+
+            function startCountdown() {
+                if (countdownInterval) clearInterval(countdownInterval);
+                updateCountdown();
+                countdownInterval = setInterval(updateCountdown, 1000);
+            }
+
+            async function checkPaymentStatusNow() {
+                if (!qrisCheckUrl) return;
+
+                const checkBtnText = document.getElementById('qris-manual-check-text');
+                if (checkBtnText) checkBtnText.textContent = 'Memeriksa...';
+
+                try {
+                    const response = await fetch(qrisCheckUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.paid) {
+                            if (pollTimer) clearInterval(pollTimer);
+                            if (countdownInterval) clearInterval(countdownInterval);
+                            window.location.reload();
+                            return;
+                        }
+                        if (data.expired) {
+                            setQrisExpiredState();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Polling error:', e);
+                } finally {
+                    if (checkBtnText) checkBtnText.textContent = 'Cek Status Sekarang';
+                }
+            }
+
+            function startPolling() {
+                if (!qrisCheckUrl || !isQrisActive || isExpired) return;
+                if (pollTimer) clearInterval(pollTimer);
+
+                // Polling per 3 detik
+                pollTimer = setInterval(async () => {
+                    try {
+                        const response = await fetch(qrisCheckUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.paid) {
+                                clearInterval(pollTimer);
+                                if (countdownInterval) clearInterval(countdownInterval);
+                                window.location.reload();
+                            } else if (data.expired) {
+                                setQrisExpiredState();
+                            }
+                        }
+                    } catch (e) {
+                        // ignore network glitches
+                    }
+                }, 3000);
+            }
+
+            async function regenerateQris() {
+                if (!qrisRegenerateUrl) return;
+
+                const regenBtn = document.getElementById('qris-regenerate-btn');
+                const regenText = document.getElementById('qris-regenerate-text');
+
+                if (regenBtn) regenBtn.disabled = true;
+                if (regenText) regenText.textContent = 'Membuat QRIS Baru...';
+
+                try {
+                    const response = await fetch(qrisRegenerateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.qris_image_data_uri) {
+                            setQrisActiveState(data.qris_image_data_uri, data.expires_at);
+                        } else {
+                            window.location.reload();
+                        }
+                    } else {
+                        const err = await response.json();
+                        alert(err.message || 'Gagal membuat ulang QRIS.');
+                    }
+                } catch (e) {
+                    alert('Terjadi kesalahan jaringan saat membuat ulang QRIS.');
+                } finally {
+                    if (regenBtn) regenBtn.disabled = false;
+                    if (regenText) regenText.textContent = 'Generate Ulang QRIS';
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                if (isQrisActive) {
+                    if (isExpired) {
+                        setQrisExpiredState();
+                    } else {
+                        startCountdown();
+                        startPolling();
+                    }
+                }
+            });
         </script>
     </body>
 </html>

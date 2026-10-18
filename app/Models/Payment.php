@@ -24,6 +24,9 @@ use Illuminate\Support\Carbon;
  * @property PaymentStatus $status
  * @property int $amount_rupiah
  * @property string|null $qris_payload
+ * @property string|null $qris_token
+ * @property int|null $qris_unique_code
+ * @property Carbon|null $qris_expires_at
  * @property PaymentGatewayDriver|null $gateway_driver
  * @property string|null $gateway_payment_id
  * @property string|null $gateway_order_id
@@ -49,6 +52,9 @@ use Illuminate\Support\Carbon;
     'status',
     'amount_rupiah',
     'qris_payload',
+    'qris_token',
+    'qris_unique_code',
+    'qris_expires_at',
     'gateway_driver',
     'gateway_payment_id',
     'gateway_order_id',
@@ -110,6 +116,8 @@ class Payment extends Model
             'status' => PaymentStatus::class,
             'gateway_driver' => PaymentGatewayDriver::class,
             'amount_rupiah' => 'integer',
+            'qris_unique_code' => 'integer',
+            'qris_expires_at' => 'datetime',
             'gateway_expires_at' => 'datetime',
             'gateway_payload' => 'array',
             'settled_at' => 'datetime',

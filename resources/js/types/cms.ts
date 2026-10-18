@@ -6,6 +6,9 @@ export type OrganizationOption = {
 export type OrganizationSummary = OrganizationOption & {
     slug: string;
     is_active: boolean;
+    qris_enabled?: boolean;
+    qris_api_key?: string | null;
+    qris_base_url?: string | null;
     branches_count: number;
     users_count: number;
     pending?: boolean;
@@ -31,7 +34,8 @@ export type BranchSummary = {
     free_delivery_radius_meters: number;
     delivery_fee_per_km_rupiah: number;
     qris_enabled: boolean;
-    qris_static_payload: string | null;
+    qris_api_key?: string | null;
+    qris_base_url?: string | null;
     is_active: boolean;
     city: Pick<CitySummary, 'id' | 'name' | 'province'>;
     organization: OrganizationOption;
@@ -69,6 +73,15 @@ export type BranchesPageProps = {
 
 export type UsersPageProps = {
     users: UserSummary[];
+    pagination: {
+        current_page: number;
+        last_page: number;
+        total: number;
+    };
+    statistics?: {
+        total: number;
+        branch_admins: number;
+    };
     branches: Pick<BranchSummary, 'id' | 'organization_id' | 'name'>[];
     organizations: OrganizationOption[];
 };
@@ -336,6 +349,11 @@ export type CashflowStatement = {
 export type CashflowPageProps = {
     statement: CashflowStatement;
     entries: CashflowEntrySummary[];
+    pagination: {
+        current_page: number;
+        last_page: number;
+        total: number;
+    };
     branches: CashflowBranchOption[];
     organizations: OrganizationOption[];
     categories: CashflowCategoryOption[];
@@ -343,5 +361,6 @@ export type CashflowPageProps = {
         year: number;
         branch_id: string | null;
         organization_id: string | null;
+        tab?: string;
     };
 };

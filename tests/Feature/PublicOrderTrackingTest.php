@@ -20,6 +20,18 @@ const PUBLIC_TRACKING_PAYWUZ_BASE_URL = 'https://api.paywuz.test/v1';
 beforeEach(function (): void {
     $this->withoutVite();
     Cache::forget('payment-gateways.paywuz.methods');
+    Http::fake([
+        'https://qris.karuhundeveloper.com/*' => Http::response([
+            'status' => 'success',
+            'data' => [
+                'token' => 'qris_token_test_123',
+                'amount' => 50000,
+                'unique_code' => 0,
+                'qris_string' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+                'expires_at' => now()->addMinutes(15)->toIso8601String(),
+            ],
+        ], 200),
+    ]);
     config()->set('payment-gateways.drivers.paywuz.base_url', PUBLIC_TRACKING_PAYWUZ_BASE_URL);
     config()->set('payment-gateways.drivers.paywuz.method_cache_seconds', 0);
 });
@@ -115,7 +127,6 @@ it('automatically generates and displays dynamic QRIS for unpaid order when bran
     $branch = Branch::factory()->for($organization)->create([
         'name' => 'Cabang Merdeka',
         'qris_enabled' => true,
-        'qris_static_payload' => PUBLIC_TRACKING_TEST_STATIC_QRIS,
     ]);
     $order = Order::factory()->for($organization)->for($branch)->create([
         'order_number' => 'LDR-20260916-00000011',
@@ -132,7 +143,7 @@ it('automatically generates and displays dynamic QRIS for unpaid order when bran
         ->assertSee('QRIS Dinamis')
         ->assertSee('Rp50.000')
         ->assertSee('Unduh QRIS')
-        ->assertSee('Cek Pembayaran')
+        ->assertSee('Cek Status Sekarang')
         ->assertSee('data:image/svg+xml;base64,');
 
     expect($order->payments()->where('status', PaymentStatus::Pending)->exists())->toBeTrue();
@@ -146,7 +157,6 @@ it('displays existing pending QRIS payment created by branch admin', function ()
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PUBLIC_TRACKING_TEST_STATIC_QRIS,
     ]);
     $order = Order::factory()->for($organization)->for($branch)->create([
         'order_number' => 'LDR-20260916-00000012',
@@ -175,7 +185,6 @@ it('allows customer to switch payment method to payment gateway via signed POST'
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PUBLIC_TRACKING_TEST_STATIC_QRIS,
     ]);
     $order = Order::factory()->for($organization)->for($branch)->create([
         'order_number' => 'LDR-20260916-00000013',
@@ -263,7 +272,6 @@ it('displays lunas badge and digital receipt in the unified page when order is f
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PUBLIC_TRACKING_TEST_STATIC_QRIS,
     ]);
     $order = Order::factory()->for($organization)->for($branch)->create([
         'order_number' => 'LDR-20260916-00000014',
@@ -319,7 +327,6 @@ it('blocks switching an active gateway back to QRIS via signed POST', function (
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PUBLIC_TRACKING_TEST_STATIC_QRIS,
     ]);
     $order = Order::factory()->for($organization)->for($branch)->create([
         'order_number' => 'LDR-20260916-00000015',

@@ -18,7 +18,12 @@ class DemoDataSeeder extends Seeder
     {
         $organization = Organization::query()->updateOrCreate(
             ['slug' => 'laundryhub-demo'],
-            ['name' => 'LaundryHub Demo', 'is_active' => true],
+            [
+                'name' => 'LaundryHub Demo',
+                'qris_enabled' => true,
+                'qris_api_key' => 'qris_a00470db65b730b967bb35cf3ae6c93c7eab7e947a078608',
+                'is_active' => true,
+            ],
         );
 
         $jakartaCity = City::query()->updateOrCreate([
@@ -43,7 +48,8 @@ class DemoDataSeeder extends Seeder
                 'free_delivery_radius_meters' => 10000,
                 'delivery_fee_per_km_rupiah' => 3000,
                 'qris_enabled' => true,
-                'qris_static_payload' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+                'qris_api_key' => null,
+                'qris_base_url' => 'https://qris.karuhundeveloper.com',
                 'is_active' => true,
             ],
         );

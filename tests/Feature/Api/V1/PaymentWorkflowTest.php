@@ -20,6 +20,18 @@ const PAYMENT_TEST_STATIC_QRIS = '00020101021126370014ID.CO.QRIS.WWW0115ID123456
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+    Http::fake([
+        'https://qris.karuhundeveloper.com/*' => Http::response([
+            'status' => 'success',
+            'data' => [
+                'token' => 'qris_token_test_123',
+                'amount' => 50000,
+                'unique_code' => 0,
+                'qris_string' => PAYMENT_TEST_STATIC_QRIS,
+                'expires_at' => now()->addMinutes(15)->toIso8601String(),
+            ],
+        ], 200),
+    ]);
 });
 
 it('rejects payment before pickup pricing is confirmed', function (): void {
@@ -54,7 +66,6 @@ it('creates and manually reconciles a dynamic QRIS payment with audit history', 
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PAYMENT_TEST_STATIC_QRIS,
     ]);
     $admin = User::factory()->for($organization)->create();
     $admin->assignRole(RoleName::BranchAdmin->value);
@@ -81,7 +92,7 @@ it('creates and manually reconciles a dynamic QRIS payment with audit history', 
         ->assertJsonPath('data.status_history.0.status', PaymentStatus::Pending->value);
 
     $payload = $response->json('data.qris_payload');
-    expect($payload)->toBeString()->toContain('010212')->toContain('540550000');
+    expect($payload)->toBeString()->toBe(PAYMENT_TEST_STATIC_QRIS);
 
     $imageDataUri = $response->json('data.qris_image_data_uri');
     expect($imageDataUri)->toBeString()->toStartWith('data:image/svg+xml;base64,');
@@ -140,7 +151,6 @@ it('allows a customer to create QRIS only for their own order', function (): voi
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PAYMENT_TEST_STATIC_QRIS,
     ]);
     $customer = User::factory()->withCustomerPin()->create();
     $customer->assignRole(RoleName::Customer->value);
@@ -167,8 +177,7 @@ it('allows a customer to create QRIS only for their own order', function (): voi
 
     expect($response->json('data.qris_payload'))
         ->toBeString()
-        ->toContain('010212')
-        ->toContain('540527500');
+        ->toBe(PAYMENT_TEST_STATIC_QRIS);
     expect($response->json('data.qris_image_data_uri'))
         ->toBeString()
         ->toStartWith('data:image/svg+xml;base64,');
@@ -229,7 +238,6 @@ it('rejects duplicate pending payments and invalid reconciliation transitions', 
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PAYMENT_TEST_STATIC_QRIS,
     ]);
     $admin = User::factory()->for($organization)->create();
     $admin->assignRole(RoleName::BranchAdmin->value);
@@ -270,7 +278,6 @@ it('allows branch admin to accept cash payment when a dynamic QRIS is pending an
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PAYMENT_TEST_STATIC_QRIS,
     ]);
     $admin = User::factory()->for($organization)->create();
     $admin->assignRole(RoleName::BranchAdmin->value);

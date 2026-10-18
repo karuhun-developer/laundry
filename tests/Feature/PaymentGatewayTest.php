@@ -37,7 +37,6 @@ function paymentGatewayTestContext(int $amountRupiah = 50000): array
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => PAYMENT_GATEWAY_TEST_STATIC_QRIS,
     ]);
     $admin = User::factory()->for($organization)->create();
     $admin->assignRole(RoleName::BranchAdmin->value);
@@ -199,6 +198,18 @@ it('returns no gateway methods without outbound requests when disabled or incomp
 it('keeps cash and branch QRIS working while rejecting gateway payments when disabled', function (): void {
     configurePaywuz(false, null);
     Http::preventStrayRequests();
+    Http::fake([
+        'https://qris.karuhundeveloper.com/*' => Http::response([
+            'status' => 'success',
+            'data' => [
+                'token' => 'qris_token_test_123',
+                'amount' => 50000,
+                'unique_code' => 0,
+                'qris_string' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+                'expires_at' => now()->addMinutes(15)->toIso8601String(),
+            ],
+        ], 200),
+    ]);
     $context = paymentGatewayTestContext();
 
     $this->postJson(paymentStoreRoute($context), [
@@ -236,7 +247,7 @@ it('keeps cash and branch QRIS working while rejecting gateway payments when dis
         ->assertJsonPath('code', 'PAYMENT_GATEWAY_UNAVAILABLE');
 
     expect(Payment::query()->where('order_id', $gatewayOrder->id)->exists())->toBeFalse();
-    Http::assertNothingSent();
+    Http::assertNotSent(fn ($req) => str_contains($req->url(), 'paywuz'));
 });
 
 it('lists direct Paywuz methods and excludes provider meta methods', function (): void {

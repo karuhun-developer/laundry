@@ -20,6 +20,7 @@ it('generates default cashflow categories when an organization is created', func
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Laundry Baru',
+        'qris_api_key' => 'qris_test_key_cat',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
 

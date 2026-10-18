@@ -26,6 +26,9 @@ class PaymentResource extends JsonResource
             'status_label' => $this->status->label(),
             'amount_rupiah' => $this->amount_rupiah,
             'qris_payload' => $this->qris_payload,
+            'qris_token' => $this->qris_token,
+            'qris_unique_code' => $this->qris_unique_code,
+            'qris_expires_at' => $this->qris_expires_at?->toISOString(),
             'qris_image_data_uri' => $this->qris_payload === null
                 ? null
                 : (new QrisImageGenerator)->dataUri($this->qris_payload),

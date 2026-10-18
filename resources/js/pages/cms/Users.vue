@@ -37,7 +37,6 @@ const organizationName = (user: UserSummary): string =>
     user.organization?.name ??
     props.organizations.find((organization) => organization.id === user.organization_id)?.name ??
     'Tanpa organisasi';
-const userIdentity = (user: UserSummary): string => user.email ?? user.whatsapp_phone ?? user.name;
 const userConfirmations = (user: UserSummary): string[] =>
     [user.email, user.whatsapp_phone, user.name].filter(
         (val): val is string => typeof val === 'string' && val.trim() !== '',

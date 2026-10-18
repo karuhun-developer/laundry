@@ -33,13 +33,20 @@ class CashflowController extends Controller
     {
         Gate::authorize('viewAny', CashflowEntry::class);
 
+        $request->validate([
+            'year' => ['sometimes', 'integer'],
+            'branch_id' => ['sometimes', 'nullable', 'integer'],
+            'organization_id' => ['sometimes', 'nullable', 'integer'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'tab' => ['sometimes', 'string', 'in:laporan,tabel'],
+        ]);
+
         /** @var User $user */
         $user = $request->user();
         $isSuperadmin = $user->hasRole(RoleName::Superadmin->value);
         $year = (int) $request->input('year', now()->year);
 
-        $entriesQuery = CashflowEntry::query()
-            ->with(['category:id,name,type,group', 'branch:id,name'])
+        $baseQuery = CashflowEntry::query()
             ->whereYear('entry_date', $year)
             ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $user->organization_id))
             ->when(
@@ -51,9 +58,20 @@ class CashflowController extends Controller
                 fn ($query) => $query->where('branch_id', $request->input('branch_id')),
             );
 
-        $entries = $entriesQuery->oldest('entry_date')->oldest('id')->get();
+        $statementEntries = (clone $baseQuery)
+            ->with(['category:id,name,type,group'])
+            ->oldest('entry_date')
+            ->oldest('id')
+            ->get();
 
-        $statement = $this->buildStatement($entries, $year);
+        $statement = $this->buildStatement($statementEntries, $year);
+
+        $paginatedEntries = (clone $baseQuery)
+            ->with(['category:id,name,type,group', 'branch:id,name'])
+            ->oldest('entry_date')
+            ->oldest('id')
+            ->paginate(25)
+            ->withQueryString();
 
         $branches = Branch::query()
             ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $user->organization_id))
@@ -81,7 +99,12 @@ class CashflowController extends Controller
 
         return Inertia::render('cms/Cashflow', [
             'statement' => $statement,
-            'entries' => $entries,
+            'entries' => $paginatedEntries->getCollection()->values(),
+            'pagination' => [
+                'current_page' => $paginatedEntries->currentPage(),
+                'last_page' => $paginatedEntries->lastPage(),
+                'total' => $paginatedEntries->total(),
+            ],
             'branches' => $branches,
             'organizations' => $organizations,
             'categories' => $categories,
@@ -89,6 +112,7 @@ class CashflowController extends Controller
                 'year' => $year,
                 'branch_id' => $request->input('branch_id'),
                 'organization_id' => $request->input('organization_id'),
+                'tab' => $request->input('tab', 'laporan'),
             ],
         ]);
     }

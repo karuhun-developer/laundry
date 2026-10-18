@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { Building, ImageUp, Pencil, Plus } from '@lucide/vue';
+import { Building, Pencil, Plus } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import BranchDeliveryFields from '@/components/cms/BranchDeliveryFields.vue';
 import CmsFormDialog from '@/components/cms/CmsFormDialog.vue';
@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { decodeQrisImage } from '@/lib/qris';
 import { store, update } from '@/routes/cms/branches';
 import type { BranchesPageProps, BranchSummary, CitySummary, OrganizationOption } from '@/types';
 
@@ -22,9 +21,6 @@ const props = defineProps<{
 }>();
 
 const open = ref(false);
-const qrisImageBusy = ref(false);
-const qrisImageMessage = ref('');
-const qrisImageError = ref('');
 const isEditing = computed(() => props.branch !== undefined);
 const defaultOrganizationId = (): string =>
     (
@@ -44,7 +40,8 @@ const form = useForm({
     free_delivery_radius_meters: props.branch?.free_delivery_radius_meters.toString() ?? '10000',
     delivery_fee_per_km_rupiah: props.branch?.delivery_fee_per_km_rupiah.toString() ?? '3000',
     qris_enabled: props.branch?.qris_enabled ?? false,
-    qris_static_payload: props.branch?.qris_static_payload ?? '',
+    qris_api_key: props.branch?.qris_api_key ?? '',
+    qris_base_url: props.branch?.qris_base_url ?? '',
     is_active: props.branch?.is_active ?? true,
 });
 
@@ -69,10 +66,9 @@ const restoreValues = (): void => {
         props.branch?.free_delivery_radius_meters.toString() ?? '10000';
     form.delivery_fee_per_km_rupiah = props.branch?.delivery_fee_per_km_rupiah.toString() ?? '3000';
     form.qris_enabled = props.branch?.qris_enabled ?? false;
-    form.qris_static_payload = props.branch?.qris_static_payload ?? '';
+    form.qris_api_key = props.branch?.qris_api_key ?? '';
+    form.qris_base_url = props.branch?.qris_base_url ?? '';
     form.is_active = props.branch?.is_active ?? true;
-    qrisImageMessage.value = '';
-    qrisImageError.value = '';
     form.clearErrors();
 };
 
@@ -81,30 +77,6 @@ watch(open, (isOpen) => {
         restoreValues();
     }
 });
-
-const importQrisImage = async (event: Event): Promise<void> => {
-    const input = event.currentTarget;
-
-    if (!(input instanceof HTMLInputElement) || !input.files?.[0]) {
-        return;
-    }
-
-    qrisImageBusy.value = true;
-    qrisImageMessage.value = '';
-    qrisImageError.value = '';
-
-    try {
-        form.qris_static_payload = await decodeQrisImage(input.files[0]);
-        form.qris_enabled = true;
-        form.clearErrors('qris_static_payload');
-        qrisImageMessage.value = 'Payload QRIS berhasil dibaca dari gambar.';
-    } catch (error) {
-        qrisImageError.value = error instanceof Error ? error.message : 'Gambar QRIS gagal dibaca.';
-    } finally {
-        qrisImageBusy.value = false;
-        input.value = '';
-    }
-};
 
 const submit = (): void => {
     const city = availableCities.value.find((item) => item.id.toString() === form.city_id);
@@ -133,7 +105,8 @@ const submit = (): void => {
         free_delivery_radius_meters: Number(form.free_delivery_radius_meters),
         delivery_fee_per_km_rupiah: Number(form.delivery_fee_per_km_rupiah),
         qris_enabled: form.qris_enabled,
-        qris_static_payload: form.qris_static_payload === '' ? null : form.qris_static_payload,
+        qris_api_key: form.qris_api_key === '' ? null : form.qris_api_key,
+        qris_base_url: form.qris_base_url === '' ? null : form.qris_base_url,
         is_active: form.is_active,
         city,
         organization,
@@ -283,69 +256,50 @@ const submit = (): void => {
 
                 <section class="border-line space-y-4 rounded-xl border p-4">
                     <div>
-                        <h3 class="text-ink-950 text-sm font-semibold">QRIS dinamis</h3>
+                        <h3 class="text-ink-950 text-sm font-semibold">QRIS Dinamis</h3>
                         <p class="text-ink-500 mt-1 text-xs leading-5">
-                            Masukkan payload QRIS statis merchant. Saat pelanggan membayar, sistem
-                            menyisipkan nominal tagihan dan menghitung ulang CRC secara otomatis.
+                            Integrasi QRIS dinamis via qris.karuhundeveloper.com. Bila API Key cabang dikosongkan, cabang akan otomatis menggunakan pengaturan dari organisasi.
                         </p>
                     </div>
 
                     <label class="flex min-h-11 cursor-pointer items-center gap-3">
                         <Checkbox v-model="form.qris_enabled" data-test="branch-qris-enabled" />
-                        <span class="text-sm font-medium">Aktifkan pembayaran QRIS</span>
+                        <span class="text-sm font-medium">Cabang aktif pembayaran QRIS Dinamis</span>
                     </label>
 
-                    <div class="space-y-2">
-                        <Label for="branch-qris-payload">Payload QRIS statis</Label>
-                        <label
-                            for="branch-qris-image"
-                            class="border-line text-ink-700 hover:bg-canvas flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
-                            :class="qrisImageBusy ? 'pointer-events-none opacity-60' : ''"
-                        >
-                            <ImageUp class="size-4" aria-hidden="true" />
-                            {{ qrisImageBusy ? 'Membaca QRIS…' : 'Ambil payload dari gambar QRIS' }}
-                        </label>
-                        <input
-                            id="branch-qris-image"
-                            class="sr-only"
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            :disabled="qrisImageBusy"
-                            data-test="branch-qris-image"
-                            @change="importQrisImage"
-                        />
-                        <textarea
-                            id="branch-qris-payload"
-                            v-model="form.qris_static_payload"
-                            class="border-input focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full resize-y rounded-md border bg-transparent px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:ring-3"
-                            placeholder="000201010211...6304ABCD"
-                            :required="form.qris_enabled"
-                            :aria-invalid="Boolean(form.errors.qris_static_payload)"
-                            aria-describedby="branch-qris-payload-help branch-qris-payload-error"
-                        />
-                        <p id="branch-qris-payload-help" class="text-ink-500 text-xs leading-5">
-                            Unggah gambar QRIS atau tempel payload hasil pembacaan QR merchant.
-                            Payload diverifikasi sebelum disimpan dan dienkripsi di database.
-                        </p>
-                        <p
-                            v-if="qrisImageMessage"
-                            class="text-mint-500 text-xs"
-                            role="status"
-                            aria-live="polite"
-                        >
-                            {{ qrisImageMessage }}
-                        </p>
-                        <p
-                            v-if="qrisImageError"
-                            class="text-destructive text-xs"
-                            role="alert"
-                        >
-                            {{ qrisImageError }}
-                        </p>
-                        <InputError
-                            id="branch-qris-payload-error"
-                            :message="form.errors.qris_static_payload"
-                        />
+                    <div v-if="form.qris_enabled" class="space-y-4 pt-1">
+                        <div class="space-y-2">
+                            <Label for="branch-qris-api-key">API Key QRIS Cabang (Opsional)</Label>
+                            <Input
+                                id="branch-qris-api-key"
+                                v-model="form.qris_api_key"
+                                placeholder="Kosongkan untuk menggunakan API Key organisasi"
+                                :aria-invalid="Boolean(form.errors.qris_api_key)"
+                                aria-describedby="branch-qris-api-key-error"
+                            />
+                            <p class="text-ink-500 text-xs">
+                                Biarkan kosong jika ingin menggunakan kredensial QRIS milik organisasi.
+                            </p>
+                            <InputError
+                                id="branch-qris-api-key-error"
+                                :message="form.errors.qris_api_key"
+                            />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="branch-qris-base-url">QRIS Base URL Cabang (Opsional)</Label>
+                            <Input
+                                id="branch-qris-base-url"
+                                v-model="form.qris_base_url"
+                                placeholder="https://qris.karuhundeveloper.com"
+                                :aria-invalid="Boolean(form.errors.qris_base_url)"
+                                aria-describedby="branch-qris-base-url-error"
+                            />
+                            <InputError
+                                id="branch-qris-base-url-error"
+                                :message="form.errors.qris_base_url"
+                            />
+                        </div>
                     </div>
                 </section>
 

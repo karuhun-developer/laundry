@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { CheckCircle2, Copy, Download, MessageCircle, XCircle } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { CheckCircle2, Copy, Download, MessageCircle, RefreshCw, XCircle } from '@lucide/vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
 import { formatRupiah } from '@/lib/mobileOrders';
@@ -26,6 +26,40 @@ const copied = ref(false);
 const downloadProcessing = ref(false);
 const isGateway = computed(() => props.payment.gateway !== null);
 const isGatewayQris = computed(() => props.payment.gateway?.method === 'QRIS');
+const isQris = computed(() => !isGateway.value || isGatewayQris.value);
+const remainingSeconds = ref(0);
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+const updateRemainingTime = (): void => {
+    if (!props.payment.qris_expires_at) {
+        remainingSeconds.value = 900;
+        return;
+    }
+    const expiry = new Date(props.payment.qris_expires_at).getTime();
+    const diff = Math.max(0, Math.floor((expiry - Date.now()) / 1000));
+    remainingSeconds.value = diff;
+};
+
+const isExpired = computed(() => isQris.value && remainingSeconds.value <= 0 && Boolean(props.payment.qris_expires_at));
+
+const formattedCountdown = computed(() => {
+    const m = Math.floor(remainingSeconds.value / 60);
+    const s = remainingSeconds.value % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+});
+
+onMounted(() => {
+    if (isQris.value) {
+        updateRemainingTime();
+        countdownInterval = setInterval(updateRemainingTime, 1000);
+    }
+});
+
+onUnmounted(() => {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+});
 
 const copyPaymentNumber = async (): Promise<void> => {
     const paymentNumber = props.payment.gateway?.payment_number;
@@ -70,6 +104,7 @@ const emit = defineEmits<{
     reconcile: [payment: MobilePayment, status: 'paid' | 'failed'];
     requestVerification: [payment: MobilePayment];
     sharePayment: [payment: MobilePayment];
+    regeneratePayment: [payment: MobilePayment];
 }>();
 </script>
 
@@ -89,9 +124,13 @@ const emit = defineEmits<{
         </div>
 
         <div
-            v-if="payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
-            class="mx-auto mt-4 max-w-72 rounded-2xl bg-white p-3 shadow-low"
+            v-if="!isExpired && payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
+            class="mx-auto mt-4 max-w-72 rounded-2xl bg-white p-3 shadow-low text-center"
         >
+            <div class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>Berlaku: {{ formattedCountdown }}</span>
+            </div>
             <img
                 :src="payment.qris_image_data_uri"
                 :alt="`QRIS ${payment.payment_number}`"
@@ -99,8 +138,28 @@ const emit = defineEmits<{
                 data-test="qris-image"
             />
         </div>
+
         <div
-            v-if="payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
+            v-if="isExpired && (!isGateway || isGatewayQris)"
+            class="mt-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-center"
+        >
+            <p class="text-sm font-semibold text-red-600">QRIS Telah Kedaluwarsa</p>
+            <p class="mt-1 text-xs text-ink-600">Batas waktu pembayaran 15 menit telah habis.</p>
+            <Button
+                type="button"
+                variant="outline"
+                class="mt-3 w-full border-brand-600/30 text-brand-700"
+                :disabled="busy"
+                data-test="regenerate-qris-button"
+                @click="emit('regeneratePayment', payment)"
+            >
+                <RefreshCw class="size-4" />
+                Generate Ulang QRIS
+            </Button>
+        </div>
+
+        <div
+            v-if="!isExpired && payment.qris_image_data_uri && (!isGateway || isGatewayQris)"
             class="mt-3 grid gap-2"
             :class="canSharePayment ? 'sm:grid-cols-2' : ''"
         >

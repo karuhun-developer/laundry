@@ -15,7 +15,9 @@ use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\MobileAppController;
+use App\Http\Controllers\PublicOrderPaymentCheckController;
 use App\Http\Controllers\PublicOrderPaymentController;
+use App\Http\Controllers\PublicOrderPaymentRegenerateController;
 use App\Http\Controllers\PublicOrderReceiptController;
 use App\Http\Controllers\PublicOrderTrackingController;
 use App\Http\Controllers\ReportExportController;
@@ -35,6 +37,12 @@ Route::get('struk/{order}', PublicOrderReceiptController::class)
 Route::post('pesanan/{order:order_number}/bayar', PublicOrderPaymentController::class)
     ->middleware(['signed', 'throttle:10,1'])
     ->name('orders.public.payment.store');
+Route::post('pesanan/{order:order_number}/payment/check', PublicOrderPaymentCheckController::class)
+    ->middleware(['signed', 'throttle:120,1'])
+    ->name('orders.public.payment.check');
+Route::post('pesanan/{order:order_number}/payment/regenerate', PublicOrderPaymentRegenerateController::class)
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('orders.public.payment.regenerate');
 Route::get('app-updates/{asset}/{filename}', AppUpdateDownloadController::class)
     ->whereNumber('asset')
     ->where('filename', 'laundryhub-v[0-9]+\.[0-9]+\.[0-9]+\.apk')

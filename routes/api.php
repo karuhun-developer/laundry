@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\V1\PaymentGatewayWebhookController;
 use App\Http\Controllers\Api\V1\PaymentStatusEventController;
 use App\Http\Controllers\Api\V1\PaymentWhatsAppSuggestionController;
 use App\Http\Controllers\Api\V1\PriceQuoteController;
+use App\Http\Controllers\Api\V1\QrisPaymentCheckController;
+use App\Http\Controllers\Api\V1\QrisPaymentRegenerateController;
 use App\Http\Controllers\Api\V1\ResetCustomerPinController;
 use App\Http\Controllers\Api\V1\SetDefaultCustomerAddressController;
 use App\Http\Controllers\Api\V1\StoreCustomerAddressController;
@@ -155,6 +157,18 @@ Route::prefix('v1')->name('api.v1.')->middleware(EnsureCustomerSessionIsCurrent:
     )->middleware('auth:sanctum')
         ->scopeBindings()
         ->name('organizations.branches.orders.payments.status-events.store');
+    Route::post(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments/{payment}/check',
+        QrisPaymentCheckController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.payments.check');
+    Route::post(
+        'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments/{payment}/regenerate',
+        QrisPaymentRegenerateController::class,
+    )->middleware('auth:sanctum')
+        ->scopeBindings()
+        ->name('organizations.branches.orders.payments.regenerate');
     Route::get(
         'organizations/{organization:slug}/branches/{branch}/orders/{order}/payments/{payment}/whatsapp-suggestion',
         PaymentWhatsAppSuggestionController::class,

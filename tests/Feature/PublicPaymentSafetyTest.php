@@ -21,6 +21,18 @@ const SAFETY_GATEWAY_URL = 'https://api.paywuz.test/v1';
 beforeEach(function (): void {
     $this->withoutVite();
     Http::preventStrayRequests();
+    Http::fake([
+        'https://qris.karuhundeveloper.com/*' => Http::response([
+            'status' => 'success',
+            'data' => [
+                'token' => 'qris_token_test_123',
+                'amount' => 50000,
+                'unique_code' => 0,
+                'qris_string' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+                'expires_at' => now()->addMinutes(15)->toIso8601String(),
+            ],
+        ], 200),
+    ]);
     config()->set([
         'payment-gateways.drivers.paywuz.enabled' => true,
         'payment-gateways.drivers.paywuz.api_key' => 'safety-test-secret',
@@ -33,7 +45,6 @@ function safetyOrder(): Order
 {
     $branch = Branch::factory()->create([
         'qris_enabled' => true,
-        'qris_static_payload' => SAFETY_QRIS,
     ]);
 
     return Order::factory()->for($branch)->create([
@@ -183,7 +194,7 @@ it('offers QRIS again after a confirmed gateway cancellation', function (): void
     $this->post(URL::signedRoute('orders.public.payment.store', ['order' => $order->order_number]), ['method' => 'qris'])
         ->assertRedirect()->assertSessionMissing('error');
     expect($order->payments()->where('status', PaymentStatus::Pending)->count())->toBe(1);
-    Http::assertNothingSent();
+    Http::assertSent(fn ($req) => str_contains($req->url(), '/v1/qris/create'));
 });
 
 it('reloads pricing and paid amounts before selecting a payment and reuses repeated selections', function (): void {
@@ -198,7 +209,7 @@ it('reloads pricing and paid amounts before selecting a payment and reuses repea
     expect($payment->amount_rupiah)->toBe(50000);
     expect($repeatedPayment->id)->toBe($payment->id);
     expect($order->payments()->where('status', PaymentStatus::Pending)->count())->toBe(1);
-    Http::assertNothingSent();
+    Http::assertSentCount(1);
 });
 
 it('rejects a stale order that has since become fully paid', function (): void {

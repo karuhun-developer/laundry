@@ -26,6 +26,9 @@ class StoreOrganizationRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'is_active' => ['sometimes', 'boolean'],
+            'qris_enabled' => ['sometimes', 'boolean'],
+            'qris_api_key' => ['required', 'string', 'max:255'],
+            'qris_base_url' => ['nullable', 'string', 'url', 'max:255'],
         ];
     }
 }

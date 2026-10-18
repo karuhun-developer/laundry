@@ -19,6 +19,7 @@ it('regenerates an organization slug when its name changes', function (): void {
 
     $this->actingAs($superadmin)->patch(route('cms.organizations.update', $organization), [
         'name' => 'Karuhun Laundry Utama',
+        'qris_api_key' => 'qris_test_sample_key',
         'is_active' => false,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -38,6 +39,7 @@ it('generates a unique slug when an organization is renamed to a duplicate name'
 
     $this->actingAs($superadmin)->patch(route('cms.organizations.update', $organization), [
         'name' => 'Existing Laundry',
+        'qris_api_key' => 'qris_test_sample_key',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -51,6 +53,7 @@ it('ignores a supplied organization slug during update', function (): void {
 
     $this->actingAs($superadmin)->patch(route('cms.organizations.update', $organization), [
         'name' => 'Karuhun Laundry Utama',
+        'qris_api_key' => 'qris_test_sample_key',
         'slug' => 'slug-yang-tidak-boleh-dipakai',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
@@ -132,7 +135,7 @@ it('lets an owner update branches only inside their organization', function (): 
         'free_delivery_radius_meters' => 12000,
         'delivery_fee_per_km_rupiah' => 4000,
         'qris_enabled' => true,
-        'qris_static_payload' => '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
+        'qris_api_key' => 'qris_test_branch_api_key',
         'is_active' => false,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -143,9 +146,7 @@ it('lets an owner update branches only inside their organization', function (): 
         'qris_enabled' => true,
         'is_active' => false,
     ]);
-    expect($branch->refresh()->qris_static_payload)->toBe(
-        '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC',
-    );
+    expect($branch->refresh()->qris_api_key)->toBe('qris_test_branch_api_key');
 
     $this->actingAs($owner)->patch(route('cms.branches.update', $otherBranch), [
         'city_id' => $otherBranch->city_id,

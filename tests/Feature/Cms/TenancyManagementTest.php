@@ -20,6 +20,7 @@ it('generates an organization slug from its name', function (): void {
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
+        'qris_api_key' => 'qris_test_organization_key',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -35,11 +36,13 @@ it('allows duplicate organization names with unique generated slugs', function (
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
+        'qris_api_key' => 'qris_test_organization_key',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
+        'qris_api_key' => 'qris_test_organization_key',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -55,6 +58,7 @@ it('ignores a supplied organization slug', function (): void {
 
     $this->actingAs($superadmin)->post(route('cms.organizations.store'), [
         'name' => 'Karuhun Laundry',
+        'qris_api_key' => 'qris_test_organization_key',
         'slug' => 'slug-yang-tidak-boleh-dipakai',
         'is_active' => true,
     ])->assertRedirect()->assertSessionHasNoErrors();
@@ -152,30 +156,27 @@ it('validates and stores encrypted QRIS settings for a branch', function (): voi
         'code' => 'QRS01',
         'address' => 'Jl. Pembayaran No. 1',
         'qris_enabled' => true,
-        'qris_static_payload' => '  '.CMS_BRANCH_STATIC_QRIS.'  ',
+        'qris_api_key' => 'qris_custom_branch_key',
+        'qris_base_url' => 'https://qris.karuhundeveloper.com',
     ])->assertRedirect()->assertSessionHasNoErrors();
 
     $branch = Branch::query()->where('code', 'QRS01')->firstOrFail();
 
     expect($branch->qris_enabled)->toBeTrue()
-        ->and($branch->qris_static_payload)->toBe(CMS_BRANCH_STATIC_QRIS);
+        ->and($branch->qris_api_key)->toBe('qris_custom_branch_key')
+        ->and($branch->qris_base_url)->toBe('https://qris.karuhundeveloper.com');
 
     $this->actingAs($owner)->post(route('cms.branches.store'), [
         'city_id' => $city->id,
-        'name' => 'Cabang QRIS Rusak',
+        'name' => 'Cabang Tanpa Custom Key',
         'code' => 'QRS02',
         'address' => 'Jl. Pembayaran No. 2',
         'qris_enabled' => true,
-        'qris_static_payload' => substr(CMS_BRANCH_STATIC_QRIS, 0, -4).'FFFF',
-    ])->assertSessionHasErrors(['qris_static_payload' => 'Checksum QRIS tidak cocok.']);
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    $this->actingAs($owner)->post(route('cms.branches.store'), [
-        'city_id' => $city->id,
-        'name' => 'Cabang Tanpa QRIS',
-        'code' => 'QRS03',
-        'address' => 'Jl. Pembayaran No. 3',
-        'qris_enabled' => true,
-    ])->assertSessionHasErrors('qris_static_payload');
+    $branch2 = Branch::query()->where('code', 'QRS02')->firstOrFail();
+    expect($branch2->qris_enabled)->toBeTrue()
+        ->and($branch2->qris_api_key)->toBeNull();
 });
 
 it('enforces city uniqueness globally by name and province', function (): void {
@@ -223,7 +224,7 @@ it('scopes the branch management page to an owner organization', function (): vo
     $otherCity = City::factory()->create(['name' => 'Z Bandung']);
     $branch = Branch::factory()->for($organization)->for($city)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => CMS_BRANCH_STATIC_QRIS,
+        'qris_api_key' => 'qris_test_key_sample',
     ]);
     Branch::factory()->for($otherCity)->create();
 
@@ -238,7 +239,7 @@ it('scopes the branch management page to an owner organization', function (): vo
             ->has('branches', 1)
             ->where('branches.0.id', $branch->id)
             ->where('branches.0.qris_enabled', true)
-            ->where('branches.0.qris_static_payload', CMS_BRANCH_STATIC_QRIS)
+            ->where('branches.0.qris_api_key', 'qris_test_key_sample')
             ->has('cities', 2)
             ->where('cities.0.id', $city->id)
             ->has('organizations', 0));

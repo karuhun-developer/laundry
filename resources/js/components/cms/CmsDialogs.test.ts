@@ -288,12 +288,16 @@ describe('CMS dialogs', () => {
             organization.name,
         );
         expect(wrapper.find('#organization-slug').exists()).toBe(false);
+        expect(wrapper.get('#organization-qris-api-key').attributes('required')).toBeDefined();
 
         await wrapper.get('[data-test="organization-form"]').trigger('submit');
 
         expect(inertiaHarness.submittedData()).toEqual({
             name: organization.name,
             is_active: organization.is_active,
+            qris_enabled: true,
+            qris_api_key: '',
+            qris_base_url: '',
         });
     });
 
@@ -486,8 +490,6 @@ describe('CMS dialogs', () => {
     });
 
     it('prefills and submits branch QRIS settings', async () => {
-        const qrisPayload =
-            '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
         const branch: BranchSummary = {
             id: 7,
             organization_id: 1,
@@ -501,7 +503,8 @@ describe('CMS dialogs', () => {
             free_delivery_radius_meters: 10000,
             delivery_fee_per_km_rupiah: 3000,
             qris_enabled: true,
-            qris_static_payload: qrisPayload,
+            qris_api_key: 'qris_test_branch_key',
+            qris_base_url: 'https://qris.karuhundeveloper.com',
             is_active: true,
             city: { id: 1, name: 'Jakarta Selatan', province: 'DKI Jakarta' },
             organization: { id: 1, name: 'LaundryHub Demo' },
@@ -517,32 +520,21 @@ describe('CMS dialogs', () => {
             global: { stubs: dialogStubs },
         });
 
-        expect(wrapper.text()).toContain('QRIS dinamis');
-        expect(wrapper.get<HTMLTextAreaElement>('#branch-qris-payload').element.value).toBe(
-            qrisPayload,
+        expect(wrapper.text()).toContain('Cabang aktif pembayaran QRIS Dinamis');
+        expect(wrapper.get<HTMLInputElement>('#branch-qris-api-key').element.value).toBe(
+            'qris_test_branch_key',
         );
-        expect(wrapper.get('#branch-qris-payload').attributes('required')).toBeDefined();
 
         await wrapper.get('[data-test="branch-form"]').trigger('submit');
 
         expect(inertiaHarness.submittedData()).toMatchObject({
             qris_enabled: true,
-            qris_static_payload: qrisPayload,
+            qris_api_key: 'qris_test_branch_key',
+            qris_base_url: 'https://qris.karuhundeveloper.com',
         });
     });
 
-    it('imports a QRIS payload from an uploaded image', async () => {
-        const qrisPayload =
-            '00020101021126370014ID.CO.QRIS.WWW0115ID12345678901235204729953033605802ID5907LAUNDRY6007JAKARTA630489DC';
-
-        vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ close: vi.fn() }));
-        vi.stubGlobal(
-            'BarcodeDetector',
-            class {
-                detect = vi.fn().mockResolvedValue([{ rawValue: qrisPayload }]);
-            },
-        );
-
+    it('toggles QRIS dynamic settings in branch form dialog', async () => {
         const wrapper = mount(BranchFormDialog, {
             props: {
                 cities: [{ id: 1, name: 'Jakarta Selatan', province: 'DKI Jakarta' }],
@@ -552,20 +544,12 @@ describe('CMS dialogs', () => {
             },
             global: { stubs: dialogStubs },
         });
-        const imageInput = wrapper.get<HTMLInputElement>('#branch-qris-image');
 
-        Object.defineProperty(imageInput.element, 'files', {
-            configurable: true,
-            value: [new File(['qris'], 'merchant-qris.png', { type: 'image/png' })],
-        });
-        await imageInput.trigger('change');
-        await flushPromises();
+        expect(wrapper.find('#branch-qris-api-key').exists()).toBe(false);
 
-        expect(wrapper.get<HTMLTextAreaElement>('#branch-qris-payload').element.value).toBe(
-            qrisPayload,
-        );
-        expect(wrapper.text()).toContain('Payload QRIS berhasil dibaca dari gambar.');
-        expect(wrapper.get('#branch-qris-payload').attributes('required')).toBeDefined();
+        await wrapper.get('[data-test="branch-qris-enabled"]').trigger('click');
+
+        expect(wrapper.find('#branch-qris-api-key').exists()).toBe(true);
     });
 
     it('does not submit organization ownership from the global city form', () => {

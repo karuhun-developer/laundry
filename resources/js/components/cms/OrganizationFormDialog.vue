@@ -20,6 +20,9 @@ const isEditing = computed(() => props.organization !== undefined);
 const form = useForm({
     name: props.organization?.name ?? '',
     is_active: props.organization?.is_active ?? true,
+    qris_enabled: props.organization?.qris_enabled ?? true,
+    qris_api_key: props.organization?.qris_api_key ?? '',
+    qris_base_url: props.organization?.qris_base_url ?? '',
 });
 
 const predictSlug = (value: string): string =>
@@ -32,6 +35,9 @@ const predictSlug = (value: string): string =>
 const restoreValues = (): void => {
     form.name = props.organization?.name ?? '';
     form.is_active = props.organization?.is_active ?? true;
+    form.qris_enabled = props.organization?.qris_enabled ?? true;
+    form.qris_api_key = props.organization?.qris_api_key ?? '';
+    form.qris_base_url = props.organization?.qris_base_url ?? '';
     form.clearErrors();
 };
 
@@ -134,6 +140,34 @@ const submit = (): void => {
                 aria-describedby="organization-name-error"
             />
             <InputError id="organization-name-error" :message="form.errors.name" />
+        </div>
+
+        <div class="space-y-2">
+            <Label for="organization-qris-api-key">API Key QRIS Dinamis <span class="text-destructive">*</span></Label>
+            <Input
+                id="organization-qris-api-key"
+                v-model="form.qris_api_key"
+                placeholder="qris_..."
+                required
+                :aria-invalid="Boolean(form.errors.qris_api_key)"
+                aria-describedby="organization-qris-api-key-error"
+            />
+            <p class="text-xs text-ink-500">
+                Wajib diisi. Cabang akan otomatis menggunakan API Key ini jika cabang tidak mengatur API Key tersendiri.
+            </p>
+            <InputError id="organization-qris-api-key-error" :message="form.errors.qris_api_key" />
+        </div>
+
+        <div class="space-y-2">
+            <Label for="organization-qris-base-url">QRIS Base URL (Opsional)</Label>
+            <Input
+                id="organization-qris-base-url"
+                v-model="form.qris_base_url"
+                placeholder="https://qris.karuhundeveloper.com"
+                :aria-invalid="Boolean(form.errors.qris_base_url)"
+                aria-describedby="organization-qris-base-url-error"
+            />
+            <InputError id="organization-qris-base-url-error" :message="form.errors.qris_base_url" />
         </div>
 
         <label class="border-line flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2">

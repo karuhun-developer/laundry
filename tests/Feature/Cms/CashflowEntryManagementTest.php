@@ -136,7 +136,6 @@ it('automatically records a debit cashflow entry when a QRIS payment transitions
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create([
         'qris_enabled' => true,
-        'qris_static_payload' => 'DUMMY_PAYLOAD',
     ]);
     app(GenerateDefaultCashflowCategories::class)->handle($organization);
 

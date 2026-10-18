@@ -21,7 +21,8 @@ final class CreateBranch
             'free_delivery_radius_meters' => $data->freeDeliveryRadiusMeters,
             'delivery_fee_per_km_rupiah' => $data->deliveryFeePerKmRupiah,
             'qris_enabled' => $data->qrisEnabled,
-            'qris_static_payload' => $data->qrisStaticPayload,
+            'qris_api_key' => $data->qrisApiKey,
+            'qris_base_url' => $data->qrisBaseUrl,
             'is_active' => $data->isActive,
         ]);
     }

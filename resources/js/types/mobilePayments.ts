@@ -49,6 +49,9 @@ export type MobilePayment = {
     status_label: string;
     amount_rupiah: number;
     qris_payload: string | null;
+    qris_token?: string | null;
+    qris_unique_code?: number | null;
+    qris_expires_at?: string | null;
     qris_image_data_uri: string | null;
     gateway: MobilePaymentGateway | null;
     note: string | null;

@@ -19,7 +19,8 @@ final readonly class BranchData
         public int $freeDeliveryRadiusMeters,
         public int $deliveryFeePerKmRupiah,
         public bool $qrisEnabled,
-        public ?string $qrisStaticPayload,
+        public ?string $qrisApiKey,
+        public ?string $qrisBaseUrl,
         public bool $isActive,
     ) {}
 
@@ -37,8 +38,11 @@ final readonly class BranchData
             freeDeliveryRadiusMeters: $request->integer('free_delivery_radius_meters', 10000),
             deliveryFeePerKmRupiah: $request->integer('delivery_fee_per_km_rupiah'),
             qrisEnabled: $request->boolean('qris_enabled'),
-            qrisStaticPayload: $request->filled('qris_static_payload')
-                ? $request->string('qris_static_payload')->toString()
+            qrisApiKey: $request->filled('qris_api_key')
+                ? $request->string('qris_api_key')->toString()
+                : null,
+            qrisBaseUrl: $request->filled('qris_base_url')
+                ? $request->string('qris_base_url')->toString()
                 : null,
             isActive: $request->boolean('is_active', true),
         );

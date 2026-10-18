@@ -20,6 +20,9 @@ class OrganizationFactory extends Factory
         return [
             'name' => fake()->unique()->company(),
             'is_active' => true,
+            'qris_enabled' => true,
+            'qris_api_key' => 'qris_a00470db65b730b967bb35cf3ae6c93c7eab7e947a078608',
+            'qris_base_url' => 'https://qris.karuhundeveloper.com',
         ];
     }
 }

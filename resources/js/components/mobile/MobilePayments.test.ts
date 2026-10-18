@@ -613,4 +613,25 @@ describe('mobile payment dialog', () => {
 
         wrapper.unmount();
     });
+
+    it('hides QR image and shows regenerate button when QRIS has expired', async () => {
+        const order = makeOrder();
+        order.payments[0]!.qris_expires_at = new Date(Date.now() - 60000).toISOString();
+        const actions = makeActions(order);
+        const wrapper = mount(PaymentDialog, {
+            props: { order, actions, role: 'branch_admin' },
+            attachTo: document.body,
+        });
+
+        await wrapper.get('[data-test="open-payment-dialog"]').trigger('click');
+
+        await vi.waitFor(() => {
+            expect(document.body.textContent).toContain('QRIS Telah Kedaluwarsa');
+        });
+        expect(document.body.querySelector('[data-test="qris-image"]')).toBeNull();
+        expect(document.body.querySelector('[data-test="regenerate-qris-button"]')).not.toBeNull();
+
+        wrapper.unmount();
+    });
 });
+

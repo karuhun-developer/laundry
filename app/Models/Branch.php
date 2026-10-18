@@ -27,7 +27,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int $free_delivery_radius_meters
  * @property int $delivery_fee_per_km_rupiah
  * @property bool $qris_enabled
- * @property string|null $qris_static_payload
+ * @property string|null $qris_api_key
+ * @property string|null $qris_base_url
  * @property bool $is_active
  * @property-read City $city
  * @property-read Organization $organization
@@ -44,7 +45,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'free_delivery_radius_meters',
     'delivery_fee_per_km_rupiah',
     'qris_enabled',
-    'qris_static_payload',
+    'qris_api_key',
+    'qris_base_url',
     'is_active',
 ])]
 class Branch extends Model implements HasMedia
@@ -107,7 +109,7 @@ class Branch extends Model implements HasMedia
             'free_delivery_radius_meters' => 'integer',
             'delivery_fee_per_km_rupiah' => 'integer',
             'qris_enabled' => 'boolean',
-            'qris_static_payload' => 'encrypted',
+            'qris_api_key' => 'encrypted',
             'is_active' => 'boolean',
         ];
     }

@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { CheckCircle2, QrCode, ReceiptText, RefreshCw } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import {
+    check as checkPaymentRoute,
+    regenerate as regeneratePaymentRoute,
+} from '@/routes/api/v1/organizations/branches/orders/payments';
 import DigitalReceiptPanel from '@/components/mobile/molecules/DigitalReceiptPanel.vue';
 import PaymentEntryForm from '@/components/mobile/molecules/PaymentEntryForm.vue';
 import PaymentHistory from '@/components/mobile/molecules/PaymentHistory.vue';
@@ -374,6 +378,159 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
         actionProcessing.value = false;
     }
 };
+
+let qrisPollInterval: ReturnType<typeof setInterval> | null = null;
+
+const stopQrisPolling = (): void => {
+    if (qrisPollInterval) {
+        clearInterval(qrisPollInterval);
+        qrisPollInterval = null;
+    }
+};
+
+const checkQrisStatus = async (payment: MobilePayment): Promise<void> => {
+    try {
+        const orgSlug = currentOrder.value.organization?.slug;
+        const branchId = currentOrder.value.branch?.id;
+        const orderId = currentOrder.value.id;
+
+        if (!orgSlug || !branchId || !orderId) {
+            return;
+        }
+
+        const csrfToken =
+            typeof document !== 'undefined'
+                ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
+                : '';
+
+        const url = checkPaymentRoute.url({
+            organization: orgSlug,
+            branch: branchId,
+            order: orderId,
+            payment: payment.id,
+        });
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
+
+        if (res.ok) {
+            const data = (await res.json()) as { paid?: boolean; status?: string; expired?: boolean };
+            if (data.paid) {
+                stopQrisPolling();
+                await refreshPaymentDialog();
+                toast.success('Pembayaran QRIS berhasil diterima!');
+            }
+        }
+    } catch {
+        // Silently ignore polling network errors
+    }
+};
+
+const startQrisPolling = (): void => {
+    stopQrisPolling();
+    if (!open.value) {
+        return;
+    }
+
+    const payment = latestPendingPayment.value;
+    if (!payment || payment.method !== 'qris' || payment.status !== 'pending') {
+        return;
+    }
+
+    qrisPollInterval = setInterval(() => {
+        const currentPayment = latestPendingPayment.value;
+        if (
+            !currentPayment ||
+            currentPayment.method !== 'qris' ||
+            currentPayment.status !== 'pending' ||
+            !open.value
+        ) {
+            stopQrisPolling();
+            return;
+        }
+
+        void checkQrisStatus(currentPayment);
+    }, 3000);
+};
+
+const regenerateQrisPayment = async (payment: MobilePayment): Promise<void> => {
+    actionProcessing.value = true;
+    resetAnnouncements();
+
+    try {
+        const orgSlug = currentOrder.value.organization?.slug;
+        const branchId = currentOrder.value.branch?.id;
+        const orderId = currentOrder.value.id;
+
+        if (!orgSlug || !branchId || !orderId) {
+            throw new Error('Data pesanan tidak lengkap untuk membuat ulang QRIS.');
+        }
+
+        const csrfToken =
+            typeof document !== 'undefined'
+                ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
+                : '';
+
+        const url = regeneratePaymentRoute.url({
+            organization: orgSlug,
+            branch: branchId,
+            order: orderId,
+            payment: payment.id,
+        });
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
+
+        if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as { message?: string };
+            throw new Error(data.message ?? 'Gagal membuat ulang QRIS.');
+        }
+
+        message.value = 'QRIS baru berhasil dibuat.';
+        toast.success(message.value);
+        await refreshPaymentDialog();
+    } catch (err: unknown) {
+        error.value = err instanceof Error ? err.message : 'Gagal membuat ulang QRIS.';
+        toast.error(error.value);
+    } finally {
+        actionProcessing.value = false;
+    }
+};
+
+watch(
+    [
+        open,
+        () => latestPendingPayment.value?.id,
+        () => latestPendingPayment.value?.status,
+        () => latestPendingPayment.value?.method,
+    ],
+    ([isOpen, _id, status, method]) => {
+        if (isOpen && status === 'pending' && method === 'qris') {
+            startQrisPolling();
+        } else {
+            stopQrisPolling();
+        }
+    },
+    { immediate: true },
+);
+
+onUnmounted(() => {
+    stopQrisPolling();
+});
 </script>
 
 <template>
@@ -469,6 +626,7 @@ const sharePaymentToCustomer = async (payment: MobilePayment): Promise<void> => 
                 @reconcile="reconcile"
                 @request-verification="requestPaymentVerification"
                 @share-payment="sharePaymentToCustomer"
+                @regenerate-payment="regenerateQrisPayment"
             />
             <PaymentEntryForm
                 v-if="

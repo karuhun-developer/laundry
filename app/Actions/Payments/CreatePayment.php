@@ -7,17 +7,20 @@ use App\Data\CreatePaymentData;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentCannotBeCreated;
+use App\Exceptions\QrisApiException;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
-use App\Services\Qris\QrisPayloadGenerator;
+use App\Services\Qris\QrisApiClient;
+use App\Services\Qris\QrisConfigurationResolver;
 use Illuminate\Support\Facades\DB;
 
 final readonly class CreatePayment
 {
     public function __construct(
-        private QrisPayloadGenerator $qrisPayloadGenerator,
+        private QrisConfigurationResolver $qrisResolver,
+        private QrisApiClient $qrisApiClient,
         private CreateGatewayPayment $createGatewayPayment,
     ) {}
 
@@ -69,16 +72,33 @@ final readonly class CreatePayment
                 ? PaymentStatus::Paid
                 : PaymentStatus::Pending;
             $qrisPayload = null;
+            $qrisToken = null;
+            $qrisUniqueCode = null;
+            $qrisExpiresAt = null;
 
             if ($data->method === PaymentMethod::Qris) {
-                if (! $branch->qris_enabled || $branch->qris_static_payload === null) {
+                $qrisConfig = $this->qrisResolver->resolve($branch);
+
+                if ($qrisConfig === null) {
                     throw PaymentCannotBeCreated::qrisUnavailable();
                 }
 
-                $qrisPayload = $this->qrisPayloadGenerator->generate(
-                    $branch->qris_static_payload,
-                    $data->amountRupiah,
-                );
+                $idempotencyKey = sprintf('ORD-%s-%d-%s', $lockedOrder->order_number ?? $lockedOrder->id, $data->amountRupiah, substr(uniqid(), -6));
+
+                try {
+                    $qrisRes = $this->qrisApiClient->create(
+                        $qrisConfig,
+                        $data->amountRupiah,
+                        $idempotencyKey,
+                    );
+                } catch (QrisApiException $e) {
+                    throw new PaymentCannotBeCreated('Gagal membuat QRIS: '.$e->getMessage(), previous: $e);
+                }
+
+                $qrisPayload = $qrisRes->qrisString;
+                $qrisToken = $qrisRes->token;
+                $qrisUniqueCode = $qrisRes->uniqueCode;
+                $qrisExpiresAt = $qrisRes->expiresAt;
             }
 
             $payment = Payment::query()->create([
@@ -90,6 +110,9 @@ final readonly class CreatePayment
                 'status' => $status,
                 'amount_rupiah' => $data->amountRupiah,
                 'qris_payload' => $qrisPayload,
+                'qris_token' => $qrisToken,
+                'qris_unique_code' => $qrisUniqueCode,
+                'qris_expires_at' => $qrisExpiresAt,
                 'note' => $data->note,
                 'settled_at' => $status === PaymentStatus::Paid ? now() : null,
             ]);
