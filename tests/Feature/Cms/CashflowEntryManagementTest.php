@@ -5,6 +5,7 @@ use App\Actions\Payments\CreatePayment;
 use App\Actions\Payments\TransitionPaymentStatus;
 use App\Data\CreatePaymentData;
 use App\Data\TransitionPaymentStatusData;
+use App\Enums\CashflowGroup;
 use App\Enums\CashflowType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -211,4 +212,50 @@ it('automatically records a debit cashflow entry when cash payment is received',
         'amount_rupiah' => 100000,
         'description' => 'Pembayaran pesanan #ORD-CASH-002',
     ]);
+});
+
+it('aggregates same-named categories across organizations in the cashflow statement', function (): void {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+
+    $org1 = Organization::factory()->create(['name' => 'Org A']);
+    $branch1 = Branch::factory()->for($org1)->create();
+    $cat1 = CashflowCategory::factory()->for($org1)->create([
+        'name' => 'Pembayaran Pesanan',
+        'type' => CashflowType::Debit,
+        'group' => CashflowGroup::Rutin,
+    ]);
+    CashflowEntry::factory()->for($org1)->create([
+        'branch_id' => $branch1->id,
+        'cashflow_category_id' => $cat1->id,
+        'type' => CashflowType::Debit,
+        'amount_rupiah' => 28000,
+        'entry_date' => now()->startOfMonth()->toDateString(),
+    ]);
+
+    $org2 = Organization::factory()->create(['name' => 'Org B']);
+    $branch2 = Branch::factory()->for($org2)->create();
+    $cat2 = CashflowCategory::factory()->for($org2)->create([
+        'name' => 'Pembayaran Pesanan',
+        'type' => CashflowType::Debit,
+        'group' => CashflowGroup::Rutin,
+    ]);
+    CashflowEntry::factory()->for($org2)->create([
+        'branch_id' => $branch2->id,
+        'cashflow_category_id' => $cat2->id,
+        'type' => CashflowType::Debit,
+        'amount_rupiah' => 66000,
+        'entry_date' => now()->startOfMonth()->toDateString(),
+    ]);
+
+    $this->actingAs($superadmin)
+        ->get(route('cms.cashflow.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('cms/Cashflow')
+            ->where('statement.total_debit', 94000)
+            ->where('statement.categories', fn ($categories) => collect($categories)->where('name', 'Pembayaran Pesanan')->count() === 1
+                && collect($categories)->firstWhere('name', 'Pembayaran Pesanan')['total'] === 94000
+            )
+        );
 });

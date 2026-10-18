@@ -194,18 +194,23 @@ class CashflowController extends Controller
      */
     private function buildStatement(Collection $entries, int $year): array
     {
-        /** @var array<int, array{id: int, name: string, type: string, group: string, monthly: array<int, int>, total: int}> $categoryData */
+        /** @var array<string, array{id: int, name: string, type: string, group: string, monthly: array<int, int>, total: int}> $categoryData */
         $categoryData = [];
         $monthlyDebit = array_fill(1, 12, 0);
         $monthlyCredit = array_fill(1, 12, 0);
 
         foreach ($entries as $entry) {
             $month = $entry->entry_date->month;
-            $catId = $entry->cashflow_category_id;
+            $groupKey = sprintf(
+                '%s:%s:%s',
+                $entry->category->type->value,
+                $entry->category->group->value,
+                mb_strtolower(trim($entry->category->name)),
+            );
 
-            if (! isset($categoryData[$catId])) {
-                $categoryData[$catId] = [
-                    'id' => $catId,
+            if (! isset($categoryData[$groupKey])) {
+                $categoryData[$groupKey] = [
+                    'id' => $entry->cashflow_category_id,
                     'name' => $entry->category->name,
                     'type' => $entry->category->type->value,
                     'group' => $entry->category->group->value,
@@ -214,8 +219,8 @@ class CashflowController extends Controller
                 ];
             }
 
-            $categoryData[$catId]['monthly'][$month] += $entry->amount_rupiah;
-            $categoryData[$catId]['total'] += $entry->amount_rupiah;
+            $categoryData[$groupKey]['monthly'][$month] += $entry->amount_rupiah;
+            $categoryData[$groupKey]['total'] += $entry->amount_rupiah;
 
             if ($entry->type === CashflowType::Debit) {
                 $monthlyDebit[$month] += $entry->amount_rupiah;
