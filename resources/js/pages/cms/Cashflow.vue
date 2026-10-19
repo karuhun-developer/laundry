@@ -3,9 +3,9 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { BarChart3, Download, FileSpreadsheet, Table2, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CashflowCategoryDialog from '@/components/cms/CashflowCategoryDialog.vue';
+import CashflowEntryDeleteDialog from '@/components/cms/CashflowEntryDeleteDialog.vue';
 import CashflowEntryFormDialog from '@/components/cms/CashflowEntryFormDialog.vue';
 import CashflowImportDialog from '@/components/cms/CashflowImportDialog.vue';
-import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,6 @@ import {
     exportMethod as cashflowExport,
     index as cashflowIndex,
     template as cashflowTemplate,
-    destroy,
 } from '@/routes/cms/cashflow';
 import type { CashflowPageProps, CashflowStatementCategory } from '@/types';
 
@@ -658,14 +657,18 @@ const availableBranches = computed(() => {
                                         {{ formatRupiah(entry.amount_rupiah) }}
                                     </td>
                                     <td class="px-5 py-4 text-right">
-                                        <CmsDeleteDialog
+                                        <div
                                             v-if="entry.payment_id === null"
-                                            title="Hapus entri cashflow"
-                                            description="Hapus entri cashflow ini secara permanen."
-                                            :confirmation="entry.description"
-                                            confirmation-label="Ketik deskripsi untuk konfirmasi"
-                                            :route="destroy(entry.id)"
-                                        />
+                                            class="flex justify-end gap-1"
+                                        >
+                                            <CashflowEntryFormDialog
+                                                :entry="entry"
+                                                :branches="branches"
+                                                :organizations="organizations"
+                                                :categories="categories"
+                                            />
+                                            <CashflowEntryDeleteDialog :entry="entry" />
+                                        </div>
                                         <span v-else class="text-ink-400 text-xs italic">Otomatis</span>
                                     </td>
                                 </tr>
@@ -698,14 +701,17 @@ const availableBranches = computed(() => {
                                 </span>
                             </div>
 
-                            <div v-if="entry.payment_id === null" class="border-line flex items-center justify-end border-t pt-3">
-                                <CmsDeleteDialog
-                                    title="Hapus entri cashflow"
-                                    description="Hapus entri cashflow ini secara permanen."
-                                    :confirmation="entry.description"
-                                    confirmation-label="Ketik deskripsi untuk konfirmasi"
-                                    :route="destroy(entry.id)"
+                            <div
+                                v-if="entry.payment_id === null"
+                                class="border-line flex items-center justify-end gap-1 border-t pt-3"
+                            >
+                                <CashflowEntryFormDialog
+                                    :entry="entry"
+                                    :branches="branches"
+                                    :organizations="organizations"
+                                    :categories="categories"
                                 />
+                                <CashflowEntryDeleteDialog :entry="entry" />
                             </div>
                         </article>
                     </div>

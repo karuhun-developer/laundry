@@ -28,10 +28,24 @@ class CashflowEntryPolicy
     }
 
     /**
+     * Determine whether the user can update the model.
+     * Only manual entries (no linked payment) can be updated.
+     */
+    public function update(User $user, CashflowEntry $entry): bool
+    {
+        return $this->canManageManualEntry($user, $entry);
+    }
+
+    /**
      * Determine whether the user can delete the model.
      * Only manual entries (no linked payment) can be deleted.
      */
     public function delete(User $user, CashflowEntry $entry): bool
+    {
+        return $this->canManageManualEntry($user, $entry);
+    }
+
+    private function canManageManualEntry(User $user, CashflowEntry $entry): bool
     {
         if ($entry->payment_id !== null) {
             return false;

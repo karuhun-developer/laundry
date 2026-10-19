@@ -76,7 +76,7 @@ class CashflowEntry extends Model
         return [
             'type' => CashflowType::class,
             'amount_rupiah' => 'integer',
-            'entry_date' => 'date',
+            'entry_date' => 'date:Y-m-d',
         ];
     }
 }

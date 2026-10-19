@@ -54,6 +54,7 @@ it('renders the cashflow page with statement and entries for owner', function ()
             ->has('entries')
             ->has('branches')
             ->has('categories')
+            ->where('entries.0.entry_date', now()->toDateString())
             ->where('statement.total_credit', 500000)
         );
 });
@@ -106,6 +107,148 @@ it('allows an owner to delete manual cashflow entries', function (): void {
     $this->assertDatabaseMissing('cashflow_entries', ['id' => $entry->id]);
 });
 
+it('allows an owner to update only the amount and date of manual income', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $category = CashflowCategory::factory()->for($organization)->debit()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $entry = CashflowEntry::factory()->for($organization)->for($branch)->create([
+        'cashflow_category_id' => $category->id,
+        'type' => CashflowType::Debit,
+        'amount_rupiah' => 125000,
+        'description' => 'Pemasukan manual',
+        'entry_date' => '2026-10-01',
+        'payment_id' => null,
+    ]);
+
+    $this->actingAs($owner)->patch(route('cms.cashflow.update', $entry), [
+        'amount_rupiah' => 175000,
+        'entry_date' => '2026-10-18',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('cashflow_entries', [
+        'id' => $entry->id,
+        'organization_id' => $organization->id,
+        'branch_id' => $branch->id,
+        'cashflow_category_id' => $category->id,
+        'type' => CashflowType::Debit->value,
+        'amount_rupiah' => 175000,
+        'description' => 'Pemasukan manual',
+        'entry_date' => '2026-10-18 00:00:00',
+    ]);
+});
+
+it('rejects protected fields when updating manual income', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $category = CashflowCategory::factory()->for($organization)->debit()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $entry = CashflowEntry::factory()->for($organization)->for($branch)->create([
+        'cashflow_category_id' => $category->id,
+        'type' => CashflowType::Debit,
+        'amount_rupiah' => 125000,
+        'description' => 'Pemasukan manual',
+        'payment_id' => null,
+    ]);
+
+    $this->actingAs($owner)->patch(route('cms.cashflow.update', $entry), [
+        'amount_rupiah' => 175000,
+        'description' => 'Deskripsi yang tidak boleh berubah',
+        'entry_date' => '2026-10-18',
+    ])->assertSessionHasErrors('description');
+
+    $this->assertDatabaseHas('cashflow_entries', [
+        'id' => $entry->id,
+        'amount_rupiah' => 125000,
+        'description' => 'Pemasukan manual',
+    ]);
+});
+
+it('allows an owner to update every field of a manual expense', function (): void {
+    $organization = Organization::factory()->create();
+    $originalBranch = Branch::factory()->for($organization)->create();
+    $newBranch = Branch::factory()->for($organization)->create();
+    $originalCategory = CashflowCategory::factory()->for($organization)->credit()->create();
+    $newCategory = CashflowCategory::factory()->for($organization)->debit()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $entry = CashflowEntry::factory()->for($organization)->for($originalBranch)->create([
+        'cashflow_category_id' => $originalCategory->id,
+        'type' => CashflowType::Credit,
+        'amount_rupiah' => 350000,
+        'description' => 'Pengeluaran lama',
+        'entry_date' => '2026-10-01',
+        'payment_id' => null,
+    ]);
+
+    $this->actingAs($owner)->patch(route('cms.cashflow.update', $entry), [
+        'organization_id' => $organization->id,
+        'branch_id' => $newBranch->id,
+        'cashflow_category_id' => $newCategory->id,
+        'type' => CashflowType::Debit->value,
+        'amount_rupiah' => 425000,
+        'description' => 'Entri yang sudah diperbarui',
+        'entry_date' => '2026-10-18',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('cashflow_entries', [
+        'id' => $entry->id,
+        'organization_id' => $organization->id,
+        'branch_id' => $newBranch->id,
+        'cashflow_category_id' => $newCategory->id,
+        'type' => CashflowType::Debit->value,
+        'amount_rupiah' => 425000,
+        'description' => 'Entri yang sudah diperbarui',
+        'entry_date' => '2026-10-18 00:00:00',
+    ]);
+});
+
+it('forbids updating an auto-generated payment cashflow entry', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    $payment = Payment::factory()->for($organization)->for($branch)->create();
+
+    $entry = CashflowEntry::factory()->for($organization)->for($branch)->create([
+        'payment_id' => $payment->id,
+        'type' => CashflowType::Debit,
+        'amount_rupiah' => 50000,
+    ]);
+
+    $this->actingAs($owner)->patch(route('cms.cashflow.update', $entry), [
+        'amount_rupiah' => 75000,
+        'entry_date' => '2026-10-18',
+    ])->assertForbidden();
+
+    $this->assertDatabaseHas('cashflow_entries', [
+        'id' => $entry->id,
+        'amount_rupiah' => 50000,
+    ]);
+});
+
+it('forbids updating another organizations manual cashflow entry', function (): void {
+    $organization = Organization::factory()->create();
+    $otherOrganization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+    $otherBranch = Branch::factory()->for($otherOrganization)->create();
+
+    $entry = CashflowEntry::factory()->for($otherOrganization)->for($otherBranch)->create([
+        'payment_id' => null,
+    ]);
+
+    $this->actingAs($owner)->patch(route('cms.cashflow.update', $entry), [
+        'amount_rupiah' => 75000,
+        'entry_date' => '2026-10-18',
+    ])->assertForbidden();
+});
+
 it('forbids deleting an auto-generated payment cashflow entry', function (): void {
     $organization = Organization::factory()->create();
     $branch = Branch::factory()->for($organization)->create();
@@ -130,6 +273,33 @@ it('forbids deleting an auto-generated payment cashflow entry', function (): voi
         ->assertForbidden();
 
     $this->assertDatabaseHas('cashflow_entries', ['id' => $entry->id]);
+});
+
+it('keeps payment cashflow entries read-only for superadmin', function (): void {
+    $organization = Organization::factory()->create();
+    $branch = Branch::factory()->for($organization)->create();
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole(RoleName::Superadmin->value);
+    $payment = Payment::factory()->for($organization)->for($branch)->create();
+
+    $entry = CashflowEntry::factory()->for($organization)->for($branch)->create([
+        'payment_id' => $payment->id,
+        'type' => CashflowType::Debit,
+        'amount_rupiah' => 50000,
+    ]);
+
+    $this->actingAs($superadmin)->patch(route('cms.cashflow.update', $entry), [
+        'amount_rupiah' => 75000,
+        'entry_date' => '2026-10-18',
+    ])->assertForbidden();
+
+    $this->actingAs($superadmin)->delete(route('cms.cashflow.destroy', $entry))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('cashflow_entries', [
+        'id' => $entry->id,
+        'amount_rupiah' => 50000,
+    ]);
 });
 
 it('automatically records a debit cashflow entry when a QRIS payment transitions to paid', function (): void {

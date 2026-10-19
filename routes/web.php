@@ -92,6 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('cashflow/import/template', [CashflowController::class, 'template'])->name('cashflow.template');
         Route::post('cashflow/import', [CashflowController::class, 'import'])->name('cashflow.import');
         Route::post('cashflow', [CashflowController::class, 'store'])->name('cashflow.store');
+        Route::patch('cashflow/{cashflowEntry}', [CashflowController::class, 'update'])->name('cashflow.update');
         Route::delete('cashflow/{cashflowEntry}', [CashflowController::class, 'destroy'])->name('cashflow.destroy');
         Route::post('cashflow/categories', [CashflowCategoryController::class, 'store'])->name('cashflow.categories.store');
         Route::patch('cashflow/categories/{cashflowCategory}', [CashflowCategoryController::class, 'update'])->name('cashflow.categories.update');

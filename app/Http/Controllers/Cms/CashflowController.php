@@ -7,12 +7,14 @@ use App\Actions\Cashflow\DeleteCashflowEntry;
 use App\Actions\Cashflow\DownloadCashflowImportTemplateCsv;
 use App\Actions\Cashflow\ExportCashflowCsv;
 use App\Actions\Cashflow\ImportCashflowCsv;
+use App\Actions\Cashflow\UpdateCashflowEntry;
 use App\Data\CashflowEntryData;
 use App\Enums\CashflowType;
 use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\ImportCsvRequest;
 use App\Http\Requests\Cms\StoreCashflowEntryRequest;
+use App\Http\Requests\Cms\UpdateCashflowEntryRequest;
 use App\Models\Branch;
 use App\Models\CashflowCategory;
 use App\Models\CashflowEntry;
@@ -132,10 +134,25 @@ class CashflowController extends Controller
         return back()->with('success', 'Entri cashflow berhasil ditambahkan.');
     }
 
+    public function update(
+        UpdateCashflowEntryRequest $request,
+        CashflowEntry $cashflowEntry,
+        UpdateCashflowEntry $updateCashflowEntry,
+    ): RedirectResponse {
+        $updateCashflowEntry->handle(
+            $cashflowEntry,
+            CashflowEntryData::fromUpdateRequest($request, $cashflowEntry),
+        );
+
+        return back()->with('success', 'Entri cashflow berhasil diperbarui.');
+    }
+
     public function destroy(
         CashflowEntry $cashflowEntry,
         DeleteCashflowEntry $deleteCashflowEntry,
     ): RedirectResponse {
+        abort_unless($cashflowEntry->payment_id === null, 403);
+
         Gate::authorize('delete', $cashflowEntry);
 
         $deleteCashflowEntry->handle($cashflowEntry);
