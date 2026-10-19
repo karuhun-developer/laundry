@@ -73,6 +73,9 @@ export type BranchesPageProps = {
 
 export type UsersPageProps = {
     users: UserSummary[];
+    filters: {
+        search: string;
+    };
     pagination: {
         current_page: number;
         last_page: number;

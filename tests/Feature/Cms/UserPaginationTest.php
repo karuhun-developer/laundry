@@ -59,3 +59,79 @@ it('paginates users and calculates total statistics across all pages', function 
             ->where('statistics.branch_admins', 5)
         );
 });
+
+it('searches users by name email and whatsapp within the current organization', function (): void {
+    $organization = Organization::factory()->create();
+    $otherOrganization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    $byName = User::factory()->for($organization)->create([
+        'name' => 'Pelanggan Melati',
+        'email' => 'nama@example.test',
+        'whatsapp_phone' => '628111111111',
+    ]);
+    $byEmail = User::factory()->for($organization)->create([
+        'name' => 'Pelanggan Mawar',
+        'email' => 'email-khusus@example.test',
+        'whatsapp_phone' => '628222222222',
+    ]);
+    $byWhatsapp = User::factory()->for($organization)->create([
+        'name' => 'Pelanggan Anggrek',
+        'email' => 'telepon@example.test',
+        'whatsapp_phone' => '628777123456',
+    ]);
+    User::factory()->for($otherOrganization)->create([
+        'name' => 'Pelanggan Melati Lain',
+    ]);
+
+    foreach ([$byName, $byEmail, $byWhatsapp] as $customer) {
+        $customer->assignRole(RoleName::Customer->value);
+    }
+
+    $searches = [
+        ['Melati', $byName->id],
+        ['email-khusus', $byEmail->id],
+        ['777123456', $byWhatsapp->id],
+    ];
+
+    foreach ($searches as [$search, $expectedUserId]) {
+        $this->actingAs($owner)
+            ->get(route('cms.users.index', ['search' => $search]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('cms/Users')
+                ->has('users', 1)
+                ->where('users.0.id', $expectedUserId)
+                ->where('pagination.total', 1)
+                ->where('filters.search', $search)
+                ->where('statistics.total', 4)
+            );
+    }
+});
+
+it('preserves the user search while paginating filtered results', function (): void {
+    $organization = Organization::factory()->create();
+    $owner = User::factory()->for($organization)->create();
+    $owner->assignRole(RoleName::Owner->value);
+
+    for ($index = 1; $index <= 26; $index++) {
+        $customer = User::factory()->for($organization)->create([
+            'name' => sprintf('Needle Customer %02d', $index),
+        ]);
+        $customer->assignRole(RoleName::Customer->value);
+    }
+
+    $this->actingAs($owner)
+        ->get(route('cms.users.index', ['search' => 'Needle', 'page' => 2]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('cms/Users')
+            ->has('users', 1)
+            ->where('pagination.current_page', 2)
+            ->where('pagination.last_page', 2)
+            ->where('pagination.total', 26)
+            ->where('statistics.total', 27)
+            ->where('filters.search', 'Needle')
+        );
+});

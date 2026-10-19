@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Building2, ShieldCheck, UsersRound } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { Building2, LoaderCircle, Search, ShieldCheck, UsersRound, X } from '@lucide/vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CmsDeleteDialog from '@/components/cms/CmsDeleteDialog.vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
 import CmsPageHeader from '@/components/cms/CmsPageHeader.vue';
 import UserFormDialog from '@/components/cms/UserFormDialog.vue';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { roleLabel } from '@/lib/formatters';
 import { dashboard } from '@/routes/cms';
 import { destroy, index } from '@/routes/cms/users';
@@ -28,6 +29,8 @@ const isSuperadmin = computed(() => page.props.auth.user.roles.includes('superad
 const currentOrganizationId = computed(() => page.props.auth.user.organization_id);
 const currentUserId = computed(() => page.props.auth.user.id);
 const loading = ref(false);
+const searchQuery = ref(props.filters.search ?? '');
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 const totalUsers = computed(() => props.statistics?.total ?? props.pagination.total);
 const branchAdmins = computed(
@@ -49,9 +52,13 @@ const pageNumbers = computed(() => {
 });
 
 const visitPage = (pageNumber = 1): void => {
+    clearTimeout(searchTimer);
     router.get(
         index().url,
-        { page: pageNumber },
+        {
+            page: pageNumber,
+            ...(searchQuery.value.trim() ? { search: searchQuery.value.trim() } : {}),
+        },
         {
             preserveState: true,
             preserveScroll: true,
@@ -64,6 +71,16 @@ const visitPage = (pageNumber = 1): void => {
             },
         },
     );
+};
+
+watch(searchQuery, () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => visitPage(), 300);
+});
+onBeforeUnmount(() => clearTimeout(searchTimer));
+
+const clearSearch = (): void => {
+    searchQuery.value = '';
 };
 
 const organizationName = (user: UserSummary): string =>
@@ -108,13 +125,46 @@ const canManageUser = (user: UserSummary): boolean => isSuperadmin.value || !isO
                 <div class="border-line border-b px-5 py-4">
                     <h2 class="font-display text-ink-950 font-semibold">Daftar pengguna</h2>
                     <p class="text-ink-500 mt-1 text-sm">Role dan cabang yang dapat diakses setiap akun.</p>
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div class="relative max-w-xl flex-1">
+                            <Search
+                                class="text-ink-500 pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                                aria-hidden="true"
+                            />
+                            <Input
+                                id="user-search"
+                                v-model="searchQuery"
+                                type="search"
+                                class="h-11 pr-10 pl-10"
+                                placeholder="Cari nama, email, atau WhatsApp"
+                            />
+                            <button
+                                v-if="searchQuery"
+                                type="button"
+                                class="text-ink-500 hover:text-ink-950 absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg"
+                                aria-label="Hapus pencarian pengguna"
+                                data-test="clear-user-search"
+                                @click="clearSearch"
+                            >
+                                <X class="size-4" aria-hidden="true" />
+                            </button>
+                        </div>
+                        <p v-if="loading" class="text-ink-500 flex items-center gap-2 text-sm" role="status">
+                            <LoaderCircle class="size-4 animate-spin" aria-hidden="true" />
+                            Mencari pengguna…
+                        </p>
+                    </div>
                 </div>
 
                 <CmsEmptyState
                     v-if="users.length === 0"
                     class="m-5"
-                    title="Belum ada pengguna"
-                    description="Tambahkan owner, admin cabang, atau pelanggan untuk memulai."
+                    :title="searchQuery.trim() ? 'Pengguna tidak ditemukan' : 'Belum ada pengguna'"
+                    :description="
+                        searchQuery.trim()
+                            ? 'Coba gunakan nama, email, atau nomor WhatsApp yang lain.'
+                            : 'Tambahkan owner, admin cabang, atau pelanggan untuk memulai.'
+                    "
                     :icon="UsersRound"
                 />
 

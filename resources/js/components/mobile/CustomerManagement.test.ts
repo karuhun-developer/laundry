@@ -355,6 +355,43 @@ describe('mobile customer management dialogs', () => {
 });
 
 describe('mobile customer surfaces', () => {
+    it('searches customers and reveals directory results in batches', async () => {
+        const directoryCustomers = Array.from(
+            { length: 23 },
+            (_, index): MobileCustomer => ({
+                ...customer,
+                id: 100 + index,
+                name: `Pelanggan ${index + 1}`,
+                email: `customer${index + 1}@example.com`,
+                whatsapp_phone: `62812${String(index + 1).padStart(4, '0')}`,
+            }),
+        );
+        const wrapper = mount(CustomerDirectory, {
+            props: { customers: directoryCustomers },
+        });
+
+        expect(wrapper.findAll('article')).toHaveLength(10);
+        expect(wrapper.text()).toContain('Menampilkan 10 dari 23 pelanggan');
+
+        await wrapper.get('[data-test="load-more-customers"]').trigger('click');
+        expect(wrapper.findAll('article')).toHaveLength(20);
+
+        const search = wrapper.get('[data-test="customer-directory-search"]');
+        await search.setValue('PELANGGAN 23');
+        expect(wrapper.findAll('article')).toHaveLength(1);
+        expect(wrapper.text()).toContain('customer23@example.com');
+
+        await search.setValue('628120002');
+        expect(wrapper.findAll('article')).toHaveLength(1);
+        expect(wrapper.text()).toContain('Pelanggan 2');
+
+        await search.setValue('tidak ada');
+        expect(wrapper.findAll('article')).toHaveLength(0);
+        expect(wrapper.get('[data-test="customer-directory-no-results"]').text()).toContain(
+            'Tidak ada pelanggan',
+        );
+    });
+
     it('surfaces PIN state and customer actions without rendering plaintext PIN data', async () => {
         const customerWithUnexpectedSecret = { ...customer, temporary_pin: 'do-not-render' };
         const wrapper = mount(CustomerDirectory, {

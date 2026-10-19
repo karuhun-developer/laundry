@@ -29,22 +29,35 @@ class UserController extends Controller
 
         $request->validate([
             'page' => ['sometimes', 'integer', 'min:1'],
+            'search' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
         /** @var User $actor */
         $actor = $request->user();
         $isSuperadmin = $actor->hasRole(RoleName::Superadmin->value);
 
-        $query = User::query()
+        $baseQuery = User::query()
             ->with(['organization:id,name', 'roles:id,name', 'branches:id,name'])
             ->when(! $isSuperadmin, fn ($query) => $query->where('organization_id', $actor->organization_id))
             ->whereDoesntHave('roles', fn ($query) => $query->where('name', RoleName::Superadmin->value))
             ->orderBy('name');
 
-        $totalUsers = (clone $query)->count();
-        $branchAdminsCount = (clone $query)
+        $totalUsers = (clone $baseQuery)->count();
+        $branchAdminsCount = (clone $baseQuery)
             ->whereHas('roles', fn ($query) => $query->where('name', RoleName::BranchAdmin->value))
             ->count();
+
+        $search = trim((string) $request->input('search', ''));
+        $escapedSearch = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search);
+        $query = (clone $baseQuery)->when(
+            $search !== '',
+            fn ($query) => $query->where(function ($query) use ($escapedSearch): void {
+                $query
+                    ->where('name', 'like', "%{$escapedSearch}%")
+                    ->orWhere('email', 'like', "%{$escapedSearch}%")
+                    ->orWhere('whatsapp_phone', 'like', "%{$escapedSearch}%");
+            }),
+        );
 
         $users = $query->paginate(25)->withQueryString();
 
@@ -70,6 +83,9 @@ class UserController extends Controller
             ],
             'branches' => $branches,
             'organizations' => $organizations,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 

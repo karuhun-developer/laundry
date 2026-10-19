@@ -1,15 +1,43 @@
 <script setup lang="ts">
-import { KeyRound, Mail, Pencil, Phone, UserPlus, UserRound } from '@lucide/vue';
+import { KeyRound, Mail, Pencil, Phone, Search, UserPlus, UserRound, X } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import type { MobileCustomer } from '@/types/mobile';
 
-defineProps<{ customers: readonly MobileCustomer[] }>();
+const props = defineProps<{ customers: readonly MobileCustomer[] }>();
 
 const emit = defineEmits<{
     create: [];
     edit: [customer: MobileCustomer];
     'reset-pin': [customer: MobileCustomer];
 }>();
+
+const pageSize = 10;
+const searchQuery = ref('');
+const visibleCount = ref(pageSize);
+const filteredCustomers = computed(() => {
+    const search = searchQuery.value.trim().toLocaleLowerCase('id-ID');
+
+    if (!search) {
+        return props.customers;
+    }
+
+    return props.customers.filter((customer) =>
+        [customer.name, customer.email, customer.whatsapp_phone].some((value) =>
+            value?.toLocaleLowerCase('id-ID').includes(search),
+        ),
+    );
+});
+const visibleCustomers = computed(() => filteredCustomers.value.slice(0, visibleCount.value));
+const hasMoreCustomers = computed(() => visibleCount.value < filteredCustomers.value.length);
+
+watch([searchQuery, () => props.customers], () => {
+    visibleCount.value = pageSize;
+});
+
+const loadMore = (): void => {
+    visibleCount.value += pageSize;
+};
 
 const formatExpiry = (expiresAt: string): string =>
     new Intl.DateTimeFormat('id-ID', {
@@ -48,9 +76,42 @@ const formatExpiry = (expiresAt: string): string =>
             Kelola pelanggan organisasi dan pelanggan umum yang sudah dihubungkan ke organisasi ini.
         </p>
 
-        <div class="mt-5 space-y-3">
+        <div class="mt-5 space-y-2">
+            <label for="customer-directory-search" class="text-sm font-medium text-ink-700">
+                Cari pelanggan
+            </label>
+            <div class="relative">
+                <Search
+                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-500"
+                    aria-hidden="true"
+                />
+                <input
+                    id="customer-directory-search"
+                    v-model="searchQuery"
+                    type="search"
+                    class="min-h-11 w-full rounded-xl border border-line bg-surface pr-11 pl-10 text-sm text-ink-950 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+                    placeholder="Nama, email, atau WhatsApp"
+                    data-test="customer-directory-search"
+                />
+                <button
+                    v-if="searchQuery"
+                    type="button"
+                    class="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-500 hover:bg-canvas hover:text-ink-950"
+                    aria-label="Hapus pencarian pelanggan"
+                    data-test="clear-customer-directory-search"
+                    @click="searchQuery = ''"
+                >
+                    <X class="size-4" aria-hidden="true" />
+                </button>
+            </div>
+            <p v-if="customers.length > 0" class="text-xs text-ink-500" aria-live="polite">
+                Menampilkan {{ visibleCustomers.length }} dari {{ filteredCustomers.length }} pelanggan
+            </p>
+        </div>
+
+        <div class="mt-4 space-y-3">
             <article
-                v-for="customer in customers"
+                v-for="customer in visibleCustomers"
                 :key="customer.id"
                 class="rounded-2xl border border-line bg-surface p-4 shadow-low"
                 :class="customer.pending ? 'border-brand-600/30' : ''"
@@ -133,6 +194,23 @@ const formatExpiry = (expiresAt: string): string =>
             >
                 Belum ada pelanggan yang tersedia untuk organisasi ini.
             </p>
+            <p
+                v-else-if="filteredCustomers.length === 0"
+                class="rounded-2xl border border-dashed border-line bg-surface p-6 text-center text-sm text-ink-500"
+                data-test="customer-directory-no-results"
+            >
+                Tidak ada pelanggan yang cocok dengan pencarian.
+            </p>
+            <Button
+                v-if="hasMoreCustomers"
+                type="button"
+                variant="outline"
+                class="min-h-11 w-full rounded-xl"
+                data-test="load-more-customers"
+                @click="loadMore"
+            >
+                Muat lainnya
+            </Button>
         </div>
     </section>
 </template>
