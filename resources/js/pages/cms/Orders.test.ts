@@ -201,6 +201,51 @@ describe('CMS Orders Queue page', () => {
         wrapper.unmount();
     });
 
+    it('shows the pricing confirmation date and labels orders that are not priced yet', () => {
+        const confirmedAt = '2026-09-23T10:00:00.000Z';
+        const createdAt = '2026-09-19T08:00:00.000Z';
+        const expectedPricingDate = new Intl.DateTimeFormat('id-ID', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(new Date(confirmedAt));
+        const unexpectedCreatedDate = new Intl.DateTimeFormat('id-ID', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(new Date(createdAt));
+        const pricedOrder: CmsOrderSummary = {
+            ...sampleOrders[0],
+            created_at: createdAt,
+            pricing: { ...sampleOrders[0].pricing, confirmed_at: confirmedAt },
+        };
+        const unpricedOrder: CmsOrderSummary = {
+            ...sampleOrders[1],
+            pricing: { ...sampleOrders[1].pricing, confirmed: false, confirmed_at: null },
+        };
+        const wrapper = mount(Orders, {
+            props: {
+                orders: [pricedOrder, unpricedOrder],
+                branches,
+                organizations,
+                orderStatuses,
+                ...serverProps,
+            },
+            global: {
+                stubs: {
+                    CmsPageHeader: true,
+                    CmsMetricCard: true,
+                    CmsEmptyState: true,
+                    Badge: true,
+                    OrderDetailDialog: true,
+                    OrderDeleteDialog: true,
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain(expectedPricingDate);
+        expect(wrapper.text()).not.toContain(unexpectedCreatedDate);
+        expect(wrapper.text()).toContain('Belum ditimbang');
+    });
+
     it('renders safely when order items are empty, null, or wrapped in a data object', () => {
         const defensiveOrders = [
             {

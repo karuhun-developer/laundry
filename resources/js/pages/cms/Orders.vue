@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { CheckCircle2, Clock, Download, FileSpreadsheet, Layers, PackageCheck, ShoppingBag } from '@lucide/vue';
+import {
+    CheckCircle2,
+    Clock,
+    Download,
+    FileSpreadsheet,
+    Layers,
+    PackageCheck,
+    ShoppingBag,
+} from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CmsEmptyState from '@/components/cms/CmsEmptyState.vue';
 import CmsMetricCard from '@/components/cms/CmsMetricCard.vue';
@@ -102,7 +110,8 @@ const visitPage = (pageNumber = 1): void => {
 const handleExport = (): void => {
     const params = new URLSearchParams();
     if (searchQuery.value.trim()) params.append('search', searchQuery.value.trim());
-    if (organizationFilter.value !== 'all') params.append('organization_id', organizationFilter.value);
+    if (organizationFilter.value !== 'all')
+        params.append('organization_id', organizationFilter.value);
     if (branchFilter.value !== 'all') params.append('branch_id', branchFilter.value);
     if (statusFilter.value !== 'all') params.append('status', statusFilter.value);
     if (dateFrom.value) params.append('date_from', dateFrom.value);
@@ -406,7 +415,7 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                                         {{ order.order_number ?? `Pesanan #${order.id}` }}
                                     </p>
                                     <p class="text-ink-500 mt-0.5 text-xs">
-                                        {{ formatDate(order.created_at) }}
+                                        {{ order.pricing.confirmed_at ? formatDate(order.pricing.confirmed_at) : 'Belum ditimbang' }}
                                     </p>
                                 </td>
 
@@ -514,7 +523,7 @@ const itemsSummary = (order: CmsOrderSummary): string => {
                         </div>
 
                         <div class="border-line flex items-center justify-between border-t pt-3">
-                            <span class="text-ink-400 text-[11px]">{{ formatDate(order.created_at) }}</span>
+                            <span class="text-ink-400 text-[11px]">{{ order.pricing.confirmed_at ? formatDate(order.pricing.confirmed_at) : 'Belum ditimbang' }}</span>
                             <div class="flex items-center gap-1">
                                 <OrderDetailDialog
                                     :order="order"
